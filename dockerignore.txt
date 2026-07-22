@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+.env
+data/config_store.json
+
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+
+.git/
+.gitignore
+README.md

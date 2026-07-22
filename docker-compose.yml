@@ -1,0 +1,24 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount seluruh folder data supaya config_store.json (dan perubahan
+      # lewat interface config) tersimpan permanen, tidak hilang tiap
+      # container di-restart/rebuild. Vector store & dokumen dari host
+      # (hasil git pull) juga dipakai langsung lewat sini.
+      - ./data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
