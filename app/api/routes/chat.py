@@ -18,6 +18,7 @@ def chat(request: ChatRequest) -> ChatResponse:
     else:
         prompt = build_prompt(request.message, chunks)
         answer = generate_answer(prompt)
+        sources = list(dict.fromkeys(sources))
 
     # Persist both turns to the conversation store
     try:

@@ -137,13 +137,17 @@ function MessageBubble({ role, content, sources }) {
         <div className={`${s.bubble} ${isUser ? s.bubbleUser : s.bubbleAi}`}>
           {isUser
             ? content
-            : <ReactMarkdown className={s.markdownContent}>{content}</ReactMarkdown>
+            : (
+              <div className={s.markdownContent}>
+                <ReactMarkdown>{content}</ReactMarkdown>
+              </div>
+            )
           }
         </div>
         {!isUser && sources && sources.length > 0 && (
           <div className={s.sourcesRow} aria-label="Sumber dokumen">
             <span className={s.sourcesLabel}>Sumber:</span>
-            {sources.map((src, i) => <SourceTag key={i} label={src} />)}
+            {Array.from(new Set(sources)).map((src, i) => <SourceTag key={i} label={src} />)}
           </div>
         )}
       </div>
