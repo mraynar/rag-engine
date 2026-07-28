@@ -1,54 +1,66 @@
 // frontend/app/layout.js
-// Root layout — wraps every page with the topnav and global design system
+// Root layout — wraps every page with the topnav and global design system.
+// Must stay a Server Component (exports `metadata`), so all client-side
+// providers live in AppProviders.js which is imported here.
 
+import Image from 'next/image';
 import './globals.css';
 
 export const metadata = {
   title: 'TPS RAG Engine',
   description: 'Sistem tanya-jawab berbasis dokumen untuk PT Terminal Petikemas Surabaya',
+  icons: {
+    icon: '/images/Logo Pelindo.png',
+  },
 };
 
-// NavLink with active-state detection is handled client-side in a small component
 import NavLinks from './NavLinks';
+import AppProviders from './AppProviders';
 
 export default function RootLayout({ children }) {
   return (
     <html lang="id">
       <body>
-        <div className="page-shell">
-          {/* ---- Top navigation bar ---- */}
-          <header className="topnav" role="banner">
-            <div className="topnav-inner">
-              {/* Brand */}
-              <div className="topnav-brand">
-                <div className="topnav-logo" aria-hidden="true">
-                  {/* Crane / container icon SVG */}
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="14" width="8" height="7" rx="1"/>
-                    <rect x="14" y="14" width="8" height="7" rx="1"/>
-                    <path d="M6 14V9h12v5"/>
-                    <path d="M12 9V3"/>
-                    <path d="M9 3h6"/>
-                    <path d="M12 3l-5 6"/>
-                    <path d="M12 3l5 6"/>
-                  </svg>
+        <AppProviders>
+          <div className="page-shell">
+            {/* ---- Top navigation bar ---- */}
+            <header className="topnav" role="banner" style={{ position: 'relative' }}>
+              <div className="topnav-inner">
+
+                {/* Brand — logo image + app label */}
+                <div className="topnav-brand">
+                  <div className="topnav-logo-wrap">
+                    <Image
+                      src="/images/Logo TPS Monokrom.png"
+                      alt="Logo PT Terminal Petikemas Surabaya"
+                      width={110}
+                      height={44}
+                      priority
+                      style={{ objectFit: 'contain', display: 'block' }}
+                    />
+                  </div>
+
+                  {/* Divider */}
+                  <span className="topnav-divider" aria-hidden="true" />
+
+                  <div className="topnav-app-label">
+                    <span className="topnav-app-name">RAG Engine</span>
+                    <span className="topnav-app-sub">Sistem Manajemen Model &amp; Dokumen</span>
+                  </div>
                 </div>
-                <span className="topnav-title">
-                  RAG Engine
-                  <span className="topnav-subtitle">TPS Pelindo</span>
-                </span>
+
+                {/* Navigation links */}
+                <NavLinks />
               </div>
+              {/* Upload status pill — rendered by AppProviders, positioned absolutely */}
+            </header>
 
-              {/* Navigation links — client component for active detection */}
-              <NavLinks />
-            </div>
-          </header>
-
-          {/* ---- Page content ---- */}
-          <main className="main-content" id="main-content">
-            {children}
-          </main>
-        </div>
+            {/* ---- Page content ---- */}
+            <main className="main-content" id="main-content">
+              {children}
+            </main>
+          </div>
+        </AppProviders>
       </body>
     </html>
   );

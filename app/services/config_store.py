@@ -1,37 +1,3 @@
-"""
-Config Agent — sesuai AGENTS.md poin 3, ini satu-satunya file yang boleh
-mengubah skema config store.
-
-Fase belajar: disimpan sebagai file JSON lokal (data/config_store.json).
-File ini SENGAJA tidak ikut di-push ke git (berisi API key asli) — yang
-di-push adalah data/config_store.json.example (placeholder, struktur sama).
-
-Supaya orang lain yang pull repo (misal mentor) tidak perlu copy file
-manual, saat config store pertama kali diakses dan filenya belum ada,
-otomatis dibuat dari .example — lalu diisi lewat endpoint /config
-(app/api/routes/config.py), bukan edit file manual.
-
-Struktur store (list of entry objects):
-  [
-    {
-      "key":         str  — identifier unik, bisa berupa "{group}_{uuid8}"
-      "group":       str  — kategori, misal "generation_model"
-      "description": str  — keterangan singkat
-      "value":       str  — isi konfigurasi
-      "is_secret":   bool — true → value disamarkan di API response
-      "is_active":   bool — true → entry ini yang dipakai oleh sistem
-    },
-    ...
-  ]
-
-Setiap group boleh punya beberapa kandidat (is_active=False) dan
-tepat satu yang aktif (is_active=True). Fungsi get_active_value(group)
-dipakai oleh app/core/config.py.
-
-Fase lanjut (nanti): pindah ke tabel database, tapi fungsi-fungsi di
-bawah ini tetap dipakai sama seperti sekarang.
-"""
-
 import json
 import shutil
 import uuid
@@ -43,11 +9,6 @@ CONFIG_STORE_PATH = DATA_DIR / "config_store.json"
 CONFIG_STORE_EXAMPLE_PATH = DATA_DIR / "config_store.json.example"
 
 MASKED_VALUE = "••••••••"
-
-
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
 
 def _ensure_store_exists() -> None:
     """Copy .example to live file if the live file doesn't exist yet."""

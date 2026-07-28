@@ -97,3 +97,11 @@ watchfiles==1.2.0
 websocket-client==1.9.0
 websockets==16.1.1
 yarl==1.24.5
+
+# --- Document parsing (tambahan untuk dynamic document management) ---
+pandas
+openpyxl
+python-docx
+pdfplumber
+python-pptx
+python-multipart

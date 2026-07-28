@@ -251,16 +251,26 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
   }
 
   async function handleToggleSecret() {
+    // Hide if currently shown
     if (showSecret) {
       setShowSecret(false);
       return;
     }
 
+    // For non-secret entries, value is already in entry.value — no API call needed
+    if (!entry.is_secret) {
+      setRevealedValue(entry.value);
+      setShowSecret(true);
+      return;
+    }
+
+    // Already fetched previously — just show it
     if (revealedValue !== null) {
       setShowSecret(true);
       return;
     }
 
+    // Secret entry — fetch via /reveal
     setRevealing(true);
     try {
       const res = await fetch(`${API_URL}/config/${entry.key}/reveal`);
@@ -278,10 +288,11 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
     }
   }
 
-  // Display value: for secret fields, show bullets unless explicitly toggled and fetched
-  const displayValue = entry.is_secret
-    ? (showSecret && revealedValue !== null ? revealedValue : '••••••••')
-    : entry.value;
+  // Display value: ALWAYS show bullets by default — toggle with eye icon.
+  // For is_secret=false entries the value is already in entry.value (no API call needed).
+  const displayValue = showSecret
+    ? (revealedValue ?? entry.value)
+    : '••••••••';
 
 
   const trClass = `${s.tr} ${entry.is_active ? s.trActive : ''} ${isEditing ? s.trEditing : ''}`;
@@ -313,8 +324,8 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
             value={editValue}
             onChange={e => setEditValue(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }}
-            type={entry.is_secret ? 'password' : 'text'}
-            placeholder={entry.is_secret ? 'Kosongkan = tidak berubah' : entry.value}
+            type="password"
+            placeholder="Kosongkan = tidak berubah"
             aria-label="Edit nilai"
           />
         </td>
@@ -374,26 +385,24 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
       {/* Value */}
       <td className={s.td}>
         <div className={s.valueCell}>
-          <span className={`${s.valueText} ${entry.is_secret && !showSecret ? s.valueTextSecret : ''}`}>
+          <span className={`${s.valueText} ${!showSecret ? s.valueTextSecret : ''}`}>
             {displayValue}
           </span>
-          {entry.is_secret && (
-            <button
-              className={s.eyeBtn}
-              onClick={handleToggleSecret}
-              disabled={revealing}
-              title={showSecret ? 'Sembunyikan' : 'Tampilkan'}
-              aria-label={showSecret ? 'Sembunyikan nilai' : 'Tampilkan nilai'}
-            >
-              {revealing ? (
-                <SpinnerIcon size={14} className={s.spinIcon} />
-              ) : showSecret ? (
-                <EyeOffIcon size={14} />
-              ) : (
-                <EyeIcon size={14} />
-              )}
-            </button>
-          )}
+          <button
+            className={s.eyeBtn}
+            onClick={handleToggleSecret}
+            disabled={revealing}
+            title={showSecret ? 'Sembunyikan' : 'Tampilkan'}
+            aria-label={showSecret ? 'Sembunyikan nilai' : 'Tampilkan nilai'}
+          >
+            {revealing ? (
+              <SpinnerIcon size={14} className={s.spinIcon} />
+            ) : showSecret ? (
+              <EyeOffIcon size={14} />
+            ) : (
+              <EyeIcon size={14} />
+            )}
+          </button>
         </div>
       </td>
 
