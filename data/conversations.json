@@ -1,0 +1,77 @@
+[
+  {
+    "id": "conv_28b0dd52",
+    "title": "siapakah muhammad raynar hammam?",
+    "pinned": false,
+    "created_at": "2026-07-28T07:16:41",
+    "updated_at": "2026-07-28T07:20:08",
+    "messages": [
+      {
+        "role": "user",
+        "content": "siapakah muhammad raynar hammam?",
+        "timestamp": "2026-07-28T07:16:53"
+      },
+      {
+        "role": "assistant",
+        "content": "Maaf, saya tidak menemukan informasi ini di dokumen.",
+        "sources": [],
+        "timestamp": "2026-07-28T07:16:53"
+      },
+      {
+        "role": "user",
+        "content": "apa vessel operator dengan total call terbanyak?",
+        "timestamp": "2026-07-28T07:17:36"
+      },
+      {
+        "role": "assistant",
+        "content": "Berdasarkan data pada konteks yang diberikan, **vessel operator** dengan jumlah **total call** terbanyak adalah **SSL**. \n\nBerikut adalah rincian data **total call** untuk setiap **vessel operator**:\n*   **SSL**: memiliki **total call** sebanyak 3.\n*   **RCL**: memiliki **total call** sebanyak 0.\n*   **PIL**: memiliki **total call** sebanyak 0.",
+        "sources": [
+          "Dummy 10 Rows - Sheet1.csv",
+          "Dummy 10 Rows - Sheet1.csv",
+          "Dummy 10 Rows - Sheet1.csv"
+        ],
+        "timestamp": "2026-07-28T07:17:36"
+      },
+      {
+        "role": "user",
+        "content": "kalau SIT total callnya berapa?",
+        "timestamp": "2026-07-28T07:18:22"
+      },
+      {
+        "role": "assistant",
+        "content": "Berdasarkan konteks yang diberikan, berikut adalah informasi mengenai jumlah **TOTAL CALL** untuk operator kapal **SIT**:\n\nOperator kapal **SIT** memiliki **TOTAL CALL** sebanyak **5**.\n\nBerikut adalah rincian data lengkap untuk operator **SIT**:\n*   **NO**: 4\n*   **VESSEL OPERATOR**: **SIT**\n*   **SERVICE**: **CMI**\n*   **TOTAL CALL**: 5\n*   **AVERAGE BM**: 34\n*   **AVERAGE GM**: 23\n*   **TEU**: 3485",
+        "sources": [
+          "Dummy 10 Rows - Sheet1.csv",
+          "Dummy 10 Rows - Sheet1.csv"
+        ],
+        "timestamp": "2026-07-28T07:18:22"
+      },
+      {
+        "role": "user",
+        "content": "nah itu dia berarti total call terbanyak kenapa anda tidak menyebutkan itu?\nkenapa anda malah menyebutkan : SSL: memiliki total call sebanyak 3.\nRCL: memiliki total call sebanyak 0.\nPIL: memiliki total call sebanyak 0.",
+        "timestamp": "2026-07-28T07:19:08"
+      },
+      {
+        "role": "assistant",
+        "content": "Berdasarkan konteks yang diberikan, saya **tidak tahu** alasan mengapa hal tersebut tidak disebutkan sebelumnya, karena informasi mengenai alasan atau analisis tersebut tidak ada di dalam konteks. Konteks yang Anda berikan hanya memuat data mentah sebagai berikut:\n\n*   **RCL** dengan **SERVICE** RMI3 memiliki **TOTAL CALL** sebanyak 0.\n*   **PIL** dengan **SERVICE** SSE memiliki **TOTAL CALL** sebanyak 0.\n*   **SSL** dengan **SERVICE** SSS-SAT memiliki **TOTAL CALL** sebanyak 3.\n\nPenjelasan lebih lanjut mengenai alasan pemilihan penyampaian informasi tersebut tidak tersedia di dalam dokumen atau teks konteks yang Anda sediakan.",
+        "sources": [
+          "Dummy 10 Rows - Sheet1.csv",
+          "Dummy 10 Rows - Sheet1.csv",
+          "Dummy 10 Rows - Sheet1.csv"
+        ],
+        "timestamp": "2026-07-28T07:19:08"
+      },
+      {
+        "role": "user",
+        "content": "berikan informasi average GM terbanyak",
+        "timestamp": "2026-07-28T07:20:08"
+      },
+      {
+        "role": "assistant",
+        "content": "Maaf, saya tidak menemukan informasi ini di dokumen.",
+        "sources": [],
+        "timestamp": "2026-07-28T07:20:08"
+      }
+    ]
+  }
+]

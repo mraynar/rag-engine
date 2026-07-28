@@ -3,13 +3,23 @@ Generation Agent — urus format prompt akhir & panggil Gemini API.
 Sesuai AGENTS.md: logic generation HANYA di sini, tidak boleh bocor ke routes/.
 """
 
-from app.core.config import GENERATION_MODEL, gemini_client
+from app.core.config import get_generation_model, get_gemini_client
 
 
 def build_prompt(question: str, chunks: list[str]) -> str:
     context = "\n\n".join(chunks)
-    return f"""Jawab pertanyaan berikut HANYA berdasarkan konteks di bawah ini.
-Kalau jawabannya tidak ada di konteks, katakan tidak tahu, jangan mengarang.
+    return f"""Kamu adalah asisten AI yang menjawab pertanyaan HANYA berdasarkan konteks dokumen yang diberikan.
+
+ATURAN WAJIB:
+1. Gunakan HANYA data dari "Konteks" di bawah — jangan mengarang atau menggunakan pengetahuan luar.
+2. Jika data tidak ada di konteks, jawab "Saya tidak menemukan informasi ini di dokumen."
+3. Untuk pertanyaan yang membutuhkan perbandingan atau mencari nilai terbesar/terkecil (maksimum/minimum/terbanyak/tersedikit):
+   - Baca SEMUA data yang tersedia di konteks dengan teliti.
+   - Bandingkan SEMUA nilai yang relevan sebelum menentukan jawaban.
+   - Cantumkan nilai dari SETIAP entri yang relevan agar perbandingan transparan.
+   - Nyatakan jawaban akhir dengan jelas.
+4. Untuk data tabular (tabel/spreadsheet), baca setiap baris secara sistematis sebelum menyimpulkan.
+5. Format jawaban: gunakan **bold** untuk nama/istilah penting, bullet list untuk enumerasi, paragraf biasa untuk penjelasan.
 
 Konteks:
 {context}
@@ -20,7 +30,7 @@ Jawaban:"""
 
 
 def generate_answer(prompt: str) -> str:
-    response = gemini_client.models.generate_content(
-        model=GENERATION_MODEL, contents=prompt
+    response = get_gemini_client().models.generate_content(
+        model=get_generation_model(), contents=prompt
     )
     return response.text

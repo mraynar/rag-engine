@@ -12,7 +12,6 @@ from app.services.config_store import (
 
 router = APIRouter()
 
-_RESTART_NOTICE = " Restart server untuk menerapkan perubahan pada konfigurasi rahasia."
 
 
 # ---------------------------------------------------------------------------
@@ -39,8 +38,6 @@ def create_config_entry(request: ConfigCreateRequest) -> dict:
         is_secret=request.is_secret,
     )
     msg = f"Kandidat baru '{new_entry['key']}' berhasil ditambahkan ke grup '{request.group}'."
-    if request.is_secret:
-        msg += _RESTART_NOTICE
     return {"message": msg, "entry": new_entry}
 
 
@@ -50,11 +47,7 @@ def create_config_entry(request: ConfigCreateRequest) -> dict:
 
 @router.put("/config/{key}")
 def update_config_entry(key: str, request: ConfigUpdateRequest) -> dict:
-    """Update deskripsi dan/atau nilai dari sebuah entri config.
-
-    CATATAN: perubahan pada nilai gemini_api_key hanya berlaku setelah
-    restart server (client Gemini dibuat sekali saat startup).
-    """
+    """Update deskripsi dan/atau nilai dari sebuah entri config."""
     if request.description is None and request.value is None:
         raise HTTPException(
             status_code=422,
@@ -65,10 +58,7 @@ def update_config_entry(key: str, request: ConfigUpdateRequest) -> dict:
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-    msg = f"Config '{key}' berhasil diupdate."
-    if updated.get("is_secret"):
-        msg += _RESTART_NOTICE
-    return {"message": msg, "entry": updated}
+    return {"message": f"Config '{key}' berhasil diupdate.", "entry": updated}
 
 
 # ---------------------------------------------------------------------------
@@ -77,25 +67,13 @@ def update_config_entry(key: str, request: ConfigUpdateRequest) -> dict:
 
 @router.patch("/config/{key}/activate")
 def activate_config_entry(key: str) -> dict:
-    """Jadikan entri ini sebagai kandidat aktif di grupnya.
-
-    CATATAN: jika entri yang diaktifkan bersifat rahasia (is_secret),
-    perubahan baru berlaku setelah restart server.
-    """
+    """Jadikan entri ini sebagai kandidat aktif di grupnya."""
     try:
         set_active(key)
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-    # Re-read to check is_secret on the just-activated entry
-    from app.services.config_store import _load_store, _find_by_key
-    store = _load_store()
-    entry = _find_by_key(store, key)
-
-    msg = f"Entri '{key}' kini aktif di grupnya."
-    if entry and entry.get("is_secret"):
-        msg += _RESTART_NOTICE
-    return {"message": msg}
+    return {"message": f"Entri '{key}' kini aktif di grupnya."}
 
 
 # ---------------------------------------------------------------------------
