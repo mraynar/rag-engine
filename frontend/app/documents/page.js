@@ -9,8 +9,8 @@ import s from './documents.module.css';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-const SUPPORTED_ACCEPT = '.txt,.csv,.xlsx,.xls,.docx,.pdf,.pptx';
-const SUPPORTED_LABEL  = '.txt, .csv, .xlsx, .xls, .docx, .pdf, .pptx';
+const SUPPORTED_ACCEPT = '.txt,.csv,.xlsx,.xls,.docx,.pdf,.pptx,.jpg,.jpeg,.png,.webp';
+const SUPPORTED_LABEL  = '.txt, .csv, .xlsx, .xls, .docx, .pdf, .pptx, .jpg, .jpeg, .png, .webp';
 
 // ---- Type badge color mapping ----
 function TypeBadge({ type }) {
@@ -22,6 +22,10 @@ function TypeBadge({ type }) {
     docx: s.typeDocx,
     pdf:  s.typePdf,
     pptx: s.typePptx,
+    jpg:  s.typeImg,
+    jpeg: s.typeImg,
+    png:  s.typeImg,
+    webp: s.typeImg,
   };
   const cls = classMap[type?.toLowerCase()] || s.typeDefault;
   return <span className={`${s.typeBadge} ${cls}`}>{type || '—'}</span>;
@@ -202,12 +206,9 @@ export default function DocumentsPage() {
     return () => unregisterRefreshCallback();
   }, [fetchDocuments, registerRefreshCallback, unregisterRefreshCallback]);
 
-  // ---- File selection (from input or drop) ----
   function handleFileSelect(file) {
     if (!file) return;
     setSelectedFile(file);
-    setUploadError('');
-    setUploadSuccess('');
   }
 
   function handleInputChange(e) {
@@ -327,6 +328,7 @@ export default function DocumentsPage() {
             accept={SUPPORTED_ACCEPT}
             className={s.fileInput}
             onChange={handleInputChange}
+            onClick={(e) => e.stopPropagation()}
             id="file-input"
             tabIndex={-1}
             aria-hidden="true"

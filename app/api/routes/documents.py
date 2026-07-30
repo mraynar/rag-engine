@@ -76,13 +76,13 @@ async def upload_document(
 
     # 400 — tolak ekstensi yang tidak didukung sebelum menyimpan ke disk
     suffix = Path(filename).suffix.lower()
-    _SUPPORTED = {".txt", ".csv", ".xlsx", ".xls", ".docx", ".pdf", ".pptx"}
+    _SUPPORTED = {".txt", ".csv", ".xlsx", ".xls", ".docx", ".pdf", ".pptx", ".jpg", ".jpeg", ".png", ".webp"}
     if suffix not in _SUPPORTED:
         raise HTTPException(
             status_code=400,
             detail=(
                 f"Format file '{suffix}' belum didukung. "
-                f"Format yang didukung: .txt, .csv, .xlsx, .xls, .docx, .pdf, .pptx"
+                f"Format yang didukung: .txt, .csv, .xlsx, .xls, .docx, .pdf, .pptx, .jpg, .jpeg, .png, .webp"
             ),
         )
 

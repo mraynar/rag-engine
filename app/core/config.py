@@ -44,20 +44,23 @@ def get_generation_model() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Client cache — hanya genai.Client yang di-cache (keyed by api_key)
+# Client cache — genai.Client di-cache per thread (thread-local)
 # ---------------------------------------------------------------------------
 
-_client_cache: dict[str, genai.Client] = {}
+import threading
+
+_thread_local = threading.local()
 
 
 def get_gemini_client() -> genai.Client:
-    """Return a genai.Client for the currently active API key.
-
-    Client di-cache supaya tidak dibuat ulang setiap request (mahal).
-    Jika API key diubah via UI, cache lama di-clear dan client baru dibuat.
-    """
+    """Return a genai.Client for the currently active API key, cached per thread."""
     api_key = get_gemini_api_key()
-    if api_key not in _client_cache:
-        _client_cache.clear()  # hanya simpan 1 key, hindari unbounded growth
-        _client_cache[api_key] = genai.Client(api_key=api_key)
-    return _client_cache[api_key]
+    
+    if not hasattr(_thread_local, "client_cache"):
+        _thread_local.client_cache = {}
+        
+    cache = _thread_local.client_cache
+    if api_key not in cache:
+        cache[api_key] = genai.Client(api_key=api_key)
+        
+    return cache[api_key]

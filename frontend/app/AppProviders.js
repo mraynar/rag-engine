@@ -3,6 +3,7 @@
 // (it exports `metadata`). All client-side context providers live here.
 'use client';
 
+import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUpload, UploadProvider } from './UploadContext';
 import styles from './upload.module.css';
@@ -66,41 +67,79 @@ function SpinnerIcon({ size = 13 }) {
 
 // ---- Upload status pill shown in the topnav ----
 
-function UploadStatusArea() {
-  const { uploads, dismissUpload } = useUpload();
-  const router = useRouter();
+function UploadStatusPill({ u, onDismiss, router }) {
+  const [expanded, setExpanded] = useState(false);
 
-  if (!uploads.length) return null;
+  const isUploading = u.status === 'uploading';
+  const isSuccess   = u.status === 'success';
+  const isError     = u.status === 'error';
 
   return (
-    <div className={styles.pillStack} aria-live="polite">
-      {uploads.map((u) => (
-        <div
-          key={u.id}
-          className={`${styles.pill} ${
-            u.status === 'uploading' ? styles.pillUploading :
-            u.status === 'success'  ? styles.pillSuccess   :
-                                      styles.pillError
-          }`}
-          role={u.status !== 'uploading' ? 'alert' : undefined}
-          title={u.message || `Mengupload: ${u.filename}`}
-        >
+    <div
+      className={`${styles.pill} ${
+        isUploading ? styles.pillUploading :
+        isSuccess   ? styles.pillSuccess   :
+                      styles.pillError
+      } ${expanded ? styles.pillExpanded : ''}`}
+      role={!isUploading ? 'alert' : undefined}
+      title={u.message || `Mengupload: ${u.filename}`}
+    >
+      {expanded ? (
+        <div className={styles.expandedContent}>
+          <div className={styles.expandedHeader}>
+            <span className={styles.pillIcon}>
+              <AlertIcon size={14} />
+            </span>
+            <span className={styles.expandedTitle}>{u.filename}</span>
+            <button
+              className={styles.pillDismiss}
+              onClick={() => onDismiss(u.id)}
+              aria-label="Tutup notifikasi"
+            >
+              <XIcon size={11} />
+            </button>
+          </div>
+          <div className={styles.expandedBody}>
+            {u.message}
+          </div>
+          <div className={styles.expandedActions}>
+            <button
+              className={styles.pillNav}
+              onClick={() => setExpanded(false)}
+              aria-label="Sembunyikan detail error"
+            >
+              Sembunyikan
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
           {/* Icon */}
           <span className={styles.pillIcon}>
-            {u.status === 'uploading' && <SpinnerIcon size={13} />}
-            {u.status === 'success'   && <CheckIcon   size={13} />}
-            {u.status === 'error'     && <AlertIcon   size={13} />}
+            {isUploading && <SpinnerIcon size={13} />}
+            {isSuccess   && <CheckIcon   size={13} />}
+            {isError     && <AlertIcon   size={13} />}
           </span>
 
           {/* Label */}
           <span className={styles.pillLabel}>
-            {u.status === 'uploading'
+            {isUploading
               ? `Mengupload: ${u.filename}`
               : u.message}
           </span>
 
-          {/* Navigate to /documents on click */}
-          {u.status !== 'uploading' && (
+          {/* Action buttons */}
+          {isError && (
+            <button
+              className={styles.pillNav}
+              onClick={() => setExpanded(true)}
+              aria-label="Lihat detail error"
+            >
+              Lihat
+            </button>
+          )}
+
+          {isSuccess && (
             <button
               className={styles.pillNav}
               onClick={() => router.push('/documents')}
@@ -111,16 +150,36 @@ function UploadStatusArea() {
           )}
 
           {/* Dismiss */}
-          {u.status !== 'uploading' && (
+          {!isUploading && (
             <button
               className={styles.pillDismiss}
-              onClick={() => dismissUpload(u.id)}
+              onClick={() => onDismiss(u.id)}
               aria-label="Tutup notifikasi"
             >
               <XIcon size={11} />
             </button>
           )}
-        </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function UploadStatusArea() {
+  const { uploads, dismissUpload } = useUpload();
+  const router = useRouter();
+
+  if (!uploads.length) return null;
+
+  return (
+    <div className={styles.pillStack} aria-live="polite">
+      {uploads.map((u) => (
+        <UploadStatusPill
+          key={u.id}
+          u={u}
+          onDismiss={dismissUpload}
+          router={router}
+        />
       ))}
     </div>
   );
