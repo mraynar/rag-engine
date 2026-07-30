@@ -12,11 +12,17 @@ import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from threading import Lock
 
 import chromadb
 from google.genai import types
 
-from app.core.config import VECTOR_STORE_DIR, get_embedding_model, get_gemini_client
+from app.core.config import (
+    VECTOR_STORE_DIR,
+    get_embedding_model,
+    get_gemini_client,
+    get_generation_model,
+)
 
 CHUNK_SIZE = 300
 
@@ -99,8 +105,13 @@ def parse_pdf(file_path: Path) -> list[str]:
 
 def parse_xlsx(file_path: Path) -> list[str]:
     import pandas as pd
-    df = pd.read_excel(str(file_path), sheet_name=0)
-    return _dataframe_to_chunks(df)
+    xls = pd.read_excel(str(file_path), sheet_name=None)
+    chunks = []
+    for sheet_name, df in xls.items():
+        sheet_chunks = _dataframe_to_chunks(df)
+        context_chunks = [f"[Sheet: {sheet_name}] {chunk}" for chunk in sheet_chunks]
+        chunks.extend(context_chunks)
+    return chunks
 
 
 def parse_csv(file_path: Path) -> list[str]:
@@ -158,6 +169,40 @@ def parse_pptx(file_path: Path) -> list[str]:
     return chunks
 
 
+def parse_image(file_path: Path) -> list[str]:
+    extension = file_path.suffix.lower()
+    mime_type = "image/png"
+    if extension in (".jpg", ".jpeg"):
+        mime_type = "image/jpeg"
+    elif extension == ".webp":
+        mime_type = "image/webp"
+
+    # Baca file biner gambar
+    content = file_path.read_bytes()
+    part = types.Part.from_bytes(data=content, mime_type=mime_type)
+
+    # Prompt analisis gambar multimodal
+    prompt = (
+        "Lakukan analisis mendalam terhadap gambar ini.\n"
+        "1. Ekstrak dan tuliskan semua teks (OCR) yang terlihat pada gambar dengan sangat akurat dan lengkap.\n"
+        "2. Jelaskan elemen visual, tabel, diagram, atau grafik yang ada di dalam gambar beserta nilainya secara detail.\n"
+        "3. Berikan deskripsi ringkas tentang keseluruhan isi atau konteks gambar.\n"
+        "Format output berupa teks markdown terstruktur agar mudah dibaca."
+    )
+
+    try:
+        # Gunakan client Gemini multimodal
+        response = get_gemini_client().models.generate_content(
+            model=get_generation_model(),
+            contents=[part, prompt],
+        )
+        text = response.text or ""
+    except Exception as e:
+        raise RuntimeError(f"Gagal menganalisis gambar menggunakan model Gemini: {e}")
+
+    return chunk_by_sentences(text)
+
+
 # ---------------------------------------------------------------------------
 # Format dispatcher
 # ---------------------------------------------------------------------------
@@ -170,21 +215,41 @@ _PARSERS = {
     ".xls":  parse_xlsx,   # pandas read_excel handles .xls too
     ".csv":  parse_csv,
     ".pptx": parse_pptx,
+    ".jpg":  parse_image,
+    ".jpeg": parse_image,
+    ".png":  parse_image,
+    ".webp": parse_image,
 }
 
 _SUPPORTED_FORMATS = ", ".join(sorted(_PARSERS.keys()))
+
+_request_times: list[float] = []
+_request_lock = Lock()
+MAX_RPM = 90  # stay under the 100 limit with a safety margin
+
+
+def _wait_for_rate_limit_slot():
+    with _request_lock:
+        now = time.time()
+        # drop timestamps older than 60 seconds
+        while _request_times and _request_times[0] < now - 60:
+            _request_times.pop(0)
+        if len(_request_times) >= MAX_RPM:
+            sleep_time = 60 - (now - _request_times[0]) + 0.1
+            time.sleep(max(sleep_time, 0.0))
+        _request_times.append(time.time())
 
 
 def _embed_texts_batch(
     texts: list[str],
     batch_size: int = 100,
-    max_workers: int = 5,
+    max_workers: int = 3,
 ) -> list[list[float]]:
     """Embed a list of texts in batches, running up to `max_workers` batches concurrently.
 
     Perubahan dari versi sebelumnya:
     - batch_size dinaikkan 50 → 100 (mengurangi jumlah API call ~50%).
-    - Hingga `max_workers` (default 5) batch berjalan paralel via ThreadPoolExecutor,
+    - Hingga `max_workers` (default 3) batch berjalan paralel via ThreadPoolExecutor,
       sehingga total wall-clock time untuk dokumen besar turun drastis.
     - Urutan hasil dijaga persis sama dengan urutan input (zip dengan chunk ids aman).
 
@@ -200,6 +265,7 @@ def _embed_texts_batch(
     def embed_one_batch(batch: list[str]) -> list[list[float]]:
         for attempt in range(3):
             try:
+                _wait_for_rate_limit_slot()
                 result = get_gemini_client().models.embed_content(
                     model=get_embedding_model(),
                     contents=batch,
