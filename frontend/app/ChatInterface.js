@@ -238,7 +238,7 @@ function ChatInterfaceInner({ hideHeader = false }) {
               color: 'var(--color-navy)',
               margin: 0
             }}>
-              Layanan Pelanggan TPS
+              Chatbot TPS
             </h2>
             <button style={{
               background: 'none',

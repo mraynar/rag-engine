@@ -42,7 +42,7 @@ function DocumentsNavIcon() {
 }
 
 const links = [
-  { href: '/',          label: 'Chat',        Icon: ChatNavIcon },
+  { href: '/',          label: 'Umum',        Icon: ChatNavIcon },
   { href: '/documents', label: 'Sumber Data', Icon: DocumentsNavIcon },
   { href: '/config',    label: 'Konfigurasi', Icon: ConfigNavIcon },
 ];
