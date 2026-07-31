@@ -1,8 +1,3 @@
-"""
-Generation Agent — urus format prompt akhir & panggil Gemini API.
-Sesuai AGENTS.md: logic generation HANYA di sini, tidak boleh bocor ke routes/.
-"""
-
 from app.core.config import get_generation_model, get_gemini_client
 
 

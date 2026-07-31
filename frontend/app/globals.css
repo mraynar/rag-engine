@@ -9,9 +9,9 @@
 /* ---- CSS Design Tokens ---- */
 :root {
   /* Brand Colors — TPS Pelindo palette */
-  --color-navy:        #0B2F5C;   /* primary brand / hero backgrounds */
-  --color-navy-light:  #163d72;   /* slightly lighter navy for hovers */
-  --color-navy-dark:   #071e3d;   /* deeper navy for borders/shadows */
+  --color-navy:        #2B7FD6;   /* primary brand / hero backgrounds (sky blue) */
+  --color-navy-light:  #3b8fe6;   /* slightly lighter blue for hovers */
+  --color-navy-dark:   #1c6bbf;   /* deeper blue for borders/shadows */
 
   --color-accent:      #2B7FD6;   /* sky/cyan blue — CTAs, links, tags */
   --color-accent-hover:#1c6bbf;   /* accent on hover */
@@ -55,6 +55,8 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  height: 100vh;
+  overflow: hidden;
 }
 
 body {
@@ -63,7 +65,8 @@ body {
   line-height: 1.6;
   color: var(--color-text);
   background-color: var(--color-bg);
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 a {
@@ -87,23 +90,27 @@ input, textarea {
 .page-shell {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .main-content {
   flex: 1;
+  height: calc(100vh - 64px);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
+
 
 /* ---- Topnav ---- */
 .topnav {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--color-navy);
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  box-shadow: 0 2px 16px rgba(7,30,61,0.40);
+  background: #ffffff;
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .topnav-inner {
@@ -113,7 +120,7 @@ input, textarea {
   margin: 0 auto;
   padding: 0 1.75rem;
   height: 64px;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 /* ---- Brand block ---- */
@@ -125,22 +132,20 @@ input, textarea {
   flex-shrink: 0;
 }
 
-/* Logo image container — fixed height, width auto so the wide logo fits cleanly */
+/* Logo image container */
 .topnav-logo-wrap {
   height: 36px;
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  /* Boost visibility of the already-white monochrome logo on the dark navy bg */
-  filter: brightness(1.08);
 }
 
-/* Vertical divider between logo and app label */
+/* Vertical divider */
 .topnav-divider {
   display: block;
   width: 1px;
   height: 28px;
-  background: rgba(255,255,255,0.18);
+  background: var(--color-border);
   flex-shrink: 0;
 }
 
@@ -155,14 +160,14 @@ input, textarea {
 .topnav-app-name {
   font-size: 0.9375rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-navy);
   letter-spacing: -0.015em;
   white-space: nowrap;
 }
 
 .topnav-app-sub {
   font-size: 0.6875rem;
-  color: rgba(255,255,255,0.45);
+  color: var(--color-muted);
   font-weight: 400;
   white-space: nowrap;
   letter-spacing: 0.01em;
@@ -182,21 +187,21 @@ input, textarea {
   padding: 0.45rem 0.9rem;
   border-radius: var(--radius-sm);
   font-size: 0.8125rem;
-  font-weight: 500;
-  color: rgba(255,255,255,0.62);
+  font-weight: 550;
+  color: var(--color-text-light);
   letter-spacing: 0.005em;
   transition: background var(--transition), color var(--transition);
   white-space: nowrap;
 }
 
 .nav-link:hover {
-  background: rgba(255,255,255,0.09);
-  color: rgba(255,255,255,0.92);
+  background: var(--color-bg);
+  color: var(--color-navy);
 }
 
 .nav-link.active {
-  background: rgba(43,127,214,0.28);
-  color: #fff;
+  background: var(--color-accent-light);
+  color: var(--color-accent);
   font-weight: 600;
 }
 

@@ -43,8 +43,8 @@ function DocumentsNavIcon() {
 
 const links = [
   { href: '/',          label: 'Chat',        Icon: ChatNavIcon },
-  { href: '/config',    label: 'Konfigurasi', Icon: ConfigNavIcon },
   { href: '/documents', label: 'Sumber Data', Icon: DocumentsNavIcon },
+  { href: '/config',    label: 'Konfigurasi', Icon: ConfigNavIcon },
 ];
 
 export default function NavLinks() {

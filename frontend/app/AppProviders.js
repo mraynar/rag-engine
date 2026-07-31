@@ -187,11 +187,16 @@ function UploadStatusArea() {
 
 // ---- Root providers wrapper ----
 
+import { CategoryProvider } from './CategoryContext';
+
 export default function AppProviders({ children }) {
   return (
-    <UploadProvider>
-      <UploadStatusArea />
-      {children}
-    </UploadProvider>
+    <CategoryProvider>
+      <UploadProvider>
+        <UploadStatusArea />
+        {children}
+      </UploadProvider>
+    </CategoryProvider>
   );
 }
+

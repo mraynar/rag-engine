@@ -10,7 +10,8 @@ router = APIRouter()
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
-    chunks, sources = retrieve_relevant_chunks(request.message)
+    chunks, sources = retrieve_relevant_chunks(request.message, request.category)
+
 
     if not chunks:
         answer = "Maaf, saya tidak menemukan informasi ini di dokumen."
@@ -20,7 +21,6 @@ def chat(request: ChatRequest) -> ChatResponse:
         answer = generate_answer(prompt)
         sources = list(dict.fromkeys(sources))
 
-    # Persist both turns to the conversation store
     try:
         append_messages(
             conv_id=request.conversation_id,
@@ -29,7 +29,7 @@ def chat(request: ChatRequest) -> ChatResponse:
             sources=sources,
         )
     except KeyError:
-        # conversation_id tidak ditemukan — jangan batalkan respons, cukup log
-        print(f"[chat] WARNING: conversation '{request.conversation_id}' tidak ditemukan, pesan tidak disimpan")
+        # missing conversation_id — don't abort the response
+        print(f"[chat] WARNING: conversation '{request.conversation_id}' not found, message not persisted")
 
     return ChatResponse(answer=answer, sources=sources)

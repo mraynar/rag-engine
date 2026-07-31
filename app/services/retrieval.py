@@ -1,12 +1,4 @@
-"""
-Retrieval Agent — urus embedding pertanyaan & pencarian similarity di ChromaDB.
-Sesuai AGENTS.md: logic retrieval HANYA di sini, tidak boleh bocor ke routes/.
-
-Versi ini menambahkan filter by active documents:
-- Hanya chunk dari dokumen yang is_active=True yang dicari
-- Jika tidak ada dokumen aktif, langsung return kosong
-"""
-
+from typing import Optional
 import chromadb
 from google.genai import types
 
@@ -29,18 +21,23 @@ def embed_query(text: str) -> list[float]:
     return result.embeddings[0].values
 
 
-def retrieve_relevant_chunks(question: str) -> tuple[list[str], list[str]]:
-    active_sources = get_active_filenames()
-    if not active_sources:
-        # Tidak ada dokumen aktif — chat.py sudah handle empty chunks dengan graceful message
-        return [], []
-
+def retrieve_relevant_chunks(question: str, category: Optional[str] = None) -> tuple[list[str], list[str]]:
     chroma_client = chromadb.PersistentClient(path=str(VECTOR_STORE_DIR))
     collection = chroma_client.get_or_create_collection(name="tps_docs")
 
-    query_embedding = embed_query(question)
+    if category and category != "Semua Data":
+        where_filter = {"category": category}
+    else:
+        active_sources = get_active_filenames()
+        if active_sources:
+            where_filter = {"source": {"$in": active_sources}}
+        else:
+            where_filter = None
 
-    # ChromaDB throws if n_results > number of matching chunks — cap it safely
+
+    query_embedding = embed_query(text=question)
+
+    # n_results must not exceed the collection size or ChromaDB raises
     try:
         total_in_filter = collection.count()
     except Exception:
@@ -50,7 +47,7 @@ def retrieve_relevant_chunks(question: str) -> tuple[list[str], list[str]]:
     results = collection.query(
         query_embeddings=[query_embedding],
         n_results=safe_n,
-        where={"source": {"$in": active_sources}},
+        where=where_filter,
     )
 
     all_chunks = results["documents"][0]
@@ -64,3 +61,4 @@ def retrieve_relevant_chunks(question: str) -> tuple[list[str], list[str]]:
             sources.append(source)
 
     return chunks, sources
+

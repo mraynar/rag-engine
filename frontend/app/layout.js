@@ -1,7 +1,5 @@
 // frontend/app/layout.js
 // Root layout — wraps every page with the topnav and global design system.
-// Must stay a Server Component (exports `metadata`), so all client-side
-// providers live in AppProviders.js which is imported here.
 
 import Image from 'next/image';
 import './globals.css';
@@ -14,8 +12,9 @@ export const metadata = {
   },
 };
 
-import NavLinks from './NavLinks';
 import AppProviders from './AppProviders';
+import CategorySelector from './CategorySelector';
+import NavLinks from './NavLinks';
 
 export default function RootLayout({ children }) {
   return (
@@ -23,36 +22,48 @@ export default function RootLayout({ children }) {
       <body>
         <AppProviders>
           <div className="page-shell">
-            {/* ---- Top navigation bar ---- */}
+            {/* ---- Top navigation bar (Unified Light theme matching reference) ---- */}
             <header className="topnav" role="banner" style={{ position: 'relative' }}>
-              <div className="topnav-inner">
+              <div className="topnav-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 
-                {/* Brand — logo image + app label */}
-                <div className="topnav-brand">
-                  <div className="topnav-logo-wrap">
-                    <Image
-                      src="/images/Logo TPS Monokrom.png"
-                      alt="Logo PT Terminal Petikemas Surabaya"
-                      width={110}
-                      height={44}
-                      priority
-                      style={{ objectFit: 'contain', display: 'block' }}
-                    />
-                  </div>
-
-                  {/* Divider */}
-                  <span className="topnav-divider" aria-hidden="true" />
-
-                  <div className="topnav-app-label">
-                    <span className="topnav-app-name">RAG Engine</span>
-                    <span className="topnav-app-sub">Sistem Manajemen Model &amp; Dokumen</span>
-                  </div>
+                {/* Left: Colored Pelindo Brand Logo + NavLinks */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                  <Image
+                    src="/images/Logo_TPS.png"
+                    alt="Logo PT Terminal Petikemas Surabaya"
+                    width={120}
+                    height={36}
+                    priority
+                    style={{ objectFit: 'contain' }}
+                  />
+                  <NavLinks />
                 </div>
 
-                {/* Navigation links */}
-                <NavLinks />
+
+                {/* Right: Powered by Gemini badge + Dropdown Selector */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  
+                  {/* Powered by Gemini Badge */}
+                  <div style={{
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    color: '#2B6CB0',
+                    backgroundColor: '#EBF8FF',
+                    padding: '4px 10px',
+                    borderRadius: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <span style={{ display: 'inline-block', width: '6px', height: '6px', backgroundColor: '#3182CE', borderRadius: '50%' }} />
+                    Powered by Gemini
+                  </div>
+
+                  {/* Dropdown Category Selector */}
+                  <CategorySelector />
+                </div>
+
               </div>
-              {/* Upload status pill — rendered by AppProviders, positioned absolutely */}
             </header>
 
             {/* ---- Page content ---- */}
