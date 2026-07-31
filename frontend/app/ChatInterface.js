@@ -266,7 +266,7 @@ function ChatInterfaceInner({ hideHeader = false }) {
       )}
 
       {/* ── Active Tab Workspace Content (Centered Layout Flow) ── */}
-      <div style={{ flex: '1', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+      <div style={{ flex: '1', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', minHeight: 0 }}>
         
         {/* ──── Chat Workspace (Single Centered Column, No Sidebar) ──── */}
         <div style={{
@@ -278,7 +278,7 @@ function ChatInterfaceInner({ hideHeader = false }) {
           flexDirection: 'column',
           flex: '1',
           overflow: 'hidden',
-          height: '100%'
+          minHeight: 0
         }}>
           {/* The Unified Chat Box Card */}
           <div style={{
@@ -290,7 +290,7 @@ function ChatInterfaceInner({ hideHeader = false }) {
             boxShadow: 'var(--shadow-sm)',
             overflow: 'hidden',
             flex: '1',
-            height: '100%'
+            minHeight: 0
           }}>
             
             {/* Asisten TPS Header Bar */}
