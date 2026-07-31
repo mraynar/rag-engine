@@ -14,7 +14,6 @@ export const metadata = {
 
 import AppProviders from './AppProviders';
 import CategorySelector from './CategorySelector';
-import NavLinks from './NavLinks';
 
 export default function RootLayout({ children }) {
   return (
@@ -26,8 +25,8 @@ export default function RootLayout({ children }) {
             <header className="topnav" role="banner" style={{ position: 'relative' }}>
               <div className="topnav-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 
-                {/* Left: Colored Pelindo Brand Logo + NavLinks */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                {/* Left: Colored Pelindo Brand Logo */}
+                <div style={{ display: 'flex', alignItems: 'center' }}>
                   <Image
                     src="/images/Logo_TPS.png"
                     alt="Logo PT Terminal Petikemas Surabaya"
@@ -36,8 +35,8 @@ export default function RootLayout({ children }) {
                     priority
                     style={{ objectFit: 'contain' }}
                   />
-                  <NavLinks />
                 </div>
+
 
 
                 {/* Right: Powered by Gemini badge + Dropdown Selector */}
