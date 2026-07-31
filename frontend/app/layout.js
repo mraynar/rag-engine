@@ -14,6 +14,7 @@ export const metadata = {
 
 import AppProviders from './AppProviders';
 import CategorySelector from './CategorySelector';
+import DataManagementModal from './DataManagementModal';
 
 export default function RootLayout({ children }) {
   return (
@@ -36,7 +37,6 @@ export default function RootLayout({ children }) {
                     style={{ objectFit: 'contain' }}
                   />
                 </div>
-
 
 
                 {/* Right: Powered by Gemini badge + Dropdown Selector */}
@@ -70,6 +70,7 @@ export default function RootLayout({ children }) {
               {children}
             </main>
           </div>
+          <DataManagementModal />
         </AppProviders>
       </body>
     </html>

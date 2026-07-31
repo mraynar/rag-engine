@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import ChatInterface from './ChatInterface';
-import OneDriveManager from './OneDriveManager';
 import ConfigManager from './ConfigManager';
 import { useCategory } from './CategoryContext';
 
@@ -45,7 +44,6 @@ function InfoIcon({ size = 15 }) {
 
 export default function UnifiedPage() {
   const [activeTab, setActiveTab] = useState('umum'); // 'umum' or 'konfigurasi'
-  const [configSubTab, setConfigSubTab] = useState('sources'); // 'sources' or 'config'
   const { selectedCategory } = useCategory();
 
   return (
@@ -148,7 +146,7 @@ export default function UnifiedPage() {
             </>
           ) : (
             <>
-              Mode Konfigurasi: Manajemen dokumen, kategori OneDrive, dan konfigurasi sistem RAG
+              Mode Konfigurasi: Manajemen kredensial API key, model embedding/generation, dan Microsoft Graph
             </>
           )}
         </p>
@@ -159,74 +157,15 @@ export default function UnifiedPage() {
         {activeTab === 'umum' ? (
           <ChatInterface hideHeader={true} />
         ) : (
-          <div style={{
-            flex: '1',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            minHeight: 0
-          }}>
-            {/* Sub-tab Switcher inside Configuration ("Sumber Data" vs "Konfigurasi Sistem") */}
+          <div style={{ flex: '1', overflowY: 'auto', minHeight: 0 }}>
             <div style={{
               maxWidth: '1000px',
               width: '100%',
               margin: '0 auto',
-              padding: '0 24px 10px 24px',
-              display: 'flex',
-              gap: '8px',
-              flexShrink: 0
+              padding: '10px 24px 24px 24px'
             }}>
-              <button
-                onClick={() => setConfigSubTab('sources')}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '20px',
-                  border: configSubTab === 'sources' ? 'none' : '1px solid var(--color-border)',
-                  backgroundColor: configSubTab === 'sources' ? 'var(--color-navy)' : '#fff',
-                  color: configSubTab === 'sources' ? '#fff' : 'var(--color-text-light)',
-                  fontSize: '0.8rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                Sumber Data
-              </button>
-
-              <button
-                onClick={() => setConfigSubTab('config')}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '20px',
-                  border: configSubTab === 'config' ? 'none' : '1px solid var(--color-border)',
-                  backgroundColor: configSubTab === 'config' ? 'var(--color-navy)' : '#fff',
-                  color: configSubTab === 'config' ? '#fff' : 'var(--color-text-light)',
-                  fontSize: '0.8rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                Konfigurasi Sistem
-              </button>
+              <ConfigManager />
             </div>
-
-            {/* Scrollable container for OneDrive / Config Candidate Tables */}
-            <div style={{ flex: '1', overflowY: 'auto', minHeight: 0 }}>
-              <div style={{
-                maxWidth: '1000px',
-                width: '100%',
-                margin: '0 auto',
-                padding: '0 24px 24px 24px'
-              }}>
-                {configSubTab === 'sources' ? (
-                  <OneDriveManager />
-                ) : (
-                  <ConfigManager />
-                )}
-              </div>
-            </div>
-
           </div>
         )}
       </div>

@@ -26,7 +26,11 @@ def retrieve_relevant_chunks(question: str, category: Optional[str] = None) -> t
     collection = chroma_client.get_or_create_collection(name="tps_docs")
 
     if category and category != "Semua Data":
-        where_filter = {"category": category}
+        active_sources = get_active_filenames()
+        if category in active_sources:
+            where_filter = {"source": category}
+        else:
+            where_filter = {"category": category}
     else:
         active_sources = get_active_filenames()
         if active_sources:
