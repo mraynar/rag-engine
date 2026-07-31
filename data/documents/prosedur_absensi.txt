@@ -1,9 +1,0 @@
-Prosedur absensi pegawai di TPS menggunakan sistem verifikasi wajah. Setiap
-pegawai wajib mendaftarkan foto wajah saat awal bergabung. Saat absen,
-sistem akan membandingkan foto yang diambil dengan data yang tersimpan.
-
-Jika sistem tidak dapat mengenali wajah pegawai (unrecognized), pegawai
-diarahkan untuk melapor ke petugas HR untuk verifikasi manual.
-
-Sistem juga dilengkapi liveness detection untuk mencegah kecurangan seperti
-penggunaan foto orang lain untuk absen (spoofing).

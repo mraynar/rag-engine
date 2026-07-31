@@ -1,10 +1,3 @@
-"""
-Chat Store — manages data/conversations.json.
-
-Auto-bootstraps as [] if the file is missing (same pattern as other stores).
-All mutations are atomic: load → mutate → save.
-"""
-
 import json
 import uuid
 from datetime import datetime
@@ -14,10 +7,6 @@ from typing import Optional
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 CONVERSATIONS_PATH = DATA_DIR / "conversations.json"
 
-
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
 
 def _now_iso() -> str:
     return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")
@@ -44,7 +33,7 @@ def _find(conversations: list[dict], conv_id: str) -> Optional[dict]:
 
 
 def _summary(conv: dict) -> dict:
-    """Lightweight summary — no message bodies (for sidebar list performance)."""
+    """Strips message bodies; used for the sidebar list."""
     return {
         "id":            conv["id"],
         "title":         conv["title"],
@@ -55,16 +44,10 @@ def _summary(conv: dict) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
-
 def list_conversations() -> list[dict]:
-    """Return summaries sorted pinned-first, then by updated_at descending."""
     convs = _load()
     summaries = [_summary(c) for c in convs]
     summaries.sort(key=lambda s: (not s["pinned"], s["updated_at"]), reverse=False)
-    # pinned=True sorts before pinned=False; within each group, newer first
     summaries.sort(key=lambda s: (0 if s["pinned"] else 1, s["updated_at"]), reverse=False)
     summaries.sort(key=lambda s: s["updated_at"], reverse=True)
     pinned   = [s for s in summaries if s["pinned"]]
@@ -73,19 +56,17 @@ def list_conversations() -> list[dict]:
 
 
 def get_conversation(conv_id: str) -> dict:
-    """Return full conversation including messages. Raises KeyError if not found."""
     convs = _load()
     conv = _find(convs, conv_id)
     if conv is None:
-        raise KeyError(f"Conversation '{conv_id}' tidak ditemukan")
+        raise KeyError(f"Conversation '{conv_id}' not found")
     return conv
 
 
 def create_conversation() -> dict:
-    """Create a new empty conversation and persist it. Returns the full record."""
     conv = {
         "id":         f"conv_{uuid.uuid4().hex[:8]}",
-        "title":      "Percakapan baru",
+        "title":      "New conversation",
         "pinned":     False,
         "created_at": _now_iso(),
         "updated_at": _now_iso(),
@@ -103,15 +84,10 @@ def append_messages(
     assistant_content: str,
     sources: list[str] | None = None,
 ) -> None:
-    """Append a user+assistant message pair and update updated_at.
-
-    If this is the first message pair, auto-derive a title from the user message
-    (first 40 characters, trimmed).
-    """
     convs = _load()
     conv = _find(convs, conv_id)
     if conv is None:
-        raise KeyError(f"Conversation '{conv_id}' tidak ditemukan")
+        raise KeyError(f"Conversation '{conv_id}' not found")
 
     now = _now_iso()
     is_first = len(conv.get("messages", [])) == 0
@@ -130,38 +106,34 @@ def append_messages(
     conv["updated_at"] = now
 
     if is_first:
-        # Auto-title from the first user message
         conv["title"] = user_content[:40].strip() + ("…" if len(user_content) > 40 else "")
 
     _save(convs)
 
 
 def rename_conversation(conv_id: str, new_title: str) -> dict:
-    """Update the conversation title. Returns the updated summary."""
     convs = _load()
     conv = _find(convs, conv_id)
     if conv is None:
-        raise KeyError(f"Conversation '{conv_id}' tidak ditemukan")
-    conv["title"] = new_title.strip() or "Percakapan baru"
+        raise KeyError(f"Conversation '{conv_id}' not found")
+    conv["title"] = new_title.strip() or "New conversation"
     conv["updated_at"] = _now_iso()
     _save(convs)
     return _summary(conv)
 
 
 def toggle_pin(conv_id: str, pinned: bool) -> dict:
-    """Set pinned status. Returns the updated summary."""
     convs = _load()
     conv = _find(convs, conv_id)
     if conv is None:
-        raise KeyError(f"Conversation '{conv_id}' tidak ditemukan")
+        raise KeyError(f"Conversation '{conv_id}' not found")
     conv["pinned"] = pinned
     _save(convs)
     return _summary(conv)
 
 
 def delete_conversation(conv_id: str) -> None:
-    """Delete a conversation by id. Raises KeyError if not found."""
     convs = _load()
     if not _find(convs, conv_id):
-        raise KeyError(f"Conversation '{conv_id}' tidak ditemukan")
+        raise KeyError(f"Conversation '{conv_id}' not found")
     _save([c for c in convs if c["id"] != conv_id])

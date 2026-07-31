@@ -1,13 +1,4 @@
-"""
-Ingestion Service — parsing multi-format dokumen dan indexing ke ChromaDB.
-
-Mendukung: .txt, .csv, .xlsx, .xls, .docx, .pdf, .pptx
-Setiap format punya strategi chunking sendiri:
-  - Teks (txt/docx/pdf): sentence-splitting + accumulation (sama seperti index_documents.py)
-  - Tabular (csv/xlsx): 1 row = 1 chunk (row sudah unit informasi tersendiri)
-  - Presentasi (pptx): 1 slide = 1 chunk (slide sudah unit tersendiri)
-"""
-
+from typing import Optional
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -24,12 +15,9 @@ from app.core.config import (
     get_generation_model,
 )
 
+
 CHUNK_SIZE = 300
 
-
-# ---------------------------------------------------------------------------
-# Shared text chunking helper (extracted from index_documents.py chunk_text)
-# ---------------------------------------------------------------------------
 
 def _split_sentences(text: str) -> list[str]:
     text = text.strip()
@@ -38,13 +26,12 @@ def _split_sentences(text: str) -> list[str]:
 
 
 def chunk_by_sentences(text: str, chunk_size: int = CHUNK_SIZE) -> list[str]:
-    """Pecah teks jadi chunks berdasarkan kalimat. Reusable untuk semua format teks."""
     sentences = _split_sentences(text)
     chunks: list[str] = []
     current = ""
 
     for sentence in sentences:
-        # Kalimat tunggal lebih panjang dari chunk_size → jadikan chunk sendiri
+        # oversized sentence becomes its own chunk
         if len(sentence) > chunk_size:
             if current:
                 chunks.append(current.strip())
@@ -64,10 +51,6 @@ def chunk_by_sentences(text: str, chunk_size: int = CHUNK_SIZE) -> list[str]:
 
     return chunks
 
-
-# ---------------------------------------------------------------------------
-# Format parsers — each returns list[str] (chunks ready for embedding)
-# ---------------------------------------------------------------------------
 
 def parse_txt(file_path: Path) -> list[str]:
     text = _read_text_with_fallback_encoding(file_path)
@@ -131,17 +114,11 @@ def parse_csv(file_path: Path) -> list[str]:
 
 
 def _dataframe_to_chunks(df) -> list[str]:
-    """Konversi DataFrame ke list chunks — 1 row = 1 chunk.
-
-    Strategi row-based (bukan sentence-split) karena setiap baris tabel adalah
-    unit informasi tersendiri, beda dengan teks naratif.
-    Format: "Kolom1: Nilai1, Kolom2: Nilai2, ..."
-    """
+    """one row = one chunk; row-based because each table row is a standalone fact."""
     chunks: list[str] = []
     for _, row in df.iterrows():
         parts = []
         for col, val in row.items():
-            # Lewati sel yang kosong (NaN / string kosong)
             if val is None:
                 continue
             str_val = str(val).strip()
@@ -177,11 +154,9 @@ def parse_image(file_path: Path) -> list[str]:
     elif extension == ".webp":
         mime_type = "image/webp"
 
-    # Baca file biner gambar
     content = file_path.read_bytes()
     part = types.Part.from_bytes(data=content, mime_type=mime_type)
 
-    # Prompt analisis gambar multimodal
     prompt = (
         "Lakukan analisis mendalam terhadap gambar ini.\n"
         "1. Ekstrak dan tuliskan semua teks (OCR) yang terlihat pada gambar dengan sangat akurat dan lengkap.\n"
@@ -191,7 +166,6 @@ def parse_image(file_path: Path) -> list[str]:
     )
 
     try:
-        # Gunakan client Gemini multimodal
         response = get_gemini_client().models.generate_content(
             model=get_generation_model(),
             contents=[part, prompt],
@@ -202,10 +176,6 @@ def parse_image(file_path: Path) -> list[str]:
 
     return chunk_by_sentences(text)
 
-
-# ---------------------------------------------------------------------------
-# Format dispatcher
-# ---------------------------------------------------------------------------
 
 _PARSERS = {
     ".txt":  parse_txt,
@@ -225,13 +195,12 @@ _SUPPORTED_FORMATS = ", ".join(sorted(_PARSERS.keys()))
 
 _request_times: list[float] = []
 _request_lock = Lock()
-MAX_RPM = 90  # stay under the 100 limit with a safety margin
+MAX_RPM = 50  # half the actual 100 limit; safety margin
 
 
 def _wait_for_rate_limit_slot():
     with _request_lock:
         now = time.time()
-        # drop timestamps older than 60 seconds
         while _request_times and _request_times[0] < now - 60:
             _request_times.pop(0)
         if len(_request_times) >= MAX_RPM:
@@ -245,27 +214,14 @@ def _embed_texts_batch(
     batch_size: int = 100,
     max_workers: int = 3,
 ) -> list[list[float]]:
-    """Embed a list of texts in batches, running up to `max_workers` batches concurrently.
-
-    Perubahan dari versi sebelumnya:
-    - batch_size dinaikkan 50 → 100 (mengurangi jumlah API call ~50%).
-    - Hingga `max_workers` (default 3) batch berjalan paralel via ThreadPoolExecutor,
-      sehingga total wall-clock time untuk dokumen besar turun drastis.
-    - Urutan hasil dijaga persis sama dengan urutan input (zip dengan chunk ids aman).
-
-    Retry on rate limit:
-    - Setiap batch dicoba hingga 3 kali jika terkena RESOURCE_EXHAUSTED / HTTP 429
-      dengan jeda 30 detik antar percobaan. Error lain langsung di-raise.
-
-    Jika Gemini menolak batch_size=100 karena limit ukuran, kurangi ke 50 dan
-    catat limit aktual yang ditemukan.
-    """
+    """Embed texts in parallel batches; result order matches input order."""
     batches = [texts[i : i + batch_size] for i in range(0, len(texts), batch_size)]
 
     def embed_one_batch(batch: list[str]) -> list[list[float]]:
+        _wait_for_rate_limit_slot()
+        time.sleep(1.0)  # fixed pacing on top of the rate-limit window
         for attempt in range(3):
             try:
-                _wait_for_rate_limit_slot()
                 result = get_gemini_client().models.embed_content(
                     model=get_embedding_model(),
                     contents=batch,
@@ -274,13 +230,11 @@ def _embed_texts_batch(
                 return [e.values for e in result.embeddings]
             except Exception as e:
                 if "RESOURCE_EXHAUSTED" in str(e) and attempt < 2:
-                    # Rate limit — tunggu lalu coba lagi
-                    time.sleep(30)
+                    time.sleep(65)  # wait for rate-limit window to reset
                     continue
-                raise  # bukan rate limit, atau sudah 3x gagal
-        return []  # unreachable, tapi mypy senang
+                raise
+        return []  # unreachable
 
-    # Kumpulkan hasil per-indeks supaya urutan tetap terjaga
     all_embeddings: list[list[list[float]] | None] = [None] * len(batches)
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_idx = {executor.submit(embed_one_batch, batch): i for i, batch in enumerate(batches)}
@@ -288,19 +242,14 @@ def _embed_texts_batch(
             idx = future_to_idx[future]
             all_embeddings[idx] = future.result()  # re-raises exception from thread
 
-    # Flatten dalam urutan asli
     flat: list[list[float]] = []
     for batch_result in all_embeddings:
         flat.extend(batch_result)  # type: ignore[arg-type]
     return flat
 
 
-def ingest_document(file_path: Path, filename: str) -> int:
-    """Parse, embed (batched), dan simpan dokumen ke ChromaDB dalam satu bulk insert.
-
-    Returns jumlah chunk yang berhasil diindeks.
-    Raises ValueError untuk format yang tidak didukung.
-    """
+def ingest_document(file_path: Path, filename: str, category: Optional[str] = None) -> int:
+    """Parse, embed, and index a document into ChromaDB. Returns chunk count."""
     extension = file_path.suffix.lower()
     parser = _PARSERS.get(extension)
     if parser is None:
@@ -316,21 +265,23 @@ def ingest_document(file_path: Path, filename: str) -> int:
     chroma_client = chromadb.PersistentClient(path=str(VECTOR_STORE_DIR))
     collection = chroma_client.get_or_create_collection(name="tps_docs")
 
-    # Hapus chunks lama dengan nama file yang sama (defensif — route handler
-    # sudah cek duplikat, tapi lebih aman dibersihkan dulu).
+    # delete stale chunks for this filename before re-indexing
     try:
         collection.delete(where={"source": filename})
     except Exception:
-        pass  # Koleksi kosong atau source belum ada, aman diabaikan
+        pass
 
-    # Embed semua chunks sekaligus dalam batch (jauh lebih cepat dari 1-per-chunk)
     embeddings = _embed_texts_batch(chunks)
 
     chunk_id_prefix = filename.replace(".", "_").replace(" ", "_")
     ids       = [f"{chunk_id_prefix}_{i}" for i in range(len(chunks))]
-    metadatas = [{"source": filename} for _ in chunks]
+    metadatas = []
+    for _ in chunks:
+        meta = {"source": filename}
+        if category is not None:
+            meta["category"] = category
+        metadatas.append(meta)
 
-    # Satu collection.add() untuk semua chunks sekaligus (lebih cepat dari loop)
     collection.add(
         ids=ids,
         embeddings=embeddings,
@@ -339,3 +290,4 @@ def ingest_document(file_path: Path, filename: str) -> int:
     )
 
     return len(chunks)
+

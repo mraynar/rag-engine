@@ -1,76 +1,139 @@
 [
   {
-    "id": "conv_28b0dd52",
-    "title": "siapakah muhammad raynar hammam?",
+    "id": "conv_60809451",
+    "title": "Tanya Biodata Gweh",
     "pinned": false,
-    "created_at": "2026-07-28T07:16:41",
-    "updated_at": "2026-07-28T07:20:08",
+    "created_at": "2026-07-28T07:36:33",
+    "updated_at": "2026-07-29T01:39:34",
     "messages": [
       {
         "role": "user",
-        "content": "siapakah muhammad raynar hammam?",
-        "timestamp": "2026-07-28T07:16:53"
+        "content": "Apa bahasa pemrograman yang dikuasai oleh Muhammad Raynar Hammam?",
+        "timestamp": "2026-07-28T07:37:02"
+      },
+      {
+        "role": "assistant",
+        "content": "Berdasarkan dokumen yang diberikan, **Muhammad Raynar Hammam** memiliki keahlian dalam beberapa bahasa pemrograman yang tercantum di bagian **Hard Skills** miliknya. \n\nBerikut adalah daftar bahasa pemrograman yang dikuasai oleh **Muhammad Raynar Hammam**:\n*   **PHP**\n*   **JavaScript**\n*   **Python**\n*   **Java**\n*   **Dart**\n\nSelain bahasa pemrograman tersebut, ia juga menguasai bahasa markup/style sheet **HTML/CSS**, serta berbagai *framework*, library, dan teknologi pengembangan web/mobile lainnya seperti **React JS**, **Alpine.js**, **Tailwind**, **Bootstrap**, **Node.js**, **Laravel**, dan **Flutter**.",
+        "sources": [
+          "CV_Muhammad Raynar Hammam.pdf",
+          "CV_Muhammad Raynar Hammam.pdf",
+          "CV_Muhammad Raynar Hammam.pdf",
+          "CV_Muhammad Raynar Hammam.pdf",
+          "CV_Muhammad Raynar Hammam.pdf",
+          "CV_Muhammad Raynar Hammam.pdf",
+          "CV_Muhammad Raynar Hammam.pdf",
+          "CV_Muhammad Raynar Hammam.pdf",
+          "CV_Muhammad Raynar Hammam.pdf",
+          "CV_Muhammad Raynar Hammam.pdf"
+        ],
+        "timestamp": "2026-07-28T07:37:02"
+      },
+      {
+        "role": "user",
+        "content": "apa total call terbanyak?",
+        "timestamp": "2026-07-28T07:44:52"
+      },
+      {
+        "role": "assistant",
+        "content": "Berdasarkan analisis data yang terdapat dalam dokumen, berikut adalah perbandingan nilai **TOTAL CALL** untuk setiap operator kapal (**VESSEL OPERATOR**) dan layanan (**SERVICE**):\n\n*   **SIT** (**SERVICE**: **CMI**): 5\n*   **COS** (**SERVICE**: **GMI**): 5\n*   **CMA** (**SERVICE**: **CHINA1**): 5\n*   **SSL** (**SERVICE**: **SSS-SAT**): 3\n*   **XCL** (**SERVICE**: **SSX**): 3\n*   **OOL** (**SERVICE**: **ITS**): 2\n*   **YML** (**SERVICE**: **ITS**): 1\n*   **WHL** (**SERVICE**: **CS2**): 1\n*   **RCL** (**SERVICE**: **RMI3**): 0\n*   **PIL** (**SERVICE**: **SSE**): 0\n\nBerdasarkan perbandingan di atas, nilai **TOTAL CALL** terbanyak adalah **5**. Nilai maksimal ini dimiliki oleh tiga operator kapal, yaitu **SIT** (layanan **CMI**), **COS** (layanan **GMI**), dan **CMA** (layanan **CHINA1**).",
+        "sources": [
+          "Dummy 10 Rows - Sheet1.csv",
+          "Dummy 10 Rows - Sheet1.csv",
+          "Dummy 10 Rows - Sheet1.csv",
+          "Dummy 10 Rows - Sheet1.csv",
+          "Dummy 10 Rows - Sheet1.csv",
+          "Dummy 10 Rows - Sheet1.csv",
+          "Dummy 10 Rows - Sheet1.csv",
+          "Dummy 10 Rows - Sheet1.csv",
+          "Dummy 10 Rows - Sheet1.csv",
+          "Dummy 10 Rows - Sheet1.csv"
+        ],
+        "timestamp": "2026-07-28T07:44:52"
+      },
+      {
+        "role": "user",
+        "content": "berikan list intership atau magang yang pernah diikuti oleh hammam",
+        "timestamp": "2026-07-28T09:00:18"
+      },
+      {
+        "role": "assistant",
+        "content": "Berikut adalah daftar program magang (*internship*) yang pernah dan sedang diikuti oleh **Muhammad Raynar Hammam** berdasarkan dokumen yang diberikan:\n\n* **PT Terminal Peti Kemas Surabaya (Pelindo)** (Juni 2026 – Sekarang) sebagai **Information Technology Intern**.\n* **PT Kelas Kampus Indonesia** (Mei 2026 – Sekarang) sebagai **Front-End Developer Intern (Remote)**.\n* **Himpunan Mahasiswa Sistem Informasi** (Februari 2025 – Februari 2026) sebagai **Public Relations Staff** (tercantum dalam bagian *Internship Experience*).\n* **Data Science Cohort – Asah** dipimpin oleh **Dicoding** (Juni 2026 – Sekarang) sebagai **Data Science Intern**.\n* **UKM Penalaran dan Kreativitas UPN \"Veteran\" East Java** (Januari 2025 – Januari 2026) sebagai **Website Staff** (tercantum dalam bagian *Internship Experience*).\n* **Arindra Production** (Desember 2022 – Mei 2023) sebagai **Product Development Intern**.\n\nSeluruh riwayat di atas tercantum dalam bagian **INTERNSHIP EXPERIENCE** pada dokumen riwayat hidup milik **Muhammad Raynar Hammam**.",
+        "sources": [
+          "CV_Muhammad Raynar Hammam.pdf"
+        ],
+        "timestamp": "2026-07-28T09:00:18"
+      },
+      {
+        "role": "user",
+        "content": "berarti apa saja yang masih aktif hingga saat ini yang ia jalani?",
+        "timestamp": "2026-07-28T09:00:38"
+      },
+      {
+        "role": "assistant",
+        "content": "Berdasarkan dokumen yang diberikan, berikut adalah daftar kegiatan, pendidikan, organisasi, serta pekerjaan magang yang masih aktif dijalani oleh Muhammad Raynar Hammam hingga saat ini (ditandai dengan keterangan waktu \"Present\" pada dokumen):\n\n*   **Bachelor of Information Systems** di **UPN \"Veteran\" East Java, Surabaya** (2024 – Present).\n*   **Novo Entrepreneurship Program** di **Novo Club by Paragon Corp** (March 2026 – Present).\n*   **Programming Mentor** di **Information Systems Community** (April 2026 – Present).\n*   **Front-End Developer Intern (Remote)** di **PT Kelas Kampus Indonesia** (May 2026 – Present).\n*   **Web Development Manager** di **Society Of Renewable Energy** (May 2026 – Present).\n*   **Data Science Intern** di **Data Science Cohort – Asah led by Dicoding** (June 2026 – Present).\n*   **Information Technology Intern** di **PT Terminal Peti Kemas Surabaya (Pelindo)** (June 2026 – Present).\n\nSeluruh posisi dan kegiatan di atas saat ini masih berjalan secara aktif karena memiliki rentang periode yang dimulai dari tahun 2024 atau 2026 hingga sekarang (**Present**), mencakup kegiatan akademis, magang profesional, kepemimpinan organisasi, hingga program pengembangan diri.",
+        "sources": [
+          "CV_Muhammad Raynar Hammam.pdf"
+        ],
+        "timestamp": "2026-07-28T09:00:38"
+      },
+      {
+        "role": "user",
+        "content": "kalau kegiatan magang nya saja apa yang masih aktif?",
+        "timestamp": "2026-07-28T09:10:11"
+      },
+      {
+        "role": "assistant",
+        "content": "Berdasarkan dokumen yang diberikan, kegiatan magang (*internship*) yang saat ini masih aktif (ditunjukkan dengan keterangan \"Present\") adalah sebagai berikut:\n\n* **Front-End Developer Intern (Remote)** di **PT Kelas Kampus Indonesia** (Mei 2026 – Present)\n* **Data Science Intern** di **Data Science Cohort – Asah led by Dicoding** (Juni 2026 – Present)\n* **Information Technology Intern** di **PT Terminal Peti Kemas Surabaya (Pelindo)** (Juni 2026 – Present)",
+        "sources": [
+          "CV_Muhammad Raynar Hammam.pdf"
+        ],
+        "timestamp": "2026-07-28T09:10:11"
+      },
+      {
+        "role": "user",
+        "content": "kuliah dimana muhammad raynar hammam",
+        "timestamp": "2026-07-29T01:39:34"
+      },
+      {
+        "role": "assistant",
+        "content": "**Muhammad Raynar Hammam** menempuh kuliah di **UPN \"Veteran\" East Java** yang berlokasi di Surabaya, dengan program studi **Bachelor of Information Systems** (Sistem Informasi).",
+        "sources": [
+          "CV_Muhammad Raynar Hammam.pdf"
+        ],
+        "timestamp": "2026-07-29T01:39:34"
+      }
+    ]
+  },
+  {
+    "id": "conv_001af510",
+    "title": "siapakah muhammad raynar hammam",
+    "pinned": false,
+    "created_at": "2026-07-29T01:24:56",
+    "updated_at": "2026-07-29T01:40:15",
+    "messages": [
+      {
+        "role": "user",
+        "content": "siapakah muhammad raynar hammam",
+        "timestamp": "2026-07-29T01:25:04"
       },
       {
         "role": "assistant",
         "content": "Maaf, saya tidak menemukan informasi ini di dokumen.",
         "sources": [],
-        "timestamp": "2026-07-28T07:16:53"
+        "timestamp": "2026-07-29T01:25:04"
       },
       {
         "role": "user",
-        "content": "apa vessel operator dengan total call terbanyak?",
-        "timestamp": "2026-07-28T07:17:36"
+        "content": "kalau lihat dari cv yang muhammad raynar hammam miliki, posisi apa saja atau jenis pekerjaan apa saja yang dapat dia ambil?",
+        "timestamp": "2026-07-29T01:40:15"
       },
       {
         "role": "assistant",
-        "content": "Berdasarkan data pada konteks yang diberikan, **vessel operator** dengan jumlah **total call** terbanyak adalah **SSL**. \n\nBerikut adalah rincian data **total call** untuk setiap **vessel operator**:\n*   **SSL**: memiliki **total call** sebanyak 3.\n*   **RCL**: memiliki **total call** sebanyak 0.\n*   **PIL**: memiliki **total call** sebanyak 0.",
+        "content": "Berdasarkan dokumen CV yang dimiliki oleh **Muhammad Raynar Hammam**, berikut adalah posisi atau jenis pekerjaan yang dapat ia ambil sesuai dengan riwayat pengalaman, sertifikasi, keahlian, dan peran yang pernah dijalankannya:\n\n*   **Front-End Developer**: Didukung oleh pengalamannya sebagai **Front-End Developer Intern** di **PT Kelas Kampus Indonesia**, serta kepemilikan sertifikasi **Introduction to Front-End Development** (Meta) dan **Coding Front-End** (Microsoft).\n*   **Full Stack Developer**: Sesuai dengan profilnya sebagai **Full Stack Developer & Data Analyst**, sertifikasi **Full Stack Web Development** (AWS), serta pengalaman sebagai **Full Stack Developer & Web Administrator** untuk Website UKM Penalaran.\n*   **Data Analyst**: Sesuai dengan profilnya dan didukung oleh sertifikasi **Data Analysis Using Python** (Google), **Master in Data Analysis and Analytics** (Udemy), serta keahlian menggunakan *tools* analisis seperti **Power BI**, **Google Looker Studio**, dan **DB Browser for SQLite**.\n*   **Product Developer / Product Development**: Sesuai dengan fokus karir pada profil profesionalnya yang memiliki minat besar pada **Product Development** serta pengalaman kerjanya sebagai **Product Development Intern** di **Arindra Production**.\n*   **Software Engineer**: Didukung oleh latar belakang pendidikannya di **SMK Negeri 2 Surabaya** jurusan **Software Engineering (RPL)** serta sertifikasi **Software Engineering Mastery** (IBM).\n*   **Mobile Developer**: Berdasarkan pengalamannya sebagai **Mobile Developer** dalam proyek pembuatan aplikasi TemuAksi menggunakan teknologi **Flutter** dan **Firebase**.\n*   **Web Development Manager / Web Administrator**: Didukung oleh pengalamannya sebagai **Web Development Manager** di **Society Of Renewable Energy** dan **Website Staff** di **UKM Penalaran dan Kreativitas UPN \"Veteran\" East Java**.\n*   **Information Technology (IT) Staff**: Didukung oleh pengalaman magangnya sebagai **Information Technology Intern** di **PT Terminal Peti Kemas Surabaya (Pelindo)**.\n*   **Programming Mentor**: Berdasarkan pengalamannya mengelola divisi mentor pemrograman di **Information Systems Community**.\n*   **Public Relations Staff**: Berdasarkan pengalamannya menjabat sebagai **Public Relations Staff** di **Himpunan Mahasiswa Sistem Informasi**.\n\nSecara umum, kualifikasi **Muhammad Raynar Hammam** sangat kuat di bidang pengembangan teknologi informasi (pengembangan web dan aplikasi *mobile*), analisis data, manajemen produk digital, serta koordinasi tim/organisasi.",
         "sources": [
-          "Dummy 10 Rows - Sheet1.csv",
-          "Dummy 10 Rows - Sheet1.csv",
-          "Dummy 10 Rows - Sheet1.csv"
+          "CV_Muhammad Raynar Hammam.pdf"
         ],
-        "timestamp": "2026-07-28T07:17:36"
-      },
-      {
-        "role": "user",
-        "content": "kalau SIT total callnya berapa?",
-        "timestamp": "2026-07-28T07:18:22"
-      },
-      {
-        "role": "assistant",
-        "content": "Berdasarkan konteks yang diberikan, berikut adalah informasi mengenai jumlah **TOTAL CALL** untuk operator kapal **SIT**:\n\nOperator kapal **SIT** memiliki **TOTAL CALL** sebanyak **5**.\n\nBerikut adalah rincian data lengkap untuk operator **SIT**:\n*   **NO**: 4\n*   **VESSEL OPERATOR**: **SIT**\n*   **SERVICE**: **CMI**\n*   **TOTAL CALL**: 5\n*   **AVERAGE BM**: 34\n*   **AVERAGE GM**: 23\n*   **TEU**: 3485",
-        "sources": [
-          "Dummy 10 Rows - Sheet1.csv",
-          "Dummy 10 Rows - Sheet1.csv"
-        ],
-        "timestamp": "2026-07-28T07:18:22"
-      },
-      {
-        "role": "user",
-        "content": "nah itu dia berarti total call terbanyak kenapa anda tidak menyebutkan itu?\nkenapa anda malah menyebutkan : SSL: memiliki total call sebanyak 3.\nRCL: memiliki total call sebanyak 0.\nPIL: memiliki total call sebanyak 0.",
-        "timestamp": "2026-07-28T07:19:08"
-      },
-      {
-        "role": "assistant",
-        "content": "Berdasarkan konteks yang diberikan, saya **tidak tahu** alasan mengapa hal tersebut tidak disebutkan sebelumnya, karena informasi mengenai alasan atau analisis tersebut tidak ada di dalam konteks. Konteks yang Anda berikan hanya memuat data mentah sebagai berikut:\n\n*   **RCL** dengan **SERVICE** RMI3 memiliki **TOTAL CALL** sebanyak 0.\n*   **PIL** dengan **SERVICE** SSE memiliki **TOTAL CALL** sebanyak 0.\n*   **SSL** dengan **SERVICE** SSS-SAT memiliki **TOTAL CALL** sebanyak 3.\n\nPenjelasan lebih lanjut mengenai alasan pemilihan penyampaian informasi tersebut tidak tersedia di dalam dokumen atau teks konteks yang Anda sediakan.",
-        "sources": [
-          "Dummy 10 Rows - Sheet1.csv",
-          "Dummy 10 Rows - Sheet1.csv",
-          "Dummy 10 Rows - Sheet1.csv"
-        ],
-        "timestamp": "2026-07-28T07:19:08"
-      },
-      {
-        "role": "user",
-        "content": "berikan informasi average GM terbanyak",
-        "timestamp": "2026-07-28T07:20:08"
-      },
-      {
-        "role": "assistant",
-        "content": "Maaf, saya tidak menemukan informasi ini di dokumen.",
-        "sources": [],
-        "timestamp": "2026-07-28T07:20:08"
+        "timestamp": "2026-07-29T01:40:15"
       }
     ]
   }

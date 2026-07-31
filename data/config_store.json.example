@@ -22,5 +22,13 @@
     "value": "gemini-2.5-flash",
     "is_secret": false,
     "is_active": true
+  },
+  {
+    "key": "azure_graph_placeholder",
+    "group": "azure_graph",
+    "description": "Kredensial Azure / Microsoft Graph API (Belum Dikonfigurasi)",
+    "value": "{\"tenant_id\": \"\", \"client_id\": \"\", \"client_secret\": \"\"}",
+    "is_secret": true,
+    "is_active": false
   }
 ]
