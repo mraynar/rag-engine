@@ -87,7 +87,10 @@ def has_valid_azure_credentials() -> bool:
 
 def download_sharepoint_file(share_url: str, dest_path: Path) -> str:
     """Download SharePoint/OneDrive file. Returns the fetch_method ('graph_api' or 'fallback_download')."""
-    if has_valid_azure_credentials():
+    use_graph = has_valid_azure_credentials()
+    print(f"[sharepoint_fetcher] has_valid_azure_credentials={use_graph}", flush=True)
+
+    if use_graph:
         access_token = get_graph_access_token()
         drive_item = resolve_share_url_to_drive_item(share_url, access_token)
 
@@ -136,7 +139,15 @@ def download_sharepoint_file(share_url: str, dest_path: Path) -> str:
 
         try:
             response = requests.get(fallback_url, allow_redirects=True, timeout=60, stream=True)
-            if response.status_code != 200:
+            if response.status_code == 403:
+                raise ValueError(
+                    "Gagal download — Server SharePoint menolak akses (403 Forbidden). "
+                    "Link yang Anda masukkan sepertinya bukan 'Share Link' yang benar. "
+                    "Cara benar: buka file di SharePoint/OneDrive, klik tombol 'Share', "
+                    "pilih 'Copy Link' (bukan salin dari address bar browser), pastikan "
+                    "aksesnya 'Anyone with the link', lalu paste link itu di sini."
+                )
+            elif response.status_code != 200:
                 raise ValueError(f"Gagal mengunduh file dari fallback URL, status: {response.status_code}")
 
             # Check content-type to avoid downloading HTML login page

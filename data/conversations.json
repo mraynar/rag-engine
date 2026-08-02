@@ -109,7 +109,7 @@
     "title": "siapakah muhammad raynar hammam",
     "pinned": false,
     "created_at": "2026-07-29T01:24:56",
-    "updated_at": "2026-07-29T01:40:15",
+    "updated_at": "2026-08-02T15:07:27",
     "messages": [
       {
         "role": "user",
@@ -134,6 +134,17 @@
           "CV_Muhammad Raynar Hammam.pdf"
         ],
         "timestamp": "2026-07-29T01:40:15"
+      },
+      {
+        "role": "user",
+        "content": "\"Berapa TEUS untuk LOP TIL pada Januari 2023?\"",
+        "timestamp": "2026-08-02T15:07:27"
+      },
+      {
+        "role": "assistant",
+        "content": "Maaf, saya tidak menemukan informasi ini di dokumen.",
+        "sources": [],
+        "timestamp": "2026-08-02T15:07:27"
       }
     ]
   }
