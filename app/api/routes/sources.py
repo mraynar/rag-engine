@@ -75,7 +75,7 @@ def sync_source(id: str) -> dict:
         temp_path = Path(tmpdir) / temp_filename
         try:
             # Download file from SharePoint share link
-            download_sharepoint_file(source["onedrive_url"], temp_path)
+            fetch_method = download_sharepoint_file(source["onedrive_url"], temp_path)
 
             # Ingest downloaded document with category metadata
             chunk_count = ingest_document(
@@ -85,7 +85,7 @@ def sync_source(id: str) -> dict:
             )
 
             # Update store as success
-            updated = mark_synced(id, chunk_count)
+            updated = mark_synced(id, chunk_count, fetch_method)
             return {
                 "message": f"Sinkronisasi berhasil. Terindeks {chunk_count} chunk.",
                 "source": updated,
