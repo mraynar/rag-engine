@@ -77,27 +77,97 @@ def resolve_share_url_to_drive_item(share_url: str, access_token: str) -> dict:
         raise ValueError(f"Gagal menghubungi Microsoft Graph API: {str(e)}")
 
 
-def download_sharepoint_file(share_url: str, dest_path: Path) -> Path:
-    access_token = get_graph_access_token()
-    drive_item = resolve_share_url_to_drive_item(share_url, access_token)
-
-    download_url = drive_item.get("@microsoft.graph.downloadUrl")
-    if not download_url:
-        raise ValueError("Gagal mendapatkan link download dari Microsoft Graph API metadata.")
-
-    headers = {"Authorization": f"Bearer {access_token}"}
+def has_valid_azure_credentials() -> bool:
     try:
-        response = requests.get(download_url, headers=headers, timeout=60, stream=True)
-        if response.status_code != 200:
-            raise ValueError(f"Gagal mengunduh file, status: {response.status_code}")
+        creds = get_azure_credentials()
+        return bool(creds.get("tenant_id") and creds.get("client_id") and creds.get("client_secret"))
+    except Exception:
+        return False
 
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(dest_path, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-        return dest_path
-    except Exception as e:
-        if isinstance(e, ValueError):
-            raise
-        raise ValueError(f"Gagal mengunduh file dari SharePoint: {str(e)}")
+
+def download_sharepoint_file(share_url: str, dest_path: Path) -> str:
+    """Download SharePoint/OneDrive file. Returns the fetch_method ('graph_api' or 'fallback_download')."""
+    if has_valid_azure_credentials():
+        access_token = get_graph_access_token()
+        drive_item = resolve_share_url_to_drive_item(share_url, access_token)
+
+        download_url = drive_item.get("@microsoft.graph.downloadUrl")
+        if not download_url:
+            raise ValueError("Gagal mendapatkan link download dari Microsoft Graph API metadata.")
+
+        headers = {"Authorization": f"Bearer {access_token}"}
+        try:
+            response = requests.get(download_url, headers=headers, timeout=60, stream=True)
+            if response.status_code != 200:
+                raise ValueError(f"Gagal mengunduh file dari Graph API, status: {response.status_code}")
+
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(dest_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+            
+            # Validate Excel format
+            import pandas as pd
+            try:
+                pd.read_excel(str(dest_path), nrows=1)
+            except Exception as e:
+                dest_path.unlink(missing_ok=True)
+                raise ValueError(f"File terunduh via Graph API bukan spreadsheet Excel (.xlsx) yang valid: {str(e)}")
+
+            return "graph_api"
+        except Exception as e:
+            if isinstance(e, ValueError):
+                raise
+            raise ValueError(f"Gagal mengunduh file dari SharePoint: {str(e)}")
+    else:
+        # TEMPORARY FALLBACK — replace with Graph API once Azure credentials are available
+        # Check token parameter in query string
+        if "e=" not in share_url:
+            raise ValueError(
+                "Link ini sepertinya bukan hasil tombol Share/Copy Link (tidak ada token akses 'e='). "
+                "Buka file di SharePoint, klik Share > Copy Link, lalu gunakan link itu."
+            )
+
+        fallback_url = share_url
+        if "download=1" not in fallback_url:
+            separator = "&" if "?" in fallback_url else "?"
+            fallback_url = f"{fallback_url}{separator}download=1"
+
+        try:
+            response = requests.get(fallback_url, allow_redirects=True, timeout=60, stream=True)
+            if response.status_code != 200:
+                raise ValueError(f"Gagal mengunduh file dari fallback URL, status: {response.status_code}")
+
+            # Check content-type to avoid downloading HTML login page
+            content_type = response.headers.get("content-type", "")
+            if "text/html" in content_type:
+                raise ValueError(
+                    "Gagal download — kemungkinan link butuh login. "
+                    "Coba pastikan link dibuat dengan akses 'Anyone in TPS with the link' (public), "
+                    "atau tunggu kredensial Azure siap."
+                )
+
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(dest_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+
+            # Validate Excel format using pandas
+            import pandas as pd
+            try:
+                pd.read_excel(str(dest_path), nrows=1)
+            except Exception as e:
+                dest_path.unlink(missing_ok=True)
+                raise ValueError(
+                    "Gagal download — file terunduh bukan Excel (.xlsx) yang valid (kemungkinan dialihkan ke halaman login). "
+                    "Pastikan tipe akses link diatur ke 'Anyone' (siapa saja) atau gunakan kredensial Azure."
+                )
+
+            return "fallback_download"
+        except Exception as e:
+            if isinstance(e, ValueError):
+                raise
+            raise ValueError(f"Jalur fallback gagal menghubungi OneDrive/SharePoint: {str(e)}")
+

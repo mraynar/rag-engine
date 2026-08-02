@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "id": "src_bf647878",
+    "category_name": "Overview Box",
+    "onedrive_url": "https://tpssby-my.sharepoint.com/:x:/r/personal/ikhsan_efendi_tps_co_id/Documents/CHATBOT/OVERVIEW%20BOX.xlsx?d=w77ff21484def42c78297999e765b63d5&csf=1&web=1&e=JEjmL5",
+    "last_synced_at": null,
+    "sync_status": "failed",
+    "last_error": "Kredensial Azure/Graph API belum dikonfigurasi. Isi dulu di halaman Konfigurasi > Tata Kelola.",
+    "chunk_count": 0
+  }
+]

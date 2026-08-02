@@ -50,7 +50,8 @@ def create_source(category_name: str, onedrive_url: str) -> dict:
         "last_synced_at": None,
         "sync_status": "never_synced",
         "last_error": None,
-        "chunk_count": 0
+        "chunk_count": 0,
+        "fetch_method": None
     }
     store.append(new_entry)
     _save_store(store)
@@ -100,7 +101,7 @@ def delete_source(id: str) -> None:
     _save_store(new_store)
 
 
-def mark_synced(id: str, chunk_count: int) -> dict:
+def mark_synced(id: str, chunk_count: int, fetch_method: str = "graph_api") -> dict:
     from datetime import datetime, timezone
     store = _load_store()
     found = None
@@ -114,6 +115,7 @@ def mark_synced(id: str, chunk_count: int) -> dict:
     found["last_synced_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
     found["chunk_count"] = chunk_count
     found["last_error"] = None
+    found["fetch_method"] = fetch_method
     _save_store(store)
     return found
 

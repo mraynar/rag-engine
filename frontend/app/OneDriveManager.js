@@ -312,18 +312,32 @@ export default function OneDriveManager() {
                       </span>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <span style={{
-                          display: 'inline-block',
-                          alignSelf: 'flex-start',
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          fontSize: '0.7rem',
-                          fontWeight: '600',
-                          color: statusColor,
-                          backgroundColor: statusBg
-                        }}>
-                          {statusLabel}
-                        </span>
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '0.7rem',
+                            fontWeight: '600',
+                            color: statusColor,
+                            backgroundColor: statusBg
+                          }}>
+                            {statusLabel}
+                          </span>
+                          {cat.sync_status === 'success' && cat.fetch_method && (
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              fontWeight: '600',
+                              color: cat.fetch_method === 'fallback_download' ? '#B7791F' : '#2B6CB0',
+                              backgroundColor: cat.fetch_method === 'fallback_download' ? '#FEFCBF' : '#EBF8FF'
+                            }}>
+                              {cat.fetch_method === 'fallback_download' ? 'Mode: Fallback' : 'Mode: Graph API'}
+                            </span>
+                          )}
+                        </div>
                         {cat.last_synced_at && (
                           <span style={{ fontSize: '0.7rem', color: 'var(--color-muted)' }}>
                             Sync: {new Date(cat.last_synced_at + 'Z').toLocaleDateString('id-ID', {
