@@ -1,0 +1,1853 @@
+=== STRUKTUR FOLDER APP (backend) ===
+app
+app/core
+app/core/config.py
+app/core/.gitkeep
+app/schemas
+app/schemas/config.py
+app/schemas/.gitkeep
+app/schemas/chat.py
+app/schemas/document.py
+app/schemas/source.py
+app/api
+app/api/routes
+app/api/routes/config.py
+app/api/routes/documents.py
+app/api/routes/.gitkeep
+app/api/routes/sources.py
+app/api/routes/chat.py
+app/api/routes/conversations.py
+app/main.py
+app/services
+app/services/ingestion.py
+app/services/generation.py
+app/services/chat_store.py
+app/services/.gitkeep
+app/services/onedrive_fetcher.py
+app/services/config_store.py
+app/services/document_store.py
+app/services/sources_store.py
+app/services/retrieval.py
+app/services/sharepoint_fetcher.py
+
+=== ISI FILE ===
+
+----------------------------------------
+FILE: app/core/config.py
+----------------------------------------
+from pathlib import Path
+
+from google import genai
+
+from app.services.config_store import get_active_value
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+VECTOR_STORE_DIR = BASE_DIR / "data" / "vector_store"
+
+TOP_N = 15            # raised from 3; tabular docs need more candidates
+DISTANCE_THRESHOLD = 0.70  # relaxed to catch near-duplicate chunks
+
+
+def get_gemini_api_key() -> str:
+    return get_active_value("gemini_api_key")
+
+
+def get_embedding_model() -> str:
+    return get_active_value("embedding_model")
+
+
+def get_generation_model() -> str:
+    return get_active_value("generation_model")
+
+
+import threading
+
+_thread_local = threading.local()
+
+
+def get_gemini_client() -> genai.Client:
+    """Return a thread-local genai.Client, cached per API key."""
+    api_key = get_gemini_api_key()
+
+    if not hasattr(_thread_local, "client_cache"):
+        _thread_local.client_cache = {}
+
+    cache = _thread_local.client_cache
+    if api_key not in cache:
+        cache[api_key] = genai.Client(api_key=api_key)
+
+    return cache[api_key]
+
+----------------------------------------
+FILE: app/schemas/config.py
+----------------------------------------
+from typing import Optional
+
+from pydantic import BaseModel
+
+
+class ConfigCreateRequest(BaseModel):
+    """Request body for POST /config — add a new candidate entry."""
+    group: str
+    description: str
+    value: str
+    is_secret: bool
+
+class ConfigUpdateRequest(BaseModel):
+    """Request body for PUT /config/{key} — patch description and/or value.
+    
+    Both fields are optional; at least one must be provided (enforced in the
+    route handler).
+    """
+    description: Optional[str] = None
+    value: Optional[str] = None
+
+----------------------------------------
+FILE: app/schemas/chat.py
+----------------------------------------
+from typing import Optional
+from pydantic import BaseModel
+
+
+class ChatRequest(BaseModel):
+    message: str
+    conversation_id: str
+    category: Optional[str] = None
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    sources: list[str] = []
+----------------------------------------
+FILE: app/schemas/document.py
+----------------------------------------
+from pydantic import BaseModel
+
+
+class DocumentToggleRequest(BaseModel):
+    is_active: bool
+
+----------------------------------------
+FILE: app/schemas/source.py
+----------------------------------------
+from typing import Optional
+from pydantic import BaseModel
+
+
+class SourceCreateRequest(BaseModel):
+    category_name: str
+    onedrive_url: str
+
+
+class SourceUpdateRequest(BaseModel):
+    category_name: Optional[str] = None
+    onedrive_url: Optional[str] = None
+
+----------------------------------------
+FILE: app/api/routes/config.py
+----------------------------------------
+from fastapi import APIRouter, HTTPException
+
+from app.schemas.config import ConfigCreateRequest, ConfigUpdateRequest
+from app.services.config_store import (
+    create_config,
+    delete_config,
+    list_config,
+    reveal_config,
+    set_active,
+    update_config,
+)
+
+router = APIRouter()
+
+
+@router.get("/config")
+def get_all_config() -> list:
+    return list_config()
+
+
+@router.post("/config", status_code=201)
+def create_config_entry(request: ConfigCreateRequest) -> dict:
+    new_entry = create_config(
+        group=request.group,
+        description=request.description,
+        value=request.value,
+        is_secret=request.is_secret,
+    )
+    msg = f"New candidate '{new_entry['key']}' added to group '{request.group}'."
+    return {"message": msg, "entry": new_entry}
+
+
+@router.put("/config/{key}")
+def update_config_entry(key: str, request: ConfigUpdateRequest) -> dict:
+    if request.description is None and request.value is None:
+        raise HTTPException(
+            status_code=422,
+            detail="At least one field must be provided: 'description' or 'value'.",
+        )
+    try:
+        updated = update_config(key, description=request.description, value=request.value)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return {"message": f"Config '{key}' updated.", "entry": updated}
+
+
+@router.patch("/config/{key}/activate")
+def activate_config_entry(key: str) -> dict:
+    try:
+        set_active(key)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return {"message": f"Entry '{key}' is now active in its group."}
+
+
+@router.delete("/config/{key}")
+def delete_config_entry(key: str) -> dict:
+    try:
+        result = delete_config(key)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if result["promoted_key"]:
+        msg = (
+            f"Config '{key}' deleted. "
+            f"Active entry automatically switched to: \"{result['promoted_label']}\"."
+        )
+    else:
+        msg = f"Config '{key}' deleted."
+
+    return {"message": msg, "promoted_key": result["promoted_key"]}
+
+
+@router.get("/config/{key}/reveal")
+def get_revealed_config(key: str) -> dict:
+    try:
+        val = reveal_config(key)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return {"value": val}
+
+----------------------------------------
+FILE: app/api/routes/documents.py
+----------------------------------------
+import chromadb
+from fastapi import APIRouter, Form, HTTPException, UploadFile
+
+from app.core.config import VECTOR_STORE_DIR
+from app.schemas.document import DocumentToggleRequest
+from app.services.document_store import (
+    delete_document,
+    list_documents,
+    register_document,
+    toggle_active,
+)
+from app.services.ingestion import ingest_document
+
+router = APIRouter(prefix="/documents", tags=["documents"])
+
+DOCUMENTS_DIR_NAME = "documents"
+
+
+def _get_documents_dir():
+    from pathlib import Path
+    base = Path(__file__).resolve().parent.parent.parent.parent / "data" / "documents"
+    base.mkdir(parents=True, exist_ok=True)
+    return base
+
+
+@router.post("", status_code=201)
+async def upload_document(
+    file: UploadFile,
+    label: str = Form(default=""),
+) -> dict:
+    """Three-phase upload: save → ingest → register. Each phase rolls back the previous on failure."""
+    from pathlib import Path
+
+    filename = file.filename or "unknown"
+    documents_dir = _get_documents_dir()
+    dest_path = documents_dir / filename
+
+    if dest_path.exists():
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"File '{filename}' already exists. Delete the existing document "
+                "before re-uploading."
+            ),
+        )
+
+    suffix = Path(filename).suffix.lower()
+    _SUPPORTED = {".txt", ".csv", ".xlsx", ".xls", ".docx", ".pdf", ".pptx", ".jpg", ".jpeg", ".png", ".webp"}
+    if suffix not in _SUPPORTED:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"File format '{suffix}' is not supported. "
+                f"Supported formats: .txt, .csv, .xlsx, .xls, .docx, .pdf, .pptx, .jpg, .jpeg, .png, .webp"
+            ),
+        )
+
+    content = await file.read()
+    dest_path.write_bytes(content)
+
+    try:
+        chunk_count = ingest_document(dest_path, filename)
+    except ValueError as e:
+        dest_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        dest_path.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process document: {e}",
+        )
+
+    file_type = suffix.lstrip(".")
+    used_label = label.strip() if label.strip() else filename
+    try:
+        entry = register_document(
+            filename=filename,
+            label=used_label,
+            file_type=file_type,
+            chunk_count=chunk_count,
+        )
+    except Exception as e:
+        dest_path.unlink(missing_ok=True)
+        try:
+            chroma_client = chromadb.PersistentClient(path=str(VECTOR_STORE_DIR))
+            collection = chroma_client.get_or_create_collection(name="tps_docs")
+            collection.delete(where={"source": filename})
+        except Exception:
+            pass  # best-effort rollback
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to register document in store: {e}",
+        )
+
+    return {"message": f"Document '{filename}' uploaded and indexed successfully.", "document": entry}
+
+
+@router.get("")
+def get_documents() -> list:
+    return list_documents()
+
+
+@router.patch("/{filename}")
+def toggle_document_active(filename: str, request: DocumentToggleRequest) -> dict:
+    try:
+        entry = toggle_active(filename, request.is_active)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    status = "activated" if request.is_active else "deactivated"
+    return {"message": f"Document '{filename}' {status}.", "document": entry}
+
+
+@router.delete("/{filename}")
+def delete_document_entry(filename: str) -> dict:
+    documents_dir = _get_documents_dir()
+    file_path = documents_dir / filename
+
+    if file_path.exists():
+        file_path.unlink()
+
+    try:
+        chroma_client = chromadb.PersistentClient(path=str(VECTOR_STORE_DIR))
+        collection = chroma_client.get_or_create_collection(name="tps_docs")
+        collection.delete(where={"source": filename})
+    except Exception:
+        pass  # non-fatal; registry deletion still proceeds
+
+    try:
+        delete_document(filename)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return {"message": f"Document '{filename}' deleted successfully."}
+
+----------------------------------------
+FILE: app/api/routes/sources.py
+----------------------------------------
+import tempfile
+from pathlib import Path
+from fastapi import APIRouter, HTTPException
+
+from app.schemas.source import SourceCreateRequest, SourceUpdateRequest
+from app.services.sources_store import (
+    list_sources,
+    get_source,
+    create_source,
+    update_source,
+    delete_source,
+    mark_synced,
+    mark_failed,
+)
+from app.services.sharepoint_fetcher import download_sharepoint_file
+from app.services.ingestion import ingest_document
+
+router = APIRouter(prefix="/sources", tags=["sources"])
+
+
+
+@router.get("")
+def get_all_sources() -> list:
+    return list_sources()
+
+
+@router.post("", status_code=201)
+def create_new_source(request: SourceCreateRequest) -> dict:
+    try:
+        new_entry = create_source(
+            category_name=request.category_name,
+            onedrive_url=request.onedrive_url,
+        )
+        return {"message": "Kategori berhasil ditambahkan.", "source": new_entry}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.put("/{id}")
+def update_existing_source(id: str, request: SourceUpdateRequest) -> dict:
+    try:
+        updated = update_source(
+            id=id,
+            category_name=request.category_name,
+            onedrive_url=request.onedrive_url,
+        )
+        return {"message": "Kategori berhasil diperbarui.", "source": updated}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/{id}")
+def delete_existing_source(id: str) -> dict:
+    try:
+        delete_source(id)
+        return {"message": "Kategori berhasil dihapus."}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/{id}/sync")
+def sync_source(id: str) -> dict:
+    source = get_source(id)
+    if not source:
+        raise HTTPException(status_code=404, detail="Kategori tidak ditemukan.")
+
+    # Create temporary path for download
+    # We name the file using category name so that it identifies neatly in ingestion
+    safe_category = source["category_name"].replace(" ", "_").replace("/", "_")
+    temp_filename = f"{safe_category}.xlsx"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        temp_path = Path(tmpdir) / temp_filename
+        try:
+            # Download file from SharePoint share link
+            fetch_method = download_sharepoint_file(source["onedrive_url"], temp_path)
+
+            # Ingest downloaded document with category metadata
+            chunk_count = ingest_document(
+                file_path=temp_path,
+                filename=temp_filename,
+                category=source["category_name"],
+            )
+
+            # Update store as success
+            updated = mark_synced(id, chunk_count, fetch_method)
+            return {
+                "message": f"Sinkronisasi berhasil. Terindeks {chunk_count} chunk.",
+                "source": updated,
+            }
+        except Exception as e:
+            error_msg = str(e)
+            mark_failed(id, error_msg)
+            raise HTTPException(
+                status_code=400,
+                detail=f"Sinkronisasi gagal: {error_msg}",
+            )
+
+----------------------------------------
+FILE: app/api/routes/chat.py
+----------------------------------------
+from fastapi import APIRouter, HTTPException
+
+from app.schemas.chat import ChatRequest, ChatResponse
+from app.services.chat_store import append_messages
+from app.services.generation import build_prompt, generate_answer
+from app.services.retrieval import retrieve_relevant_chunks
+
+router = APIRouter()
+
+
+@router.post("/chat", response_model=ChatResponse)
+def chat(request: ChatRequest) -> ChatResponse:
+    chunks, sources = retrieve_relevant_chunks(request.message, request.category)
+
+
+    if not chunks:
+        answer = "Maaf, saya tidak menemukan informasi ini di dokumen."
+        sources = []
+    else:
+        prompt = build_prompt(request.message, chunks)
+        answer = generate_answer(prompt)
+        sources = list(dict.fromkeys(sources))
+
+    try:
+        append_messages(
+            conv_id=request.conversation_id,
+            user_content=request.message,
+            assistant_content=answer,
+            sources=sources,
+        )
+    except KeyError:
+        # missing conversation_id — don't abort the response
+        print(f"[chat] WARNING: conversation '{request.conversation_id}' not found, message not persisted")
+
+    return ChatResponse(answer=answer, sources=sources)
+
+----------------------------------------
+FILE: app/api/routes/conversations.py
+----------------------------------------
+"""
+Conversations API — CRUD endpoints for persistent chat conversations.
+"""
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from typing import Optional
+
+from app.services.chat_store import (
+    list_conversations,
+    get_conversation,
+    create_conversation,
+    rename_conversation,
+    toggle_pin,
+    delete_conversation,
+)
+
+router = APIRouter(prefix="/conversations", tags=["conversations"])
+
+
+class PatchConversationRequest(BaseModel):
+    title:  Optional[str]  = None
+    pinned: Optional[bool] = None
+
+
+@router.get("")
+def list_convs():
+    """List all conversations (summaries, pinned-first then newest-first)."""
+    return list_conversations()
+
+
+@router.post("", status_code=201)
+def create_conv():
+    """Create a new empty conversation. Returns the full conversation record."""
+    return create_conversation()
+
+
+@router.get("/{conv_id}")
+def get_conv(conv_id: str):
+    """Return full conversation detail including all messages."""
+    try:
+        return get_conversation(conv_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.patch("/{conv_id}")
+def patch_conv(conv_id: str, body: PatchConversationRequest):
+    """Update title and/or pinned status of a conversation."""
+    try:
+        if body.title is not None:
+            rename_conversation(conv_id, body.title)
+        if body.pinned is not None:
+            toggle_pin(conv_id, body.pinned)
+        return get_conversation(conv_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.delete("/{conv_id}", status_code=204)
+def delete_conv(conv_id: str):
+    """Delete a conversation. Returns 204 No Content."""
+    try:
+        delete_conversation(conv_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+----------------------------------------
+FILE: app/main.py
+----------------------------------------
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.routes.chat import router as chat_router
+from app.api.routes.config import router as config_router
+from app.api.routes.conversations import router as conversations_router
+from app.api.routes.documents import router as documents_router
+from app.api.routes.sources import router as sources_router
+
+
+
+def _migrate_legacy_documents() -> None:
+    """Register pre-existing ChromaDB chunks in the document store on first startup."""
+    import chromadb
+    from pathlib import Path
+
+    from app.core.config import VECTOR_STORE_DIR
+    from app.services.document_store import (
+        _load_store,
+        get_active_filenames,
+        register_document,
+    )
+
+    store = _load_store()
+    if store:
+        return
+
+    try:
+        chroma_client = chromadb.PersistentClient(path=str(VECTOR_STORE_DIR))
+        collection = chroma_client.get_or_create_collection(name="tps_docs")
+
+        all_items = collection.get(include=["metadatas"])
+        if not all_items["metadatas"]:
+            return
+
+        chunk_counts: dict[str, int] = {}
+        for meta in all_items["metadatas"]:
+            source = meta.get("source", "")
+            if source:
+                chunk_counts[source] = chunk_counts.get(source, 0) + 1
+
+        documents_dir = Path(VECTOR_STORE_DIR).parent / "documents"
+        for filename, count in chunk_counts.items():
+            ext = Path(filename).suffix.lstrip(".").lower() or "txt"
+            register_document(
+                filename=filename,
+                label=filename,
+                file_type=ext,
+                chunk_count=count,
+                is_active=True,
+            )
+            print(f"[migration] Registered: {filename} ({count} chunks)")
+
+    except Exception as e:
+        print(f"[migration] Warning: failed to migrate legacy documents — {e}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _migrate_legacy_documents()
+    yield
+
+
+app = FastAPI(title="RAG Engine", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(chat_router)
+app.include_router(config_router)
+app.include_router(documents_router)
+app.include_router(conversations_router)
+app.include_router(sources_router)
+----------------------------------------
+FILE: app/services/ingestion.py
+----------------------------------------
+from typing import Optional
+import re
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+from threading import Lock
+
+import chromadb
+from google.genai import types
+
+from app.core.config import (
+    VECTOR_STORE_DIR,
+    get_embedding_model,
+    get_gemini_client,
+    get_generation_model,
+)
+
+
+CHUNK_SIZE = 300
+
+
+def _split_sentences(text: str) -> list[str]:
+    text = text.strip()
+    raw = re.split(r"(?<=[.!?])\s+|\n\s*\n", text)
+    return [s.strip() for s in raw if s.strip()]
+
+
+def chunk_by_sentences(text: str, chunk_size: int = CHUNK_SIZE) -> list[str]:
+    sentences = _split_sentences(text)
+    chunks: list[str] = []
+    current = ""
+
+    for sentence in sentences:
+        # oversized sentence becomes its own chunk
+        if len(sentence) > chunk_size:
+            if current:
+                chunks.append(current.strip())
+                current = ""
+            chunks.append(sentence)
+            continue
+
+        candidate = f"{current} {sentence}".strip() if current else sentence
+        if len(candidate) > chunk_size and current:
+            chunks.append(current.strip())
+            current = sentence
+        else:
+            current = candidate
+
+    if current:
+        chunks.append(current.strip())
+
+    return chunks
+
+
+def parse_txt(file_path: Path) -> list[str]:
+    text = _read_text_with_fallback_encoding(file_path)
+    return chunk_by_sentences(text)
+
+
+def _read_text_with_fallback_encoding(file_path: Path) -> str:
+    for enc in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
+        try:
+            return file_path.read_text(encoding=enc)
+        except UnicodeDecodeError:
+            continue
+    raise ValueError(f"Gagal membaca file '{file_path.name}' — encoding tidak dikenali")
+
+
+def parse_docx(file_path: Path) -> list[str]:
+    from docx import Document  # python-docx
+    doc = Document(str(file_path))
+    paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+    combined = "\n".join(paragraphs)
+    return chunk_by_sentences(combined)
+
+
+def parse_pdf(file_path: Path) -> list[str]:
+    import pdfplumber
+    pages_text: list[str] = []
+    with pdfplumber.open(str(file_path)) as pdf:
+        for page in pdf.pages:
+            text = page.extract_text()
+            if text and text.strip():
+                pages_text.append(text.strip())
+    combined = "\n\n".join(pages_text)
+    return chunk_by_sentences(combined)
+
+
+def parse_xlsx(file_path: Path) -> list[str]:
+    import pandas as pd
+    xls = pd.read_excel(str(file_path), sheet_name=None)
+    chunks = []
+    for sheet_name, df in xls.items():
+        sheet_chunks = _dataframe_to_chunks(df)
+        context_chunks = [f"[Sheet: {sheet_name}] {chunk}" for chunk in sheet_chunks]
+        chunks.extend(context_chunks)
+    return chunks
+
+
+def parse_csv(file_path: Path) -> list[str]:
+    import pandas as pd
+    df = None
+    last_error = None
+    for enc in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
+        try:
+            df = pd.read_csv(str(file_path), encoding=enc)
+            break
+        except UnicodeDecodeError as e:
+            last_error = e
+            continue
+    if df is None:
+        raise ValueError(f"Gagal membaca file CSV — encoding tidak dikenali: {last_error}")
+    return _dataframe_to_chunks(df)
+
+
+def _dataframe_to_chunks(df) -> list[str]:
+    """one row = one chunk; row-based because each table row is a standalone fact."""
+    chunks: list[str] = []
+    for _, row in df.iterrows():
+        parts = []
+        for col, val in row.items():
+            if val is None:
+                continue
+            str_val = str(val).strip()
+            if str_val and str_val.lower() not in ("nan", "none", ""):
+                parts.append(f"{col}: {str_val}")
+        if parts:
+            chunks.append(", ".join(parts))
+    return chunks
+
+
+def parse_pptx(file_path: Path) -> list[str]:
+    from pptx import Presentation  # python-pptx
+    prs = Presentation(str(file_path))
+    chunks: list[str] = []
+    for slide in prs.slides:
+        texts: list[str] = []
+        for shape in slide.shapes:
+            if shape.has_text_frame:
+                for para in shape.text_frame.paragraphs:
+                    text = para.text.strip()
+                    if text:
+                        texts.append(text)
+        if texts:
+            chunks.append("\n".join(texts))
+    return chunks
+
+
+def parse_image(file_path: Path) -> list[str]:
+    extension = file_path.suffix.lower()
+    mime_type = "image/png"
+    if extension in (".jpg", ".jpeg"):
+        mime_type = "image/jpeg"
+    elif extension == ".webp":
+        mime_type = "image/webp"
+
+    content = file_path.read_bytes()
+    part = types.Part.from_bytes(data=content, mime_type=mime_type)
+
+    prompt = (
+        "Lakukan analisis mendalam terhadap gambar ini.\n"
+        "1. Ekstrak dan tuliskan semua teks (OCR) yang terlihat pada gambar dengan sangat akurat dan lengkap.\n"
+        "2. Jelaskan elemen visual, tabel, diagram, atau grafik yang ada di dalam gambar beserta nilainya secara detail.\n"
+        "3. Berikan deskripsi ringkas tentang keseluruhan isi atau konteks gambar.\n"
+        "Format output berupa teks markdown terstruktur agar mudah dibaca."
+    )
+
+    try:
+        response = get_gemini_client().models.generate_content(
+            model=get_generation_model(),
+            contents=[part, prompt],
+        )
+        text = response.text or ""
+    except Exception as e:
+        raise RuntimeError(f"Gagal menganalisis gambar menggunakan model Gemini: {e}")
+
+    return chunk_by_sentences(text)
+
+
+_PARSERS = {
+    ".txt":  parse_txt,
+    ".docx": parse_docx,
+    ".pdf":  parse_pdf,
+    ".xlsx": parse_xlsx,
+    ".xls":  parse_xlsx,   # pandas read_excel handles .xls too
+    ".csv":  parse_csv,
+    ".pptx": parse_pptx,
+    ".jpg":  parse_image,
+    ".jpeg": parse_image,
+    ".png":  parse_image,
+    ".webp": parse_image,
+}
+
+_SUPPORTED_FORMATS = ", ".join(sorted(_PARSERS.keys()))
+
+_request_times: list[float] = []
+_request_lock = Lock()
+MAX_RPM = 50  # half the actual 100 limit; safety margin
+
+
+def _wait_for_rate_limit_slot():
+    with _request_lock:
+        now = time.time()
+        while _request_times and _request_times[0] < now - 60:
+            _request_times.pop(0)
+        if len(_request_times) >= MAX_RPM:
+            sleep_time = 60 - (now - _request_times[0]) + 0.1
+            time.sleep(max(sleep_time, 0.0))
+        _request_times.append(time.time())
+
+
+def _embed_texts_batch(
+    texts: list[str],
+    batch_size: int = 100,
+    max_workers: int = 3,
+) -> list[list[float]]:
+    """Embed texts in parallel batches; result order matches input order."""
+    batches = [texts[i : i + batch_size] for i in range(0, len(texts), batch_size)]
+
+    def embed_one_batch(batch: list[str]) -> list[list[float]]:
+        _wait_for_rate_limit_slot()
+        time.sleep(1.0)  # fixed pacing on top of the rate-limit window
+        for attempt in range(3):
+            try:
+                result = get_gemini_client().models.embed_content(
+                    model=get_embedding_model(),
+                    contents=batch,
+                    config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT"),
+                )
+                return [e.values for e in result.embeddings]
+            except Exception as e:
+                if "RESOURCE_EXHAUSTED" in str(e) and attempt < 2:
+                    time.sleep(65)  # wait for rate-limit window to reset
+                    continue
+                raise
+        return []  # unreachable
+
+    all_embeddings: list[list[list[float]] | None] = [None] * len(batches)
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_idx = {executor.submit(embed_one_batch, batch): i for i, batch in enumerate(batches)}
+        for future in as_completed(future_to_idx):
+            idx = future_to_idx[future]
+            all_embeddings[idx] = future.result()  # re-raises exception from thread
+
+    flat: list[list[float]] = []
+    for batch_result in all_embeddings:
+        flat.extend(batch_result)  # type: ignore[arg-type]
+    return flat
+
+
+def ingest_document(file_path: Path, filename: str, category: Optional[str] = None) -> int:
+    """Parse, embed, and index a document into ChromaDB. Returns chunk count."""
+    extension = file_path.suffix.lower()
+    parser = _PARSERS.get(extension)
+    if parser is None:
+        raise ValueError(
+            f"Format file '{extension}' belum didukung. "
+            f"Format yang didukung: {_SUPPORTED_FORMATS}"
+        )
+
+    chunks = parser(file_path)
+    if not chunks:
+        return 0
+
+    chroma_client = chromadb.PersistentClient(path=str(VECTOR_STORE_DIR))
+    collection = chroma_client.get_or_create_collection(name="tps_docs")
+
+    # delete stale chunks for this filename before re-indexing
+    try:
+        collection.delete(where={"source": filename})
+    except Exception:
+        pass
+
+    embeddings = _embed_texts_batch(chunks)
+
+    chunk_id_prefix = filename.replace(".", "_").replace(" ", "_")
+    ids       = [f"{chunk_id_prefix}_{i}" for i in range(len(chunks))]
+    metadatas = []
+    for _ in chunks:
+        meta = {"source": filename}
+        if category is not None:
+            meta["category"] = category
+        metadatas.append(meta)
+
+    collection.add(
+        ids=ids,
+        embeddings=embeddings,
+        documents=chunks,
+        metadatas=metadatas,
+    )
+
+    return len(chunks)
+
+
+----------------------------------------
+FILE: app/services/generation.py
+----------------------------------------
+from app.core.config import get_generation_model, get_gemini_client
+
+
+def build_prompt(question: str, chunks: list[str]) -> str:
+    context = "\n\n".join(chunks)
+    return f"""Kamu adalah asisten AI yang menjawab pertanyaan HANYA berdasarkan konteks dokumen yang diberikan.
+
+ATURAN WAJIB:
+1. Gunakan HANYA data dari "Konteks" di bawah — jangan mengarang atau menggunakan pengetahuan luar.
+2. Jika data tidak ada di konteks, jawab "Saya tidak menemukan informasi ini di dokumen."
+3. Untuk pertanyaan yang membutuhkan perbandingan atau mencari nilai terbesar/terkecil (maksimum/minimum/terbanyak/tersedikit):
+   - Baca SEMUA data yang tersedia di konteks dengan teliti.
+   - Bandingkan SEMUA nilai yang relevan sebelum menentukan jawaban.
+   - Cantumkan nilai dari SETIAP entri yang relevan agar perbandingan transparan.
+   - Nyatakan jawaban akhir dengan jelas.
+4. Untuk data tabular (tabel/spreadsheet), baca setiap baris secara sistematis sebelum menyimpulkan.
+5. Format jawaban: gunakan **bold** untuk nama/istilah penting, bullet list untuk enumerasi, paragraf biasa untuk penjelasan.
+
+Konteks:
+{context}
+
+Pertanyaan: {question}
+
+Jawaban:"""
+
+
+def generate_answer(prompt: str) -> str:
+    response = get_gemini_client().models.generate_content(
+        model=get_generation_model(), contents=prompt
+    )
+    return response.text
+
+----------------------------------------
+FILE: app/services/chat_store.py
+----------------------------------------
+import json
+import uuid
+from datetime import datetime
+from pathlib import Path
+from typing import Optional
+
+DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+CONVERSATIONS_PATH = DATA_DIR / "conversations.json"
+
+
+def _now_iso() -> str:
+    return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")
+
+
+def _load() -> list[dict]:
+    if not CONVERSATIONS_PATH.exists():
+        return []
+    with open(CONVERSATIONS_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _save(conversations: list[dict]) -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with open(CONVERSATIONS_PATH, "w", encoding="utf-8") as f:
+        json.dump(conversations, f, ensure_ascii=False, indent=2)
+
+
+def _find(conversations: list[dict], conv_id: str) -> Optional[dict]:
+    for c in conversations:
+        if c["id"] == conv_id:
+            return c
+    return None
+
+
+def _summary(conv: dict) -> dict:
+    """Strips message bodies; used for the sidebar list."""
+    return {
+        "id":            conv["id"],
+        "title":         conv["title"],
+        "pinned":        conv.get("pinned", False),
+        "created_at":    conv["created_at"],
+        "updated_at":    conv["updated_at"],
+        "message_count": len(conv.get("messages", [])),
+    }
+
+
+def list_conversations() -> list[dict]:
+    convs = _load()
+    summaries = [_summary(c) for c in convs]
+    summaries.sort(key=lambda s: (not s["pinned"], s["updated_at"]), reverse=False)
+    summaries.sort(key=lambda s: (0 if s["pinned"] else 1, s["updated_at"]), reverse=False)
+    summaries.sort(key=lambda s: s["updated_at"], reverse=True)
+    pinned   = [s for s in summaries if s["pinned"]]
+    unpinned = [s for s in summaries if not s["pinned"]]
+    return pinned + unpinned
+
+
+def get_conversation(conv_id: str) -> dict:
+    convs = _load()
+    conv = _find(convs, conv_id)
+    if conv is None:
+        raise KeyError(f"Conversation '{conv_id}' not found")
+    return conv
+
+
+def create_conversation() -> dict:
+    conv = {
+        "id":         f"conv_{uuid.uuid4().hex[:8]}",
+        "title":      "New conversation",
+        "pinned":     False,
+        "created_at": _now_iso(),
+        "updated_at": _now_iso(),
+        "messages":   [],
+    }
+    convs = _load()
+    convs.append(conv)
+    _save(convs)
+    return conv
+
+
+def append_messages(
+    conv_id: str,
+    user_content: str,
+    assistant_content: str,
+    sources: list[str] | None = None,
+) -> None:
+    convs = _load()
+    conv = _find(convs, conv_id)
+    if conv is None:
+        raise KeyError(f"Conversation '{conv_id}' not found")
+
+    now = _now_iso()
+    is_first = len(conv.get("messages", [])) == 0
+
+    conv.setdefault("messages", []).append({
+        "role":      "user",
+        "content":   user_content,
+        "timestamp": now,
+    })
+    conv["messages"].append({
+        "role":      "assistant",
+        "content":   assistant_content,
+        "sources":   sources or [],
+        "timestamp": now,
+    })
+    conv["updated_at"] = now
+
+    if is_first:
+        conv["title"] = user_content[:40].strip() + ("…" if len(user_content) > 40 else "")
+
+    _save(convs)
+
+
+def rename_conversation(conv_id: str, new_title: str) -> dict:
+    convs = _load()
+    conv = _find(convs, conv_id)
+    if conv is None:
+        raise KeyError(f"Conversation '{conv_id}' not found")
+    conv["title"] = new_title.strip() or "New conversation"
+    conv["updated_at"] = _now_iso()
+    _save(convs)
+    return _summary(conv)
+
+
+def toggle_pin(conv_id: str, pinned: bool) -> dict:
+    convs = _load()
+    conv = _find(convs, conv_id)
+    if conv is None:
+        raise KeyError(f"Conversation '{conv_id}' not found")
+    conv["pinned"] = pinned
+    _save(convs)
+    return _summary(conv)
+
+
+def delete_conversation(conv_id: str) -> None:
+    convs = _load()
+    if not _find(convs, conv_id):
+        raise KeyError(f"Conversation '{conv_id}' not found")
+    _save([c for c in convs if c["id"] != conv_id])
+
+----------------------------------------
+FILE: app/services/onedrive_fetcher.py
+----------------------------------------
+import base64
+import requests
+from pathlib import Path
+
+
+def convert_onedrive_url(share_url: str) -> str:
+    url = share_url.strip()
+
+    if "1drv.ms" in url:
+        try:
+            res = requests.head(url, allow_redirects=True, timeout=10)
+            url = res.url
+        except Exception:
+            pass
+
+    if "onedrive.live.com" in url or "1drv.ms" in url:
+        base64_url = base64.b64encode(url.encode('utf-8')).decode('utf-8')
+        encoded_url = base64_url.replace('=', '').replace('/', '_').replace('+', '-')
+        return f"https://api.onedrive.com/v1.0/shares/u!{encoded_url}/root/content"
+
+    elif "sharepoint.com" in url:
+        if "?" in url:
+            base_url = url.split("?")[0]
+            params = url.split("?")[1]
+            param_list = params.split("&")
+            new_params = []
+            for p in param_list:
+                if p.startswith("web=") or p.startswith("download="):
+                    continue
+                new_params.append(p)
+            new_params.append("download=1")
+            return f"{base_url}?{'&'.join(new_params)}"
+        else:
+            return f"{url}?download=1"
+
+    if "?" in url:
+        return f"{url}&download=1"
+    return f"{url}?download=1"
+
+
+def download_onedrive_file(share_url: str, dest_path: Path) -> Path:
+    direct_url = convert_onedrive_url(share_url)
+    try:
+        response = requests.get(direct_url, timeout=30, stream=True)
+        if response.status_code in (401, 403):
+            raise ValueError(
+                "Link OneDrive harus berupa share link publik (Anyone with the link)."
+            )
+        elif response.status_code != 200:
+            raise ValueError(
+                f"Gagal mengunduh file dari OneDrive. Status code: {response.status_code}"
+            )
+
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(dest_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+        return dest_path
+    except requests.exceptions.RequestException as e:
+        raise ValueError(f"Gagal menghubungi server OneDrive: {str(e)}")
+
+----------------------------------------
+FILE: app/services/config_store.py
+----------------------------------------
+import json
+import shutil
+import uuid
+from pathlib import Path
+from typing import Optional
+
+DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+CONFIG_STORE_PATH = DATA_DIR / "config_store.json"
+CONFIG_STORE_EXAMPLE_PATH = DATA_DIR / "config_store.json.example"
+
+MASKED_VALUE = "••••••••"
+
+def _ensure_store_exists() -> None:
+    if not CONFIG_STORE_PATH.exists():
+        if not CONFIG_STORE_EXAMPLE_PATH.exists():
+            raise FileNotFoundError(
+                "Neither config_store.json nor config_store.json.example was found"
+            )
+        shutil.copy(CONFIG_STORE_EXAMPLE_PATH, CONFIG_STORE_PATH)
+
+
+def _load_store() -> list[dict]:
+    _ensure_store_exists()
+    with open(CONFIG_STORE_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _save_store(store: list[dict]) -> None:
+    with open(CONFIG_STORE_PATH, "w", encoding="utf-8") as f:
+        json.dump(store, f, ensure_ascii=False, indent=2)
+
+
+def _mask(entry: dict) -> dict:
+    result = dict(entry)
+    if result.get("is_secret"):
+        result["value"] = MASKED_VALUE
+    return result
+
+
+def _find_by_key(store: list[dict], key: str) -> Optional[dict]:
+    for entry in store:
+        if entry["key"] == key:
+            return entry
+    return None
+
+
+def list_config() -> list[dict]:
+    store = _load_store()
+    return [_mask(e) for e in store]
+
+
+def create_config(
+    group: str,
+    description: str,
+    value: str,
+    is_secret: bool,
+) -> dict:
+    """Add a candidate entry; auto-activates if it is the first in its group."""
+    store = _load_store()
+
+    group_entries = [e for e in store if e["group"] == group]
+    is_first_in_group = len(group_entries) == 0
+
+    short_id = uuid.uuid4().hex[:8]
+    new_entry = {
+        "key": f"{group}_{short_id}",
+        "group": group,
+        "description": description,
+        "value": value,
+        "is_secret": is_secret,
+        "is_active": is_first_in_group,
+    }
+
+    store.append(new_entry)
+    _save_store(store)
+    return _mask(new_entry)
+
+
+def update_config(
+    key: str,
+    description: Optional[str] = None,
+    value: Optional[str] = None,
+) -> dict:
+    store = _load_store()
+    entry = _find_by_key(store, key)
+    if entry is None:
+        raise KeyError(f"Config key '{key}' not found in config store")
+
+    if description is not None:
+        entry["description"] = description
+    if value is not None:
+        entry["value"] = value
+
+    _save_store(store)
+    return _mask(entry)
+
+
+def delete_config(key: str) -> dict:
+    """Remove an entry; auto-promotes the next entry if the deleted one was active."""
+    store = _load_store()
+    entry = _find_by_key(store, key)
+    if entry is None:
+        raise KeyError(f"Config key '{key}' not found in config store")
+
+    group = entry["group"]
+    group_entries = [e for e in store if e["group"] == group]
+
+    if len(group_entries) <= 1:
+        raise ValueError(
+            f"Cannot delete '{key}': it is the only entry in group '{group}'. "
+            f"Add another candidate before deleting this one."
+        )
+
+    was_active = entry.get("is_active", False)
+
+    store = [e for e in store if e["key"] != key]
+
+    promoted_key = None
+    promoted_label = None
+    if was_active:
+        remaining = [e for e in store if e["group"] == group]
+        if remaining:
+            remaining[0]["is_active"] = True
+            promoted_key = remaining[0]["key"]
+            # prefer description; fall back to raw value
+            promoted_label = remaining[0].get("description") or remaining[0]["value"]
+
+    _save_store(store)
+    return {"promoted_key": promoted_key, "promoted_label": promoted_label}
+
+
+def set_active(key: str) -> None:
+    """Deactivate all entries in a group, then activate this one."""
+    store = _load_store()
+    entry = _find_by_key(store, key)
+    if entry is None:
+        raise KeyError(f"Config key '{key}' not found in config store")
+
+    group = entry["group"]
+    for e in store:
+        if e["group"] == group:
+            e["is_active"] = e["key"] == key
+
+    _save_store(store)
+
+
+def reveal_config(key: str) -> str:
+    store = _load_store()
+    entry = _find_by_key(store, key)
+    if entry is None:
+        raise KeyError(f"Config key '{key}' not found in config store")
+    return entry["value"]
+
+
+def get_active_value(group: str) -> str:
+    store = _load_store()
+    for entry in store:
+        if entry["group"] == group and entry.get("is_active"):
+            return entry["value"]
+    raise RuntimeError(
+        f"No active entry found in group '{group}'. "
+        f"Activate a candidate via PATCH /config/{{key}}/activate."
+    )
+
+----------------------------------------
+FILE: app/services/document_store.py
+----------------------------------------
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Optional
+
+DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+DOCUMENTS_STORE_PATH = DATA_DIR / "documents_store.json"
+
+
+def _ensure_store_exists() -> None:
+    if not DOCUMENTS_STORE_PATH.exists():
+        DOCUMENTS_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        _save_store([])
+
+
+def _load_store() -> list[dict]:
+    _ensure_store_exists()
+    with open(DOCUMENTS_STORE_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _save_store(store: list[dict]) -> None:
+    with open(DOCUMENTS_STORE_PATH, "w", encoding="utf-8") as f:
+        json.dump(store, f, ensure_ascii=False, indent=2)
+
+
+def _find_by_filename(store: list[dict], filename: str) -> Optional[dict]:
+    for entry in store:
+        if entry["filename"] == filename:
+            return entry
+    return None
+
+
+def list_documents() -> list[dict]:
+    return _load_store()
+
+
+def register_document(
+    filename: str,
+    label: str,
+    file_type: str,
+    chunk_count: int,
+    is_active: bool = True,
+) -> dict:
+    store = _load_store()
+    new_entry = {
+        "filename": filename,
+        "label": label,
+        "file_type": file_type,
+        "uploaded_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
+        "is_active": is_active,
+        "chunk_count": chunk_count,
+    }
+    store.append(new_entry)
+    _save_store(store)
+    return new_entry
+
+
+def toggle_active(filename: str, is_active: bool) -> dict:
+    """Toggle is_active for one document; other documents are unaffected."""
+    store = _load_store()
+    entry = _find_by_filename(store, filename)
+    if entry is None:
+        raise KeyError(f"Document '{filename}' not found in document store")
+    entry["is_active"] = is_active
+    _save_store(store)
+    return entry
+
+
+def delete_document(filename: str) -> None:
+    store = _load_store()
+    new_store = [e for e in store if e["filename"] != filename]
+    if len(new_store) == len(store):
+        raise KeyError(f"Document '{filename}' not found in document store")
+    _save_store(new_store)
+
+
+def get_active_filenames() -> list[str]:
+    store = _load_store()
+    return [e["filename"] for e in store if e.get("is_active", False)]
+
+----------------------------------------
+FILE: app/services/sources_store.py
+----------------------------------------
+import json
+import uuid
+from pathlib import Path
+from typing import Optional
+
+DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+SOURCES_STORE_PATH = DATA_DIR / "sources_store.json"
+
+
+def _ensure_store_exists() -> None:
+    if not SOURCES_STORE_PATH.exists():
+        SOURCES_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        _save_store([])
+
+
+def _load_store() -> list[dict]:
+    _ensure_store_exists()
+    with open(SOURCES_STORE_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _save_store(store: list[dict]) -> None:
+    with open(SOURCES_STORE_PATH, "w", encoding="utf-8") as f:
+        json.dump(store, f, ensure_ascii=False, indent=2)
+
+
+def list_sources() -> list[dict]:
+    return _load_store()
+
+
+def get_source(id: str) -> Optional[dict]:
+    store = _load_store()
+    for entry in store:
+        if entry["id"] == id:
+            return entry
+    return None
+
+
+def create_source(category_name: str, onedrive_url: str) -> dict:
+    store = _load_store()
+
+    for entry in store:
+        if entry["category_name"].lower() == category_name.lower():
+            raise ValueError(f"Kategori '{category_name}' sudah terdaftar.")
+
+    new_entry = {
+        "id": f"src_{uuid.uuid4().hex[:8]}",
+        "category_name": category_name.strip(),
+        "onedrive_url": onedrive_url.strip(),
+        "last_synced_at": None,
+        "sync_status": "never_synced",
+        "last_error": None,
+        "chunk_count": 0,
+        "fetch_method": None
+    }
+    store.append(new_entry)
+    _save_store(store)
+    return new_entry
+
+
+def update_source(
+    id: str,
+    category_name: Optional[str] = None,
+    onedrive_url: Optional[str] = None
+) -> dict:
+    store = _load_store()
+    found = None
+    for entry in store:
+        if entry["id"] == id:
+            found = entry
+            break
+
+    if found is None:
+        raise KeyError(f"Source ID '{id}' tidak ditemukan.")
+
+    if category_name is not None:
+        category_name_stripped = category_name.strip()
+        for entry in store:
+            if entry["id"] != id and entry["category_name"].lower() == category_name_stripped.lower():
+                raise ValueError(f"Kategori '{category_name_stripped}' sudah terdaftar.")
+        found["category_name"] = category_name_stripped
+
+    if onedrive_url is not None:
+        onedrive_url_stripped = onedrive_url.strip()
+        if found["onedrive_url"] != onedrive_url_stripped:
+            found["onedrive_url"] = onedrive_url_stripped
+            found["sync_status"] = "never_synced"
+            found["last_synced_at"] = None
+            found["last_error"] = None
+            found["chunk_count"] = 0
+
+    _save_store(store)
+    return found
+
+
+def delete_source(id: str) -> None:
+    store = _load_store()
+    new_store = [e for e in store if e["id"] != id]
+    if len(new_store) == len(store):
+        raise KeyError(f"Source ID '{id}' tidak ditemukan.")
+    _save_store(new_store)
+
+
+def mark_synced(id: str, chunk_count: int, fetch_method: str = "graph_api") -> dict:
+    from datetime import datetime, timezone
+    store = _load_store()
+    found = None
+    for entry in store:
+        if entry["id"] == id:
+            found = entry
+            break
+    if found is None:
+        raise KeyError(f"Source ID '{id}' tidak ditemukan.")
+    found["sync_status"] = "success"
+    found["last_synced_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    found["chunk_count"] = chunk_count
+    found["last_error"] = None
+    found["fetch_method"] = fetch_method
+    _save_store(store)
+    return found
+
+
+def mark_failed(id: str, error_message: str) -> dict:
+    store = _load_store()
+    found = None
+    for entry in store:
+        if entry["id"] == id:
+            found = entry
+            break
+    if found is None:
+        raise KeyError(f"Source ID '{id}' tidak ditemukan.")
+    found["sync_status"] = "failed"
+    found["last_error"] = error_message
+    _save_store(store)
+    return found
+
+----------------------------------------
+FILE: app/services/retrieval.py
+----------------------------------------
+from typing import Optional
+import chromadb
+from google.genai import types
+
+from app.core.config import (
+    DISTANCE_THRESHOLD,
+    TOP_N,
+    VECTOR_STORE_DIR,
+    get_embedding_model,
+    get_gemini_client,
+)
+from app.services.document_store import get_active_filenames
+
+
+def embed_query(text: str) -> list[float]:
+    result = get_gemini_client().models.embed_content(
+        model=get_embedding_model(),
+        contents=text,
+        config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY"),
+    )
+    return result.embeddings[0].values
+
+
+def retrieve_relevant_chunks(question: str, category: Optional[str] = None) -> tuple[list[str], list[str]]:
+    chroma_client = chromadb.PersistentClient(path=str(VECTOR_STORE_DIR))
+    collection = chroma_client.get_or_create_collection(name="tps_docs")
+
+    if category and category != "Semua Data":
+        active_sources = get_active_filenames()
+        if category in active_sources:
+            where_filter = {"source": category}
+        else:
+            where_filter = {"category": category}
+    else:
+        active_sources = get_active_filenames()
+        if active_sources:
+            where_filter = {"source": {"$in": active_sources}}
+        else:
+            where_filter = None
+
+
+    query_embedding = embed_query(text=question)
+
+    # n_results must not exceed the collection size or ChromaDB raises
+    try:
+        total_in_filter = collection.count()
+    except Exception:
+        total_in_filter = TOP_N
+    safe_n = min(TOP_N, max(1, total_in_filter))
+
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=safe_n,
+        where=where_filter,
+    )
+
+    all_chunks = results["documents"][0]
+    all_sources = [meta["source"] for meta in results["metadatas"][0]]
+    all_distances = results["distances"][0]
+
+    chunks, sources = [], []
+    for chunk, source, distance in zip(all_chunks, all_sources, all_distances):
+        if distance <= DISTANCE_THRESHOLD:
+            chunks.append(chunk)
+            sources.append(source)
+
+    return chunks, sources
+
+
+----------------------------------------
+FILE: app/services/sharepoint_fetcher.py
+----------------------------------------
+import base64
+import json
+import requests
+from pathlib import Path
+from app.services.config_store import get_active_value
+
+
+def get_azure_credentials() -> dict:
+    try:
+        val = get_active_value("azure_graph")
+    except Exception:
+        raise ValueError(
+            "Kredensial Azure/Graph API belum dikonfigurasi. Isi dulu di halaman Konfigurasi > Tata Kelola."
+        )
+
+    try:
+        creds = json.loads(val)
+        tenant_id = creds.get("tenant_id")
+        client_id = creds.get("client_id")
+        client_secret = creds.get("client_secret")
+        if not tenant_id or not client_id or not client_secret:
+            raise ValueError()
+        return creds
+    except Exception:
+        raise ValueError(
+            "Format kredensial Azure tidak valid atau belum lengkap. "
+            "Isi dulu di halaman Konfigurasi > Tata Kelola."
+        )
+
+
+def get_graph_access_token() -> str:
+    creds = get_azure_credentials()
+    tenant_id = creds["tenant_id"]
+    client_id = creds["client_id"]
+    client_secret = creds["client_secret"]
+
+    token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+    payload = {
+        "grant_type": "client_credentials",
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "scope": "https://graph.microsoft.com/.default"
+    }
+
+    try:
+        res = requests.post(token_url, data=payload, timeout=15)
+        if res.status_code != 200:
+            raise ValueError(f"Autentikasi Azure Graph gagal: {res.json().get('error_description', res.text)}")
+        return res.json()["access_token"]
+    except Exception as e:
+        if isinstance(e, ValueError):
+            raise
+        raise ValueError(f"Gagal menghubungi server Microsoft login: {str(e)}")
+
+
+def resolve_share_url_to_drive_item(share_url: str, access_token: str) -> dict:
+    # URL safe base64 encoding without padding
+    base64_url = base64.urlsafe_b64encode(share_url.strip().encode('utf-8')).decode('utf-8')
+    sharing_token = f"u!{base64_url.rstrip('=')}"
+
+    graph_url = f"https://graph.microsoft.com/v1.0/shares/{sharing_token}/driveItem"
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    try:
+        res = requests.get(graph_url, headers=headers, timeout=20)
+        if res.status_code in (403, 404):
+            raise ValueError(
+                "Link tidak bisa diakses — pastikan link dibuat lewat tombol Share/Copy Link di SharePoint, "
+                "bukan disalin dari address bar, dan aplikasi Azure sudah punya izin akses ke situs ini."
+            )
+        elif res.status_code != 200:
+            raise ValueError(f"Gagal me-resolve link sharepoint (Microsoft Graph Error: {res.text})")
+        return res.json()
+    except Exception as e:
+        if isinstance(e, ValueError):
+            raise
+        raise ValueError(f"Gagal menghubungi Microsoft Graph API: {str(e)}")
+
+
+def has_valid_azure_credentials() -> bool:
+    try:
+        creds = get_azure_credentials()
+        return bool(creds.get("tenant_id") and creds.get("client_id") and creds.get("client_secret"))
+    except Exception:
+        return False
+
+
+def download_sharepoint_file(share_url: str, dest_path: Path) -> str:
+    """Download SharePoint/OneDrive file. Returns the fetch_method ('graph_api' or 'fallback_download')."""
+    use_graph = has_valid_azure_credentials()
+    print(f"[sharepoint_fetcher] has_valid_azure_credentials={use_graph}", flush=True)
+
+    if use_graph:
+        access_token = get_graph_access_token()
+        drive_item = resolve_share_url_to_drive_item(share_url, access_token)
+
+        download_url = drive_item.get("@microsoft.graph.downloadUrl")
+        if not download_url:
+            raise ValueError("Gagal mendapatkan link download dari Microsoft Graph API metadata.")
+
+        headers = {"Authorization": f"Bearer {access_token}"}
+        try:
+            response = requests.get(download_url, headers=headers, timeout=60, stream=True)
+            if response.status_code != 200:
+                raise ValueError(f"Gagal mengunduh file dari Graph API, status: {response.status_code}")
+
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(dest_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+            
+            # Validate Excel format
+            import pandas as pd
+            try:
+                pd.read_excel(str(dest_path), nrows=1)
+            except Exception as e:
+                dest_path.unlink(missing_ok=True)
+                raise ValueError(f"File terunduh via Graph API bukan spreadsheet Excel (.xlsx) yang valid: {str(e)}")
+
+            return "graph_api"
+        except Exception as e:
+            if isinstance(e, ValueError):
+                raise
+            raise ValueError(f"Gagal mengunduh file dari SharePoint: {str(e)}")
+    else:
+        # TEMPORARY FALLBACK — replace with Graph API once Azure credentials are available
+        # Check token parameter in query string
+        if "e=" not in share_url:
+            raise ValueError(
+                "Link ini sepertinya bukan hasil tombol Share/Copy Link (tidak ada token akses 'e='). "
+                "Buka file di SharePoint, klik Share > Copy Link, lalu gunakan link itu."
+            )
+
+        fallback_url = share_url
+        if "download=1" not in fallback_url:
+            separator = "&" if "?" in fallback_url else "?"
+            fallback_url = f"{fallback_url}{separator}download=1"
+
+        try:
+            response = requests.get(fallback_url, allow_redirects=True, timeout=60, stream=True)
+            if response.status_code == 403:
+                raise ValueError(
+                    "Gagal download — Server SharePoint menolak akses (403 Forbidden). "
+                    "Link yang Anda masukkan sepertinya bukan 'Share Link' yang benar. "
+                    "Cara benar: buka file di SharePoint/OneDrive, klik tombol 'Share', "
+                    "pilih 'Copy Link' (bukan salin dari address bar browser), pastikan "
+                    "aksesnya 'Anyone with the link', lalu paste link itu di sini."
+                )
+            elif response.status_code != 200:
+                raise ValueError(f"Gagal mengunduh file dari fallback URL, status: {response.status_code}")
+
+            # Check content-type to avoid downloading HTML login page
+            content_type = response.headers.get("content-type", "")
+            if "text/html" in content_type:
+                raise ValueError(
+                    "Gagal download — kemungkinan link butuh login. "
+                    "Coba pastikan link dibuat dengan akses 'Anyone in TPS with the link' (public), "
+                    "atau tunggu kredensial Azure siap."
+                )
+
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(dest_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+
+            # Validate Excel format using pandas
+            import pandas as pd
+            try:
+                pd.read_excel(str(dest_path), nrows=1)
+            except Exception as e:
+                dest_path.unlink(missing_ok=True)
+                raise ValueError(
+                    "Gagal download — file terunduh bukan Excel (.xlsx) yang valid (kemungkinan dialihkan ke halaman login). "
+                    "Pastikan tipe akses link diatur ke 'Anyone' (siapa saja) atau gunakan kredensial Azure."
+                )
+
+            return "fallback_download"
+        except Exception as e:
+            if isinstance(e, ValueError):
+                raise
+            raise ValueError(f"Jalur fallback gagal menghubungi OneDrive/SharePoint: {str(e)}")
+

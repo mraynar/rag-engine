@@ -112,70 +112,93 @@ function AddCandidateForm({ group, onSaved, onCancel }) {
   return (
     <tr className={s.addFormRow}>
       <td colSpan={5} className={s.addFormCell}>
-        <form className={s.addForm} onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px' }}>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <input
-              ref={descRef}
-              className={s.addInput}
-              placeholder="Deskripsi/Label (misal: Azure Prod TPS)"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              required
-              style={{ flex: 1 }}
-            />
+        <form className={s.addForm} onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', width: '100%' }}>
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-navy)', marginBottom: '4px', textAlign: 'left' }}>
+                Deskripsi / Label
+              </label>
+              <input
+                ref={descRef}
+                className={s.addInput}
+                placeholder={isAzure ? "Contoh: Azure Prod TPS" : "Contoh: Gemini API Key Utama"}
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                required
+                style={{ width: '100%', boxSizing: 'border-box' }}
+              />
+            </div>
 
-            {!isAzure && (
+            {isAzure ? (
               <>
-                <input
-                  className={s.addInput}
-                  placeholder="Nilai parameter"
-                  value={value}
-                  onChange={e => setValue(e.target.value)}
-                  type={isSecret ? 'password' : 'text'}
-                  required
-                  style={{ flex: 1.5 }}
-                />
-                <label className={s.addSecretToggle} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem' }}>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-navy)', marginBottom: '4px', textAlign: 'left' }}>
+                    Tenant ID (Directory ID)
+                  </label>
+                  <input
+                    className={s.addInput}
+                    placeholder="AZURE_TENANT_ID"
+                    value={azureTenant}
+                    onChange={e => setAzureTenant(e.target.value)}
+                    required
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-navy)', marginBottom: '4px', textAlign: 'left' }}>
+                    Client ID (Application ID)
+                  </label>
+                  <input
+                    className={s.addInput}
+                    placeholder="AZURE_CLIENT_ID"
+                    value={azureClient}
+                    onChange={e => setAzureClient(e.target.value)}
+                    required
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-navy)', marginBottom: '4px', textAlign: 'left' }}>
+                    Client Secret Value
+                  </label>
+                  <input
+                    className={s.addInput}
+                    placeholder="AZURE_CLIENT_SECRET"
+                    value={azureSecret}
+                    onChange={e => setAzureSecret(e.target.value)}
+                    type="password"
+                    required
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </>
+            ) : (
+              <div style={{ gridColumn: 'span 2', display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-navy)', marginBottom: '4px', textAlign: 'left' }}>
+                    Nilai Parameter
+                  </label>
+                  <input
+                    className={s.addInput}
+                    placeholder="Masukkan nilai parameter"
+                    value={value}
+                    onChange={e => setValue(e.target.value)}
+                    type={isSecret ? 'password' : 'text'}
+                    required
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <label className={s.addSecretToggle} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', paddingBottom: '8px', cursor: 'pointer', userSelect: 'none' }}>
                   <input
                     type="checkbox"
                     checked={isSecret}
                     onChange={e => setIsSecret(e.target.checked)}
                   />
-                  Rahasia
+                  Rahasia (Sembunyikan Nilai)
                 </label>
-              </>
+              </div>
             )}
           </div>
-
-          {isAzure && (
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '6px' }}>
-              <input
-                className={s.addInput}
-                placeholder="AZURE_TENANT_ID"
-                value={azureTenant}
-                onChange={e => setAzureTenant(e.target.value)}
-                required
-                style={{ flex: 1 }}
-              />
-              <input
-                className={s.addInput}
-                placeholder="AZURE_CLIENT_ID"
-                value={azureClient}
-                onChange={e => setAzureClient(e.target.value)}
-                required
-                style={{ flex: 1 }}
-              />
-              <input
-                className={s.addInput}
-                placeholder="AZURE_CLIENT_SECRET"
-                value={azureSecret}
-                onChange={e => setAzureSecret(e.target.value)}
-                type="password"
-                required
-                style={{ flex: 1.2 }}
-              />
-            </div>
-          )}
 
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '8px' }}>
             <button type="button" className={s.cancelBtn} onClick={onCancel} disabled={loading}>
