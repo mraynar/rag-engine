@@ -1,21 +1,12 @@
 [
   {
-    "id": "src_6421ae0d",
+    "id": "src_bb2a8293",
     "category_name": "Overview Box",
-    "onedrive_url": "https://tpssby-my.sharepoint.com/:x:/r/personal/ikhsan_efendi_tps_co_id/Documents/CHATBOT/OVERVIEW%20BOX.xlsx?d=w77ff21484def42c78297999e765b63d5&csf=1&web=1&e=idM5KF",
-    "last_synced_at": null,
-    "sync_status": "failed",
-    "last_error": "Gagal me-resolve link sharepoint (Microsoft Graph Error: {\"error\":{\"code\":\"generalException\",\"innerError\":{\"code\":\"spException\",\"innerError\":{\"code\":\"other\"}},\"message\":\"General exception while processing\"}})",
-    "chunk_count": 0
-  },
-  {
-    "id": "src_381109eb",
-    "category_name": "Overview Box2",
-    "onedrive_url": "https://docs.google.com/spreadsheets/d/1nU-BkAQf0x6MfgbBgok3TN02lj89qpPr/edit?usp=sharing&ouid=106524370583943233391&rtpof=true&sd=true",
-    "last_synced_at": null,
-    "sync_status": "failed",
-    "last_error": "Gagal mendownload dari Google Drive, status: 404",
-    "chunk_count": 0,
-    "fetch_method": null
+    "onedrive_url": "https://docs.google.com/spreadsheets/d/1x-EnQ5Vb6S1RCgCBrQ2vs9qj6Pn48lEJ/edit?usp=sharing&ouid=106524370583943233391&rtpof=true&sd=true",
+    "last_synced_at": "2026-08-03T09:07:02",
+    "sync_status": "success",
+    "last_error": null,
+    "chunk_count": 5,
+    "fetch_method": "google_sheets"
   }
 ]
