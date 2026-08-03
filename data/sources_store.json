@@ -7,5 +7,15 @@
     "sync_status": "failed",
     "last_error": "Gagal me-resolve link sharepoint (Microsoft Graph Error: {\"error\":{\"code\":\"generalException\",\"innerError\":{\"code\":\"spException\",\"innerError\":{\"code\":\"other\"}},\"message\":\"General exception while processing\"}})",
     "chunk_count": 0
+  },
+  {
+    "id": "src_381109eb",
+    "category_name": "Overview Box2",
+    "onedrive_url": "https://docs.google.com/spreadsheets/d/1nU-BkAQf0x6MfgbBgok3TN02lj89qpPr/edit?usp=sharing&ouid=106524370583943233391&rtpof=true&sd=true",
+    "last_synced_at": null,
+    "sync_status": "failed",
+    "last_error": "Gagal mendownload dari Google Drive, status: 404",
+    "chunk_count": 0,
+    "fetch_method": null
   }
 ]

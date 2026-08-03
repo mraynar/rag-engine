@@ -80,8 +80,7 @@ def sync_source(id: str) -> dict:
         try:
             # Download file from sharing link
             if is_gdrive:
-                download_googledrive_file(source["onedrive_url"], temp_path)
-                fetch_method = "google_drive"
+                fetch_method = download_googledrive_file(source["onedrive_url"], temp_path)
             else:
                 fetch_method = download_sharepoint_file(source["onedrive_url"], temp_path)
 

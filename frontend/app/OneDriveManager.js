@@ -176,10 +176,10 @@ export default function OneDriveManager() {
               />
             </div>
             <div style={{ flex: '2', minWidth: '300px' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-muted)', marginBottom: '4px' }}>Share URL OneDrive / Google Drive (.xlsx)</label>
+              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-muted)', marginBottom: '4px' }}>Share URL OneDrive / Google Drive / Google Sheets</label>
               <input
                 type="url"
-                placeholder="Contoh: https://1drv.ms/x/... atau https://drive.google.com/..."
+                placeholder="Contoh: https://1drv.ms/x/..., https://drive.google.com/..., atau https://docs.google.com/spreadsheets/d/..."
                 value={onedriveUrl}
                 onChange={e => setOnedriveUrl(e.target.value)}
                 required
@@ -337,6 +337,10 @@ export default function OneDriveManager() {
                               label = 'Mode: Google Drive';
                               color = '#805AD5';
                               bgColor = '#FAF5FF';
+                            } else if (cat.fetch_method === 'google_sheets') {
+                              label = 'Mode: Google Sheets';
+                              color = '#319795';
+                              bgColor = '#E6FFFA';
                             }
 
                             return (
