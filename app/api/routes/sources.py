@@ -55,6 +55,11 @@ def update_existing_source(id: str, request: SourceUpdateRequest) -> dict:
 @router.delete("/{id}")
 def delete_existing_source(id: str) -> dict:
     try:
+        source = get_source(id)
+        if source:
+            category_name = source["category_name"]
+            from app.services.ingestion import delete_category_vector_data
+            delete_category_vector_data(category_name)
         delete_source(id)
         return {"message": "Kategori berhasil dihapus."}
     except KeyError as e:

@@ -82,3 +82,14 @@ def get_revealed_config(key: str) -> dict:
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return {"value": val}
+
+
+from app.services.reset_service import reset_all_data
+
+@router.post("/config/reset")
+def reset_system_data() -> dict:
+    try:
+        reset_all_data()
+        return {"message": "Sistem berhasil di-reset. Semua data kategori, dokumen, riwayat chat, dan indeks ChromaDB telah dibersihkan."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Gagal me-reset data: {str(e)}")

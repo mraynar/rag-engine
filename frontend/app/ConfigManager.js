@@ -687,6 +687,7 @@ export default function ConfigManager() {
   const [entries, setEntries] = useState(null);
   const [fetchError, setFetchError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [toasts, setToasts] = useState([]);
   
   const toast = {
@@ -708,7 +709,7 @@ export default function ConfigManager() {
       }, {})
     : {};
 
-  // Force groups order: Gemini key, embedding model, generation model, azure graph credentials
+  // Force groups order: Gemini key, embedding model, generation model, azure graph
   const orderedGroups = ['gemini_api_key', 'embedding_model', 'generation_model', 'azure_graph'];
   const groupNames = Object.keys(groupedEntries);
   const displayGroups = orderedGroups.filter(name => groupNames.includes(name))
@@ -727,6 +728,29 @@ export default function ConfigManager() {
       setEntries([]);
     } finally {
       setRefreshing(false);
+    }
+  }
+
+  async function handleResetData() {
+    if (!window.confirm("PENTING: Apakah Anda benar-benar yakin ingin menghapus seluruh data aplikasi (Kategori, Dokumen, Chat, Index Vektor)? Tindakan ini permanen.")) return;
+    
+    setResetting(true);
+    try {
+      const res = await fetch(`${API_URL}/config/reset`, { method: 'POST' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Server error (${res.status})`);
+      }
+      const data = await res.json();
+      toast.push(data.message, 'success');
+      loadConfig();
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      toast.push(err.message || 'Gagal me-reset data.', 'error');
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -793,6 +817,42 @@ export default function ConfigManager() {
               toast={toast}
             />
           ))}
+        </div>
+      )}
+
+      {/* Danger Zone (Reset Data) */}
+      {!isLoading && (
+        <div style={{
+          marginTop: '40px',
+          padding: '20px',
+          border: '1px solid #FED7D7',
+          borderRadius: '8px',
+          backgroundColor: '#FFF5F5',
+        }}>
+          <h4 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', color: '#C53030', fontWeight: '700' }}>Danger Zone (Reset Data)</h4>
+          <p style={{ margin: '0 0 16px 0', fontSize: '0.8rem', color: '#9B2C2C' }}>
+            Menghapus semua kategori OneDrive/Google Drive, dokumen manual, riwayat chat, dan indeks pencarian ChromaDB secara permanen dari server. Tindakan ini tidak dapat dibatalkan.
+          </p>
+          <button
+            onClick={handleResetData}
+            disabled={resetting}
+            style={{
+              backgroundColor: '#E53E3E',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '8px 16px',
+              fontSize: '0.8rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            {resetting ? <SpinnerIcon size={12} className={s.spinIcon} /> : '🗑️'}
+            Reset Semua Data Aplikasi
+          </button>
         </div>
       )}
 
