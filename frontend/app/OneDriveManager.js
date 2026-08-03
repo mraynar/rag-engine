@@ -176,10 +176,10 @@ export default function OneDriveManager() {
               />
             </div>
             <div style={{ flex: '2', minWidth: '300px' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-muted)', marginBottom: '4px' }}>OneDrive Share URL (.xlsx)</label>
+              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-muted)', marginBottom: '4px' }}>Share URL OneDrive / Google Drive (.xlsx)</label>
               <input
                 type="url"
-                placeholder="https://1drv.ms/x/s!..."
+                placeholder="Contoh: https://1drv.ms/x/... atau https://drive.google.com/..."
                 value={onedriveUrl}
                 onChange={e => setOnedriveUrl(e.target.value)}
                 required
@@ -324,19 +324,35 @@ export default function OneDriveManager() {
                           }}>
                             {statusLabel}
                           </span>
-                          {cat.sync_status === 'success' && cat.fetch_method && (
-                            <span style={{
-                              display: 'inline-block',
-                              padding: '2px 8px',
-                              borderRadius: '4px',
-                              fontSize: '0.7rem',
-                              fontWeight: '600',
-                              color: cat.fetch_method === 'fallback_download' ? '#B7791F' : '#2B6CB0',
-                              backgroundColor: cat.fetch_method === 'fallback_download' ? '#FEFCBF' : '#EBF8FF'
-                            }}>
-                              {cat.fetch_method === 'fallback_download' ? 'Mode: Fallback' : 'Mode: Graph API'}
-                            </span>
-                          )}
+                          {cat.sync_status === 'success' && cat.fetch_method && (() => {
+                            let label = 'Mode: Graph API';
+                            let color = '#2B6CB0';
+                            let bgColor = '#EBF8FF';
+
+                            if (cat.fetch_method === 'fallback_download') {
+                              label = 'Mode: Fallback';
+                              color = '#B7791F';
+                              bgColor = '#FEFCBF';
+                            } else if (cat.fetch_method === 'google_drive') {
+                              label = 'Mode: Google Drive';
+                              color = '#805AD5';
+                              bgColor = '#FAF5FF';
+                            }
+
+                            return (
+                              <span style={{
+                                display: 'inline-block',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '0.7rem',
+                                fontWeight: '600',
+                                color: color,
+                                backgroundColor: bgColor
+                              }}>
+                                {label}
+                              </span>
+                            );
+                          })()}
                         </div>
                         {cat.last_synced_at && (
                           <span style={{ fontSize: '0.7rem', color: 'var(--color-muted)' }}>
