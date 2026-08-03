@@ -365,7 +365,7 @@ export default function DocumentManager() {
             </p>
           </div>
         ) : (
-          <div className={s.tableWrapper}>
+          <div className={s.tableWrapper} style={{ maxHeight: '200px', overflowY: 'auto' }}>
             <table className={s.table}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--color-border)' }}>

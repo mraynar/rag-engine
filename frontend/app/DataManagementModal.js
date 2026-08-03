@@ -56,6 +56,7 @@ export default function DataManagementModal() {
         backgroundColor: '#fff',
         width: '90%',
         maxWidth: '950px',
+        height: '710px',
         maxHeight: '85vh',
         borderRadius: '12px',
         boxShadow: 'var(--shadow-lg)',
