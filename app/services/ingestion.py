@@ -291,3 +291,12 @@ def ingest_document(file_path: Path, filename: str, category: Optional[str] = No
 
     return len(chunks)
 
+
+def delete_category_vector_data(category_name: str) -> None:
+    try:
+        chroma_client = chromadb.PersistentClient(path=str(VECTOR_STORE_DIR))
+        collection = chroma_client.get_or_create_collection(name="tps_docs")
+        collection.delete(where={"category": category_name})
+    except Exception as e:
+        print(f"[ingestion] Warning: failed to delete vector data for category '{category_name}': {e}")
+
