@@ -346,19 +346,34 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
   }
 
   // Display text formatter
-  let displayValue = '••••••••';
-  if (showSecret) {
-    const rawVal = revealedValue ?? entry.value;
-    if (isAzure) {
-      try {
-        const parsed = JSON.parse(rawVal);
-        displayValue = `Tenant: ${parsed.tenant_id.substring(0, 8)}..., Client: ${parsed.client_id.substring(0, 8)}...`;
-      } catch (e) {
-        displayValue = rawVal;
+  let displayValue;
+  if (isAzure) {
+    let creds = { tenant_id: '', client_id: '', client_secret: '' };
+    try {
+      const rawVal = revealedValue ?? entry.value;
+      if (rawVal) {
+        creds = JSON.parse(rawVal);
       }
-    } else {
-      displayValue = rawVal;
-    }
+    } catch (e) {}
+
+    displayValue = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+        <div>
+          <span style={{ fontWeight: '600', color: 'var(--color-navy)', display: 'inline-block', width: '55px' }}>Tenant:</span>
+          <span style={{ color: 'var(--color-text)' }}>{showSecret ? creds.tenant_id : '••••••••••••••••'}</span>
+        </div>
+        <div>
+          <span style={{ fontWeight: '600', color: 'var(--color-navy)', display: 'inline-block', width: '55px' }}>Client:</span>
+          <span style={{ color: 'var(--color-text)' }}>{showSecret ? creds.client_id : '••••••••••••••••'}</span>
+        </div>
+        <div>
+          <span style={{ fontWeight: '600', color: 'var(--color-navy)', display: 'inline-block', width: '55px' }}>Secret:</span>
+          <span style={{ color: 'var(--color-text)' }}>{showSecret ? creds.client_secret : '••••••••••••••••'}</span>
+        </div>
+      </div>
+    );
+  } else {
+    displayValue = showSecret ? (revealedValue ?? entry.value) : '••••••••';
   }
 
   const trClass = `${s.tr} ${entry.is_active ? s.trActive : ''} ${isEditing ? s.trEditing : ''}`;
@@ -468,9 +483,13 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
       </td>
       <td className={s.td}>
         <div className={s.valueCell}>
-          <span className={`${s.valueText} ${!showSecret ? s.valueTextSecret : ''}`}>
-            {displayValue}
-          </span>
+          {isAzure ? (
+            displayValue
+          ) : (
+            <span className={`${s.valueText} ${!showSecret ? s.valueTextSecret : ''}`}>
+              {displayValue}
+            </span>
+          )}
           <button
             className={s.eyeBtn}
             onClick={handleToggleSecret}
