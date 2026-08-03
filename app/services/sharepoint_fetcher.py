@@ -53,16 +53,50 @@ def get_graph_access_token() -> str:
         raise ValueError(f"Gagal menghubungi server Microsoft login: {str(e)}")
 
 
+def decode_jwt_payload(token: str) -> dict:
+    try:
+        parts = token.split('.')
+        if len(parts) >= 2:
+            payload_b64 = parts[1]
+            payload_b64 += '=' * (-len(payload_b64) % 4)
+            payload_json = base64.b64decode(payload_b64).decode('utf-8')
+            import json
+            return json.loads(payload_json)
+    except Exception as e:
+        return {"error": f"Gagal mendecode JWT payload: {str(e)}"}
+    return {}
+
+
 def resolve_share_url_to_drive_item(share_url: str, access_token: str) -> dict:
+    # Print original URL
+    print("=== DIAGNOSTIC LOG: SHAREPOINT RESOLVE ===", flush=True)
+    print(f"Original Share URL: {share_url}", flush=True)
+
     # URL safe base64 encoding without padding
     base64_url = base64.urlsafe_b64encode(share_url.strip().encode('utf-8')).decode('utf-8')
     sharing_token = f"u!{base64_url.rstrip('=')}"
+    print(f"Encoded Share ID: {sharing_token}", flush=True)
 
     graph_url = f"https://graph.microsoft.com/v1.0/shares/{sharing_token}/driveItem"
+    print(f"Full Endpoint URL: {graph_url}", flush=True)
+
+    # Decode access token payload to check permissions
+    payload = decode_jwt_payload(access_token)
+    print("--- Access Token Diagnostics ---", flush=True)
+    print(f"Token Type: Bearer", flush=True)
+    print(f"Roles: {payload.get('roles', 'No roles claim found')}", flush=True)
+    print(f"Scp (Scopes): {payload.get('scp', 'No scp claim found')}", flush=True)
+    print(f"Full Claims Payload (excl. signature): {payload}", flush=True)
+    print("--------------------------------", flush=True)
+
     headers = {"Authorization": f"Bearer {access_token}"}
 
     try:
         res = requests.get(graph_url, headers=headers, timeout=20)
+        print(f"Graph API Response Status Code: {res.status_code}", flush=True)
+        print(f"Graph API Response Body: {res.text}", flush=True)
+        print("==========================================", flush=True)
+
         if res.status_code in (403, 404):
             raise ValueError(
                 "Link tidak bisa diakses — pastikan link dibuat lewat tombol Share/Copy Link di SharePoint, "

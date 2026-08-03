@@ -13,6 +13,7 @@ from app.services.sources_store import (
     mark_failed,
 )
 from app.services.sharepoint_fetcher import download_sharepoint_file
+from app.services.googledrive_fetcher import download_googledrive_file
 from app.services.ingestion import ingest_document
 
 router = APIRouter(prefix="/sources", tags=["sources"])
@@ -66,6 +67,9 @@ def sync_source(id: str) -> dict:
     if not source:
         raise HTTPException(status_code=404, detail="Kategori tidak ditemukan.")
 
+    url = source["onedrive_url"].strip().lower()
+    is_gdrive = "drive.google.com" in url or "docs.google.com" in url
+
     # Create temporary path for download
     # We name the file using category name so that it identifies neatly in ingestion
     safe_category = source["category_name"].replace(" ", "_").replace("/", "_")
@@ -74,8 +78,12 @@ def sync_source(id: str) -> dict:
     with tempfile.TemporaryDirectory() as tmpdir:
         temp_path = Path(tmpdir) / temp_filename
         try:
-            # Download file from SharePoint share link
-            fetch_method = download_sharepoint_file(source["onedrive_url"], temp_path)
+            # Download file from sharing link
+            if is_gdrive:
+                download_googledrive_file(source["onedrive_url"], temp_path)
+                fetch_method = "google_drive"
+            else:
+                fetch_method = download_sharepoint_file(source["onedrive_url"], temp_path)
 
             # Ingest downloaded document with category metadata
             chunk_count = ingest_document(
