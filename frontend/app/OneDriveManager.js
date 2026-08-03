@@ -122,9 +122,9 @@ export default function OneDriveManager() {
     <div style={{ marginTop: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-navy)' }}>Kategori Sumber Data OneDrive</h3>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-navy)' }}>Kategori Sumber Data Online</h3>
           <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-muted)' }}>
-            Hubungkan folder/file Excel OneDrive publik ke kategori data untuk pencarian yang presisi.
+            Hubungkan link spreadsheet online (OneDrive / Google Drive / Google Sheets) ke kategori data untuk pencarian yang presisi.
           </p>
         </div>
         <button
@@ -235,7 +235,7 @@ export default function OneDriveManager() {
           <thead>
             <tr style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}>
               <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600' }}>Kategori</th>
-              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600' }}>Link OneDrive</th>
+              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600' }}>Tautan / Share URL</th>
               <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600' }}>Status Sinkronisasi</th>
               <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600', textAlign: 'center' }}>Chunk</th>
               <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600', textAlign: 'right' }}>Aksi</th>
@@ -470,7 +470,7 @@ export default function OneDriveManager() {
             {categories.length === 0 && (
               <tr>
                 <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: 'var(--color-muted)' }}>
-                  Belum ada kategori terdaftar. Silakan tambahkan kategori OneDrive menggunakan tombol di kanan atas.
+                  Belum ada kategori terdaftar. Silakan tambahkan kategori sumber data online menggunakan tombol di kanan atas.
                 </td>
               </tr>
             )}
