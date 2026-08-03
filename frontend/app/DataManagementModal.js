@@ -7,9 +7,32 @@ import OneDriveManager from './OneDriveManager';
 import DocumentManager from './DocumentManager';
 import { XIcon } from './icons';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 export default function DataManagementModal() {
   const { isDataModalOpen, setIsDataModalOpen } = useCategory();
   const [activeSubTab, setActiveSubTab] = useState('onedrive'); // 'onedrive' or 'manual'
+  const [resetting, setResetting] = useState(false);
+
+  async function handleResetData() {
+    if (!window.confirm("PENTING: Apakah Anda benar-benar yakin ingin menghapus seluruh data aplikasi (Kategori, Dokumen, Chat, Index Vektor)? Tindakan ini permanen.")) return;
+    
+    setResetting(true);
+    try {
+      const res = await fetch(`${API_BASE}/config/reset`, { method: 'POST' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Server error (${res.status})`);
+      }
+      const data = await res.json();
+      window.alert(data.message || "Reset berhasil.");
+      window.location.reload();
+    } catch (err) {
+      window.alert(err.message || 'Gagal me-reset data.');
+    } finally {
+      setResetting(false);
+    }
+  }
 
   if (!isDataModalOpen) return null;
 
@@ -55,7 +78,7 @@ export default function DataManagementModal() {
               Manajemen Sumber Data
             </h3>
             <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-muted)' }}>
-              Kelola sinkronisasi data OneDrive SharePoint atau unggah dokumen manual.
+              Kelola sinkronisasi data online (OneDrive, Google Drive, Google Sheets) atau unggah dokumen manual.
             </p>
           </div>
           
@@ -102,7 +125,7 @@ export default function DataManagementModal() {
               transition: 'all 0.15s ease'
             }}
           >
-            OneDrive SharePoint
+            Sumber Data Online
           </button>
 
           <button
@@ -134,6 +157,40 @@ export default function DataManagementModal() {
           ) : (
             <DocumentManager />
           )}
+
+          {/* Danger Zone (Reset Data) */}
+          <div style={{
+            marginTop: '40px',
+            padding: '16px 20px',
+            border: '1px solid #FED7D7',
+            borderRadius: '8px',
+            backgroundColor: '#FFF5F5',
+          }}>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#C53030', fontWeight: '700' }}>Danger Zone (Reset Data)</h4>
+            <p style={{ margin: '0 0 16px 0', fontSize: '0.78rem', color: '#9B2C2C', lineHeight: '1.4' }}>
+              Menghapus semua kategori data online (OneDrive/Google Drive/Google Sheets), dokumen manual, riwayat chat, dan indeks pencarian ChromaDB secara permanen dari server. Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <button
+              onClick={handleResetData}
+              disabled={resetting}
+              style={{
+                backgroundColor: '#E53E3E',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '8px 16px',
+                fontSize: '0.78rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                opacity: resetting ? 0.7 : 1
+              }}
+            >
+              {resetting ? 'Mereset...' : '🗑️ Reset Semua Data Aplikasi'}
+            </button>
+          </div>
         </div>
 
       </div>
