@@ -23,7 +23,7 @@ export default function RootLayout({ children }) {
         <AppProviders>
           <div className="page-shell">
             {/* ---- Top navigation bar (Unified Light theme matching reference) ---- */}
-            <header className="topnav" role="banner" style={{ position: 'relative' }}>
+            <header className="topnav" role="banner" style={{ position: 'relative', zIndex: 99 }}>
               <div className="topnav-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 
                 {/* Left: Colored Pelindo Brand Logo */}
