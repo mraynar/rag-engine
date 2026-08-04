@@ -43,7 +43,7 @@ function InfoIcon({ size = 15 }) {
 }
 
 export default function UnifiedPage() {
-  const [activeTab, setActiveTab] = useState('umum'); // 'umum' or 'konfigurasi'
+  const [activeTab, setActiveTab] = useState('umum');
   const { selectedCategory } = useCategory();
 
   return (
@@ -54,9 +54,9 @@ export default function UnifiedPage() {
       height: '100%',
       backgroundColor: 'var(--color-bg)',
       fontFamily: "'Inter', sans-serif",
-      overflow: 'hidden'
+      overflow: 'hidden',
     }}>
-      {/* ── Header Area (Global for all views) ── */}
+      {/* ── Header Area ── */}
       <div style={{
         maxWidth: '1000px',
         width: '100%',
@@ -65,75 +65,52 @@ export default function UnifiedPage() {
         display: 'flex',
         flexDirection: 'column',
         gap: '8px',
-        flexShrink: 0
+        flexShrink: 0,
       }}>
-        {/* Header Row: Title on Left, Switcher on Right */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: '12px'
+          gap: '12px',
         }}>
           {/* Title */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h2 style={{
-              fontSize: '1.35rem',
-              fontWeight: '700',
-              color: 'var(--color-navy)',
-              margin: 0
-            }}>
+            <h2 style={{ fontSize: '1.35rem', fontWeight: '700', color: 'var(--color-navy)', margin: 0 }}>
               Chatbot TPS
             </h2>
             <button style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--color-muted)',
-              cursor: 'pointer',
-              padding: '4px',
-              display: 'flex',
-              alignItems: 'center'
+              background: 'none', border: 'none',
+              color: 'var(--color-muted)', cursor: 'pointer',
+              padding: '4px', display: 'flex', alignItems: 'center',
             }} title="Informasi Sistem">
               <InfoIcon size={16} />
             </button>
           </div>
 
-          {/* Top-Level Tabs Switcher ("Umum" vs "Konfigurasi") */}
+          {/* Tab Switcher */}
           <div style={{ display: 'flex', gap: '4px' }}>
             <button
               onClick={() => setActiveTab('umum')}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                border: 'none',
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '6px 12px', borderRadius: '6px', border: 'none',
                 backgroundColor: activeTab === 'umum' ? 'var(--color-accent-light)' : 'transparent',
                 color: activeTab === 'umum' ? 'var(--color-accent)' : 'var(--color-text-light)',
-                fontWeight: '600',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
+                fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer',
                 transition: 'all 0.2s',
               }}
             >
               <GlobeIcon size={14} /> Umum
             </button>
-
             <button
               onClick={() => setActiveTab('konfigurasi')}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                border: 'none',
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '6px 12px', borderRadius: '6px', border: 'none',
                 backgroundColor: activeTab === 'konfigurasi' ? 'var(--color-accent-light)' : 'transparent',
                 color: activeTab === 'konfigurasi' ? 'var(--color-accent)' : 'var(--color-text-light)',
-                fontWeight: '600',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
+                fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer',
                 transition: 'all 0.2s',
               }}
             >
@@ -142,36 +119,27 @@ export default function UnifiedPage() {
           </div>
         </div>
 
-        {/* Tab Context Helper Description */}
-        <p style={{
-          margin: 0,
-          fontSize: '0.72rem',
-          color: 'var(--color-muted)',
-        }}>
+        {/* Context description */}
+        <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--color-muted)' }}>
           {activeTab === 'umum' ? (
-            <>
-              Mode Umum: Pertanyaan tentang layanan, operasional, dan informasi umum TPS (Kategori Aktif: <strong style={{ color: 'var(--color-navy)' }}>{selectedCategory}</strong>)
-            </>
+            <>Mode Umum: Pertanyaan tentang layanan, operasional, dan informasi umum TPS (Kategori Aktif: <strong style={{ color: 'var(--color-navy)' }}>{selectedCategory}</strong>)</>
           ) : (
-            <>
-              Mode Konfigurasi: Manajemen kredensial API key, model embedding/generation, dan Microsoft Graph
-            </>
+            <>Mode Konfigurasi: Manajemen kredensial API key, model embedding/generation, dan Microsoft Graph</>
           )}
         </p>
       </div>
 
-      {/* ── Content View Workspace ── */}
+      {/* ── Content ── */}
       <div style={{ flex: '1', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+        {/*
+          Chat tab:  showSidebar={true}  → full sidebar + persistent conversation
+          Config tab: switched out, but ConversationContext keeps activeConvId in memory
+        */}
         {activeTab === 'umum' ? (
-          <ChatInterface hideHeader={true} />
+          <ChatInterface hideHeader={true} showSidebar={true} />
         ) : (
           <div style={{ flex: '1', overflowY: 'auto', minHeight: 0 }}>
-            <div style={{
-              maxWidth: '1000px',
-              width: '100%',
-              margin: '0 auto',
-              padding: '10px 24px 24px 24px'
-            }}>
+            <div style={{ maxWidth: '1000px', width: '100%', margin: '0 auto', padding: '10px 24px 24px 24px' }}>
               <ConfigManager />
             </div>
           </div>

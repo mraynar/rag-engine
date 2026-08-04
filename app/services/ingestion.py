@@ -212,39 +212,52 @@ def _wait_for_rate_limit_slot():
 
 def _embed_texts_batch(
     texts: list[str],
-    batch_size: int = 100,
+    batch_size: int = 50,
     max_workers: int = 1,
 ) -> list[list[float]]:
     """Embed texts in parallel batches; result order matches input order."""
     batches = [texts[i : i + batch_size] for i in range(0, len(texts), batch_size)]
+    total_batches = len(batches)
+    print(f"[ingestion] Starting embedding: {len(texts)} chunks → {total_batches} batches of max {batch_size}")
 
-    def embed_one_batch(batch: list[str]) -> list[list[float]]:
+    # Exponential backoff schedule (seconds base, excluding jitter 0-5s):
+    # attempt 0: ~10s, 1: ~30s, 2: ~70s, 3: ~130s, 4: ~250s, 5: ~490s
+    _BACKOFF_SCHEDULE = [10, 30, 70, 130, 250, 490]
+    _MAX_RETRIES = len(_BACKOFF_SCHEDULE)
+
+    def embed_one_batch(batch_idx_and_batch: tuple) -> list[list[float]]:
+        batch_idx, batch = batch_idx_and_batch
         _wait_for_rate_limit_slot()
         time.sleep(1.0)  # fixed pacing on top of the rate-limit window
-        for attempt in range(3):
+        for attempt in range(_MAX_RETRIES):
             try:
                 result = get_gemini_client().models.embed_content(
                     model=get_embedding_model(),
                     contents=batch,
                     config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT"),
                 )
+                print(f"[ingestion] Batch {batch_idx + 1}/{total_batches} OK ({len(batch)} chunks)")
                 return [e.values for e in result.embeddings]
             except Exception as e:
-                if "RESOURCE_EXHAUSTED" in str(e) and attempt < 2:
-                    # Exponential backoff + jitter:
-                    # Attempt 0: ~10 seconds
-                    # Attempt 1: ~30 seconds
-                    backoff = 10 if attempt == 0 else 30
+                if "RESOURCE_EXHAUSTED" in str(e) and attempt < _MAX_RETRIES - 1:
+                    backoff = _BACKOFF_SCHEDULE[attempt]
                     sleep_time = backoff + random.uniform(0, 5)
-                    print(f"[ingestion] Gemini Rate Limit (RESOURCE_EXHAUSTED) hit. Sleeping for {sleep_time:.2f} seconds before retry...")
+                    print(
+                        f"[ingestion] Gemini Rate Limit (RESOURCE_EXHAUSTED) hit on batch "
+                        f"{batch_idx + 1}/{total_batches}, attempt {attempt + 1}/{_MAX_RETRIES}. "
+                        f"Sleeping for {sleep_time:.2f}s before retry..."
+                    )
                     time.sleep(sleep_time)
                     continue
                 raise
         return []  # unreachable
 
-    all_embeddings: list[list[list[float]] | None] = [None] * len(batches)
+    all_embeddings: list[list[list[float]] | None] = [None] * total_batches
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_idx = {executor.submit(embed_one_batch, batch): i for i, batch in enumerate(batches)}
+        future_to_idx = {
+            executor.submit(embed_one_batch, (i, batch)): i
+            for i, batch in enumerate(batches)
+        }
         for future in as_completed(future_to_idx):
             idx = future_to_idx[future]
             all_embeddings[idx] = future.result()  # re-raises exception from thread
@@ -252,6 +265,7 @@ def _embed_texts_batch(
     flat: list[list[float]] = []
     for batch_result in all_embeddings:
         flat.extend(batch_result)  # type: ignore[arg-type]
+    print(f"[ingestion] Embedding complete: {len(flat)} embeddings total.")
     return flat
 
 
