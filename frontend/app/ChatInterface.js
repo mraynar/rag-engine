@@ -275,6 +275,8 @@ function Sidebar({ onNewChat }) {
     conversations, loadConversations,
   } = useConversation();
 
+  const [shake, setShake] = useState(false);
+
   const pinned   = conversations.filter(c => c.pinned);
   const unpinned = conversations.filter(c => !c.pinned);
 
@@ -315,8 +317,14 @@ function Sidebar({ onNewChat }) {
       <div className={s.sidebarHeader}>
         <span className={s.sidebarTitle}>Riwayat</span>
         <button
-          className={s.newConvBtn}
-          onClick={onNewChat}
+          className={`${s.newConvBtn} ${shake ? s.newConvBtnShake : ''}`}
+          onClick={async () => {
+            const success = await onNewChat();
+            if (!success) {
+              setShake(true);
+              setTimeout(() => setShake(false), 550);
+            }
+          }}
           aria-label="Mulai percakapan baru"
           title="Percakapan Baru"
         >
@@ -456,11 +464,15 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
 
   // ── New chat ──────────────────────────────────────────────────────────────
   async function handleNewChat() {
+    if (messages.length === 0) {
+      return false;
+    }
     const res = await fetch(`${API_URL}/conversations`, { method: 'POST' });
-    if (!res.ok) return;
+    if (!res.ok) return false;
     const data = await res.json();
     setActiveConvId(data.id);
     await loadConversations();
+    return true;
   }
 
   // ── Send message ──────────────────────────────────────────────────────────
