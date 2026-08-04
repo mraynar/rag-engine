@@ -33,8 +33,23 @@ def retrieve_relevant_chunks(question: str, category: Optional[str] = None) -> t
             where_filter = {"category": category}
     else:
         active_sources = get_active_filenames()
+        from app.services.sources_store import list_sources
+        active_categories = []
+        try:
+            active_categories = [s["category_name"] for s in list_sources() if s.get("sync_status") == "success"]
+        except Exception:
+            pass
+
+        or_conditions = []
         if active_sources:
-            where_filter = {"source": {"$in": active_sources}}
+            or_conditions.append({"source": {"$in": active_sources}})
+        if active_categories:
+            or_conditions.append({"category": {"$in": active_categories}})
+
+        if len(or_conditions) == 1:
+            where_filter = or_conditions[0]
+        elif len(or_conditions) > 1:
+            where_filter = {"$or": or_conditions}
         else:
             where_filter = None
 
