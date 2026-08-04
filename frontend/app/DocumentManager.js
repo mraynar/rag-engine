@@ -90,7 +90,7 @@ function ConfirmDialog({ filename, onConfirm, onCancel, isDeleting }) {
   );
 }
 
-function DocumentRow({ doc, onToggle, onDelete, togglingFilename, deletingFilename }) {
+function DocumentRow({ doc, onToggle, onDelete, togglingFilename, deletingFilename, isSelected, onSelectToggle }) {
   const isToggling = togglingFilename === doc.filename;
   const date = doc.uploaded_at
     ? new Date(doc.uploaded_at + 'Z').toLocaleDateString('id-ID', {
@@ -100,6 +100,15 @@ function DocumentRow({ doc, onToggle, onDelete, togglingFilename, deletingFilena
 
   return (
     <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+      {/* Checkbox column */}
+      <td style={{ padding: '12px', textAlign: 'center' }}>
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onSelectToggle}
+          style={{ cursor: 'pointer' }}
+        />
+      </td>
       <td>
         <span className={s.filename} title={doc.filename}>{doc.filename}</span>
         {doc.label && doc.label !== doc.filename && (
@@ -142,6 +151,44 @@ export default function DocumentManager() {
   const [documents, setDocuments]         = useState([]);
   const [loadingDocs, setLoadingDocs]     = useState(true);
   const [fetchError, setFetchError]       = useState('');
+  const [selectedFilenames, setSelectedFilenames] = useState([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  const toggleSelect = (filename) => {
+    setSelectedFilenames(prev =>
+      prev.includes(filename) ? prev.filter(x => x !== filename) : [...prev, filename]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedFilenames.length === documents.length) {
+      setSelectedFilenames([]);
+    } else {
+      setSelectedFilenames(documents.map(d => d.filename));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedFilenames.length} dokumen terpilih beserta seluruh data indeksnya?`)) return;
+    setIsBulkDeleting(true);
+    try {
+      for (const filename of selectedFilenames) {
+        const res = await fetch(`${API_BASE}/documents/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.detail || `Gagal menghapus dokumen ${filename}`);
+        }
+      }
+      alert('Berhasil menghapus dokumen yang terpilih.');
+      setSelectedFilenames([]);
+      fetchDocuments();
+    } catch (err) {
+      alert(err.message);
+      fetchDocuments();
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
 
   const [selectedFile, setSelectedFile]   = useState(null);
   const [label, setLabel]                 = useState('');
@@ -247,6 +294,7 @@ export default function DocumentManager() {
         const data = await res.json();
         throw new Error(data.detail || 'Gagal menghapus dokumen.');
       }
+      setSelectedFilenames(prev => prev.filter(x => x !== pendingDelete));
       setDocuments(prev => prev.filter(d => d.filename !== pendingDelete));
       setPendingDelete(null);
     } catch (err) {
@@ -365,32 +413,78 @@ export default function DocumentManager() {
             </p>
           </div>
         ) : (
-          <div className={s.tableWrapper} style={{ maxHeight: '200px', overflowY: 'auto' }}>
-            <table className={s.table}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                  <th>Dokumen</th>
-                  <th>Format</th>
-                  <th>Chunk</th>
-                  <th>Diupload</th>
-                  <th>Aktif</th>
-                  <th>Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {documents.map(doc => (
-                  <DocumentRow
-                    key={doc.filename}
-                    doc={doc}
-                    onToggle={handleToggle}
-                    onDelete={handleDeleteRequest}
-                    togglingFilename={togglingFilename}
-                    deletingFilename={deletingFilename}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {selectedFilenames.length > 0 && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '10px 16px',
+                background: '#FFF5F5',
+                border: '1px solid #FED7D7',
+                borderRadius: '8px',
+                marginBottom: '12px',
+              }}>
+                <span style={{ fontSize: '0.8rem', color: '#C53030', fontWeight: '600' }}>
+                  {selectedFilenames.length} dokumen terpilih
+                </span>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={isBulkDeleting}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: '#E53E3E',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    opacity: isBulkDeleting ? 0.7 : 1,
+                  }}
+                >
+                  {isBulkDeleting ? 'Menghapus...' : '🗑️ Hapus Terpilih'}
+                </button>
+              </div>
+            )}
+
+            <div className={s.tableWrapper} style={{ maxHeight: '200px', overflowY: 'auto' }}>
+              <table className={s.table}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <th style={{ width: '40px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={documents.length > 0 && selectedFilenames.length === documents.length}
+                        onChange={toggleSelectAll}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </th>
+                    <th>Dokumen</th>
+                    <th>Format</th>
+                    <th>Chunk</th>
+                    <th>Diupload</th>
+                    <th>Aktif</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {documents.map(doc => (
+                    <DocumentRow
+                      key={doc.filename}
+                      doc={doc}
+                      onToggle={handleToggle}
+                      onDelete={handleDeleteRequest}
+                      togglingFilename={togglingFilename}
+                      deletingFilename={deletingFilename}
+                      isSelected={selectedFilenames.includes(doc.filename)}
+                      onSelectToggle={() => toggleSelect(doc.filename)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

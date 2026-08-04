@@ -1,6 +1,10 @@
 import tempfile
 from pathlib import Path
+from threading import Lock
 from fastapi import APIRouter, HTTPException
+
+_syncing_sources = set()
+_sync_lock = Lock()
 
 from app.schemas.source import SourceCreateRequest, SourceUpdateRequest
 from app.services.sources_store import (
@@ -68,44 +72,56 @@ def delete_existing_source(id: str) -> dict:
 
 @router.post("/{id}/sync")
 def sync_source(id: str) -> dict:
-    source = get_source(id)
-    if not source:
-        raise HTTPException(status_code=404, detail="Kategori tidak ditemukan.")
-
-    url = source["onedrive_url"].strip().lower()
-    is_gdrive = "drive.google.com" in url or "docs.google.com" in url
-
-    # Create temporary path for download
-    # We name the file using category name so that it identifies neatly in ingestion
-    safe_category = source["category_name"].replace(" ", "_").replace("/", "_")
-    temp_filename = f"{safe_category}.xlsx"
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        temp_path = Path(tmpdir) / temp_filename
-        try:
-            # Download file from sharing link
-            if is_gdrive:
-                fetch_method = download_googledrive_file(source["onedrive_url"], temp_path)
-            else:
-                fetch_method = download_sharepoint_file(source["onedrive_url"], temp_path)
-
-            # Ingest downloaded document with category metadata
-            chunk_count = ingest_document(
-                file_path=temp_path,
-                filename=temp_filename,
-                category=source["category_name"],
-            )
-
-            # Update store as success
-            updated = mark_synced(id, chunk_count, fetch_method)
-            return {
-                "message": f"Sinkronisasi berhasil. Terindeks {chunk_count} chunk.",
-                "source": updated,
-            }
-        except Exception as e:
-            error_msg = str(e)
-            mark_failed(id, error_msg)
+    with _sync_lock:
+        if id in _syncing_sources:
             raise HTTPException(
-                status_code=400,
-                detail=f"Sinkronisasi gagal: {error_msg}",
+                status_code=409,
+                detail="Sinkronisasi untuk kategori ini masih berjalan, mohon tunggu."
             )
+        _syncing_sources.add(id)
+
+    try:
+        source = get_source(id)
+        if not source:
+            raise HTTPException(status_code=404, detail="Kategori tidak ditemukan.")
+
+        url = source["onedrive_url"].strip().lower()
+        is_gdrive = "drive.google.com" in url or "docs.google.com" in url
+
+        # Create temporary path for download
+        # We name the file using category name so that it identifies neatly in ingestion
+        safe_category = source["category_name"].replace(" ", "_").replace("/", "_")
+        temp_filename = f"{safe_category}.xlsx"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            temp_path = Path(tmpdir) / temp_filename
+            try:
+                # Download file from sharing link
+                if is_gdrive:
+                    fetch_method = download_googledrive_file(source["onedrive_url"], temp_path)
+                else:
+                    fetch_method = download_sharepoint_file(source["onedrive_url"], temp_path)
+
+                # Ingest downloaded document with category metadata
+                chunk_count = ingest_document(
+                    file_path=temp_path,
+                    filename=temp_filename,
+                    category=source["category_name"],
+                )
+
+                # Update store as success
+                updated = mark_synced(id, chunk_count, fetch_method)
+                return {
+                    "message": f"Sinkronisasi berhasil. Terindeks {chunk_count} chunk.",
+                    "source": updated,
+                }
+            except Exception as e:
+                error_msg = str(e)
+                mark_failed(id, error_msg)
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Sinkronisasi gagal: {error_msg}",
+                )
+    finally:
+        with _sync_lock:
+            _syncing_sources.discard(id)
