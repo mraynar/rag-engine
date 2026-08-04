@@ -1,9 +1,27 @@
+from datetime import datetime, timezone, timedelta
 from app.core.config import get_generation_model, get_gemini_client
 
 
 def build_prompt(question: str, chunks: list[str]) -> str:
+    # Get current time in WIB (UTC+7)
+    wib_tz = timezone(timedelta(hours=7))
+    now_wib = datetime.now(wib_tz)
+    
+    days = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
+    months = [
+        "", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ]
+    
+    day_name = days[now_wib.weekday()]
+    month_name = months[now_wib.month]
+    formatted_date = f"{day_name}, {now_wib.day} {month_name} {now_wib.year}"
+
     context = "\n\n".join(chunks)
     return f"""Kamu adalah asisten AI yang menjawab pertanyaan HANYA berdasarkan konteks dokumen yang diberikan.
+
+Konteks waktu saat ini: Hari ini adalah {formatted_date} (WIB).
+Gunakan informasi ini untuk menafsirkan referensi waktu relatif dalam pertanyaan user, seperti "tahun ini", "tahun kemarin", "bulan lalu", "kemarin", dsb.
 
 ATURAN WAJIB:
 1. Gunakan HANYA data dari "Konteks" di bawah — jangan mengarang atau menggunakan pengetahuan luar.
