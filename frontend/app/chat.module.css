@@ -245,7 +245,7 @@
 
 .inputWrapper {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 0.625rem;
   max-width: 760px;
   margin: 0 auto;

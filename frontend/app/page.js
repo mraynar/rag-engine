@@ -61,84 +61,92 @@ export default function UnifiedPage() {
         maxWidth: '1000px',
         width: '100%',
         margin: '0 auto',
-        padding: '24px 24px 10px 24px',
+        padding: '16px 24px 8px 24px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '12px',
+        gap: '8px',
         flexShrink: 0
       }}>
-        {/* Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <h2 style={{
-            fontSize: '1.4rem',
-            fontWeight: '700',
-            color: 'var(--color-navy)',
-            margin: 0
-          }}>
-            Chatbot TPS
-          </h2>
-          <button style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--color-muted)',
-            cursor: 'pointer',
-            padding: '4px',
-            display: 'flex',
-            alignItems: 'center'
-          }} title="Informasi Sistem">
-            <InfoIcon size={16} />
-          </button>
-        </div>
-
-        {/* Top-Level Tabs Switcher ("Umum" vs "Konfigurasi") */}
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={() => setActiveTab('umum')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 16px',
-              borderRadius: '6px',
+        {/* Header Row: Title on Left, Switcher on Right */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          {/* Title */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h2 style={{
+              fontSize: '1.35rem',
+              fontWeight: '700',
+              color: 'var(--color-navy)',
+              margin: 0
+            }}>
+              Chatbot TPS
+            </h2>
+            <button style={{
+              background: 'none',
               border: 'none',
-              backgroundColor: activeTab === 'umum' ? 'var(--color-accent-light)' : 'transparent',
-              color: activeTab === 'umum' ? 'var(--color-accent)' : 'var(--color-text-light)',
-              fontWeight: '600',
-              fontSize: '0.85rem',
+              color: 'var(--color-muted)',
               cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-          >
-            <GlobeIcon size={14} /> Umum
-          </button>
-
-          <button
-            onClick={() => setActiveTab('konfigurasi')}
-            style={{
+              padding: '4px',
               display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: 'none',
-              backgroundColor: activeTab === 'konfigurasi' ? 'var(--color-accent-light)' : 'transparent',
-              color: activeTab === 'konfigurasi' ? 'var(--color-accent)' : 'var(--color-text-light)',
-              fontWeight: '600',
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-          >
-            <GearIcon size={14} /> Konfigurasi
-          </button>
+              alignItems: 'center'
+            }} title="Informasi Sistem">
+              <InfoIcon size={16} />
+            </button>
+          </div>
+
+          {/* Top-Level Tabs Switcher ("Umum" vs "Konfigurasi") */}
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button
+              onClick={() => setActiveTab('umum')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: activeTab === 'umum' ? 'var(--color-accent-light)' : 'transparent',
+                color: activeTab === 'umum' ? 'var(--color-accent)' : 'var(--color-text-light)',
+                fontWeight: '600',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              <GlobeIcon size={14} /> Umum
+            </button>
+
+            <button
+              onClick={() => setActiveTab('konfigurasi')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: activeTab === 'konfigurasi' ? 'var(--color-accent-light)' : 'transparent',
+                color: activeTab === 'konfigurasi' ? 'var(--color-accent)' : 'var(--color-text-light)',
+                fontWeight: '600',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              <GearIcon size={14} /> Konfigurasi
+            </button>
+          </div>
         </div>
 
         {/* Tab Context Helper Description */}
         <p style={{
           margin: 0,
-          fontSize: '0.75rem',
+          fontSize: '0.72rem',
           color: 'var(--color-muted)',
-          paddingBottom: '4px'
         }}>
           {activeTab === 'umum' ? (
             <>
