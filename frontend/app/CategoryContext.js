@@ -1,14 +1,36 @@
 // frontend/app/CategoryContext.js
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 const CategoryContext = createContext(null);
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const LS_KEY = 'rag_selected_category';
 
 export function CategoryProvider({ children }) {
-  const [selectedCategory, setSelectedCategory] = useState("Semua Data");
+  const [selectedCategory, _setSelectedCategory] = useState("Semua Data");
+  const initializedRef = useRef(false);
+
+  // Read initial value from localStorage on client-side mount
+  useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    try {
+      const stored = localStorage.getItem(LS_KEY);
+      if (stored) _setSelectedCategory(stored);
+    } catch {}
+  }, []);
+
+  // Wrapped setter to also update localStorage
+  const setSelectedCategory = useCallback((category) => {
+    _setSelectedCategory(category);
+    try {
+      if (category) localStorage.setItem(LS_KEY, category);
+      else localStorage.removeItem(LS_KEY);
+    } catch {}
+  }, []);
+
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   
