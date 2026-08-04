@@ -173,11 +173,11 @@ function AddCandidateForm({ group, onSaved, onCancel }) {
                 </div>
               </>
             ) : (
-              <div style={{ gridColumn: 'span 2', display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, minWidth: '200px' }}>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-navy)', marginBottom: '4px', textAlign: 'left' }}>
-                    Nilai Parameter
-                  </label>
+              <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-navy)', textAlign: 'left' }}>
+                  Nilai Parameter
+                </label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
                   <input
                     className={s.addInput}
                     placeholder="Masukkan nilai parameter"
@@ -185,17 +185,28 @@ function AddCandidateForm({ group, onSaved, onCancel }) {
                     onChange={e => setValue(e.target.value)}
                     type={isSecret ? 'password' : 'text'}
                     required
-                    style={{ width: '100%', boxSizing: 'border-box' }}
+                    style={{ width: '100%', boxSizing: 'border-box', paddingRight: '40px' }}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setIsSecret(!isSecret)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      background: 'none',
+                      border: 'none',
+                      padding: '4px',
+                      cursor: 'pointer',
+                      color: 'var(--color-text-muted)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title={isSecret ? "Tampilkan Nilai" : "Sembunyikan Nilai"}
+                  >
+                    {isSecret ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+                  </button>
                 </div>
-                <label className={s.addSecretToggle} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', paddingBottom: '8px', cursor: 'pointer', userSelect: 'none' }}>
-                  <input
-                    type="checkbox"
-                    checked={isSecret}
-                    onChange={e => setIsSecret(e.target.checked)}
-                  />
-                  Rahasia (Sembunyikan Nilai)
-                </label>
               </div>
             )}
           </div>

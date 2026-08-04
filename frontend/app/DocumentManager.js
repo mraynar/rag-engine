@@ -443,7 +443,12 @@ export default function DocumentManager() {
                     opacity: isBulkDeleting ? 0.7 : 1,
                   }}
                 >
-                  {isBulkDeleting ? 'Menghapus...' : '🗑️ Hapus Terpilih'}
+                  {isBulkDeleting ? 'Menghapus...' : (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <TrashIcon size={12} />
+                      Hapus Terpilih
+                    </span>
+                  )}
                 </button>
               </div>
             )}
