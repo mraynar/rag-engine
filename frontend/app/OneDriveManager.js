@@ -159,31 +159,61 @@ export default function OneDriveManager() {
 
   return (
     <div style={{ marginTop: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <div>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-navy)' }}>Kategori Sumber Data Online</h3>
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-muted)' }}>
-            Hubungkan link spreadsheet online (OneDrive / Google Drive / Google Sheets) ke kategori data untuk pencarian yang presisi.
-          </p>
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-navy)' }}>Kategori Sumber Data Online</h3>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {selectedIds.length > 0 && (
+              <button
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: '#E53E3E',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  opacity: isBulkDeleting ? 0.7 : 1,
+                }}
+              >
+                {isBulkDeleting ? 'Menghapus...' : (
+                  <>
+                    <TrashIcon size={12} /> Hapus Terpilih ({selectedIds.length})
+                  </>
+                )}
+              </button>
+            )}
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: 'var(--color-accent)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+              }}
+            >
+              <PlusIcon size={12} /> Tambah Kategori
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            backgroundColor: 'var(--color-accent)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '6px',
-            padding: '8px 12px',
-            fontSize: '0.8rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-          }}
-        >
-          <PlusIcon size={12} /> Tambah Kategori
-        </button>
+        <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-muted)' }}>
+          Hubungkan link spreadsheet online (OneDrive / Google Drive / Google Sheets) ke kategori data untuk pencarian yang presisi.
+        </p>
       </div>
 
       {showAddForm && (
@@ -267,45 +297,6 @@ export default function OneDriveManager() {
             </button>
           </div>
         </form>
-      )}
-
-      {selectedIds.length > 0 && (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '10px 16px',
-          background: '#FFF5F5',
-          border: '1px solid #FED7D7',
-          borderRadius: '8px',
-          marginBottom: '12px',
-        }}>
-          <span style={{ fontSize: '0.8rem', color: '#C53030', fontWeight: '600' }}>
-            {selectedIds.length} kategori terpilih
-          </span>
-          <button
-            onClick={handleBulkDelete}
-            disabled={isBulkDeleting}
-            style={{
-              padding: '6px 12px',
-              backgroundColor: '#E53E3E',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '0.75rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              opacity: isBulkDeleting ? 0.7 : 1,
-            }}
-          >
-            {isBulkDeleting ? 'Menghapus...' : (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <TrashIcon size={12} />
-                Hapus Terpilih
-              </span>
-            )}
-          </button>
-        </div>
       )}
 
       <div style={{ background: '#fff', border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden', maxHeight: '260px', overflowY: 'auto' }}>
