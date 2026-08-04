@@ -1,6 +1,7 @@
 from typing import Optional
 import re
 import time
+import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from threading import Lock
@@ -195,7 +196,7 @@ _SUPPORTED_FORMATS = ", ".join(sorted(_PARSERS.keys()))
 
 _request_times: list[float] = []
 _request_lock = Lock()
-MAX_RPM = 50  # half the actual 100 limit; safety margin
+MAX_RPM = 12  # strict limit for Gemini Free Tier (15 RPM)
 
 
 def _wait_for_rate_limit_slot():
@@ -212,7 +213,7 @@ def _wait_for_rate_limit_slot():
 def _embed_texts_batch(
     texts: list[str],
     batch_size: int = 100,
-    max_workers: int = 3,
+    max_workers: int = 1,
 ) -> list[list[float]]:
     """Embed texts in parallel batches; result order matches input order."""
     batches = [texts[i : i + batch_size] for i in range(0, len(texts), batch_size)]
@@ -230,7 +231,13 @@ def _embed_texts_batch(
                 return [e.values for e in result.embeddings]
             except Exception as e:
                 if "RESOURCE_EXHAUSTED" in str(e) and attempt < 2:
-                    time.sleep(65)  # wait for rate-limit window to reset
+                    # Exponential backoff + jitter:
+                    # Attempt 0: ~10 seconds
+                    # Attempt 1: ~30 seconds
+                    backoff = 10 if attempt == 0 else 30
+                    sleep_time = backoff + random.uniform(0, 5)
+                    print(f"[ingestion] Gemini Rate Limit (RESOURCE_EXHAUSTED) hit. Sleeping for {sleep_time:.2f} seconds before retry...")
+                    time.sleep(sleep_time)
                     continue
                 raise
         return []  # unreachable

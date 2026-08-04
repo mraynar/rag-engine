@@ -13,6 +13,44 @@ export default function OneDriveManager() {
   const [loading, setLoading] = useState(false);
   const [syncingId, setSyncingId] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === categories.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(categories.map(c => c.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedIds.length} kategori terpilih beserta seluruh data indeksnya?`)) return;
+    setIsBulkDeleting(true);
+    try {
+      for (const id of selectedIds) {
+        const res = await fetch(`${API_BASE}/sources/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.detail || `Gagal menghapus kategori ID ${id}`);
+        }
+      }
+      alert('Berhasil menghapus kategori yang terpilih.');
+      setSelectedIds([]);
+      refreshCategories();
+    } catch (err) {
+      alert(err.message);
+      refreshCategories();
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
   
   // Add Form Inputs
   const [categoryName, setCategoryName] = useState('');
@@ -83,6 +121,7 @@ export default function OneDriveManager() {
         const data = await res.json();
         throw new Error(data.detail || 'Gagal menghapus kategori.');
       }
+      setSelectedIds(prev => prev.filter(x => x !== id));
       refreshCategories();
     } catch (err) {
       alert(err.message);
@@ -230,10 +269,52 @@ export default function OneDriveManager() {
         </form>
       )}
 
+      {selectedIds.length > 0 && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '10px 16px',
+          background: '#FFF5F5',
+          border: '1px solid #FED7D7',
+          borderRadius: '8px',
+          marginBottom: '12px',
+        }}>
+          <span style={{ fontSize: '0.8rem', color: '#C53030', fontWeight: '600' }}>
+            {selectedIds.length} kategori terpilih
+          </span>
+          <button
+            onClick={handleBulkDelete}
+            disabled={isBulkDeleting}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: '#E53E3E',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '0.75rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              opacity: isBulkDeleting ? 0.7 : 1,
+            }}
+          >
+            {isBulkDeleting ? 'Menghapus...' : '🗑️ Hapus Terpilih'}
+          </button>
+        </div>
+      )}
+
       <div style={{ background: '#fff', border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden', maxHeight: '260px', overflowY: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
           <thead>
             <tr style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}>
+              <th style={{ padding: '12px', width: '40px', textAlign: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={categories.length > 0 && selectedIds.length === categories.length}
+                  onChange={toggleSelectAll}
+                  style={{ cursor: 'pointer' }}
+                />
+              </th>
               <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600' }}>Kategori</th>
               <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600' }}>Tautan / Share URL</th>
               <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600' }}>Status Sinkronisasi</th>
@@ -262,6 +343,15 @@ export default function OneDriveManager() {
 
               return (
                 <tr key={cat.id} style={{ borderBottom: '1px solid var(--color-border)', transition: 'background 0.2s' }}>
+                  {/* Select Checkbox */}
+                  <td style={{ padding: '12px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(cat.id)}
+                      onChange={() => toggleSelect(cat.id)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  </td>
                   {/* Category Name */}
                   <td style={{ padding: '12px', fontWeight: '500' }}>
                     {isEditing ? (
@@ -419,7 +509,7 @@ export default function OneDriveManager() {
                         <>
                           <button
                             onClick={() => handleSync(cat.id)}
-                            disabled={isSyncing}
+                            disabled={syncingId !== null}
                             style={{
                               padding: '6px 12px',
                               backgroundColor: 'var(--color-navy)',
@@ -429,7 +519,7 @@ export default function OneDriveManager() {
                               fontSize: '0.75rem',
                               fontWeight: '600',
                               cursor: 'pointer',
-                              opacity: isSyncing ? 0.7 : 1,
+                              opacity: syncingId !== null ? 0.5 : 1,
                             }}
                           >
                             Sync
@@ -469,7 +559,7 @@ export default function OneDriveManager() {
             })}
             {categories.length === 0 && (
               <tr>
-                <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: 'var(--color-muted)' }}>
+                <td colSpan="6" style={{ padding: '24px', textAlign: 'center', color: 'var(--color-muted)' }}>
                   Belum ada kategori terdaftar. Silakan tambahkan kategori sumber data online menggunakan tombol di kanan atas.
                 </td>
               </tr>
