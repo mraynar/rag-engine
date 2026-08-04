@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useCategory } from './CategoryContext';
 import OneDriveManager from './OneDriveManager';
 import DocumentManager from './DocumentManager';
-import { XIcon } from './icons';
+import { XIcon, TrashIcon } from './icons';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -189,7 +189,12 @@ export default function DataManagementModal() {
                 opacity: resetting ? 0.7 : 1
               }}
             >
-              {resetting ? 'Mereset...' : '🗑️ Reset Semua Data Aplikasi'}
+              {resetting ? 'Mereset...' : (
+                <>
+                  <TrashIcon size={14} />
+                  Reset Semua Data Aplikasi
+                </>
+              )}
             </button>
           </div>
         </div>
