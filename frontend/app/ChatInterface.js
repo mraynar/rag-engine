@@ -553,44 +553,44 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
 
       {/* Shell: sidebar (optional) + chat main — centered as a unit */}
       <div style={{ flex: '1', display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+        {/* Centered wrapper — padding here gives equal spacing on all 4 sides */}
         <div style={{
           display: 'flex',
           flex: '1',
           maxWidth: showSidebar ? '1120px' : '900px',
           width: '100%',
           margin: '0 auto',
+          padding: '4px 20px 16px 20px',
           overflow: 'hidden',
           minHeight: 0,
+          boxSizing: 'border-box',
         }}>
+          {/* ── Unified card: sidebar + chat in one rounded container ── */}
+          <div style={{
+            display: 'flex',
+            flex: '1',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            border: '1px solid var(--color-border)',
+            boxShadow: 'var(--shadow-sm)',
+            minHeight: 0,
+          }}>
 
-          {/* ── Sidebar ── */}
-          {showSidebar && <Sidebar onNewChat={handleNewChat} />}
+            {/* ── Sidebar ── */}
+            {showSidebar && <Sidebar onNewChat={handleNewChat} />}
 
-          {/* ── Chat Main ── */}
-          <div className={s.chatMain}>
-            <div style={{
-              width: '100%',
-              padding: '4px 20px 16px 20px',
-              display: 'flex',
-              flexDirection: 'column',
-              flex: '1',
-              overflow: 'hidden',
-              minHeight: 0,
-            }}>
-            {/* Chat Card */}
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              backgroundColor: '#fff',
-              border: '1px solid var(--color-border)',
-              borderRadius: '8px',
-              boxShadow: 'var(--shadow-sm)',
-              overflow: 'hidden',
-              flex: '1',
-              minHeight: 0,
-            }}>
+            {/* ── Chat Main ── */}
+            <div className={s.chatMain}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                flex: '1',
+                overflow: 'hidden',
+                minHeight: 0,
+                backgroundColor: '#fff',
+              }}>
 
-              {/* Top bar */}
+              {/* Top bar — merges visually with sidebar blue */}
               <div style={{
                 backgroundColor: 'var(--color-navy)',
                 color: '#fff',
@@ -731,9 +731,10 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                 <p className={s.inputHint}>Enter untuk kirim&nbsp;·&nbsp;Shift+Enter untuk baris baru</p>
               </div>
 
+              </div>
             </div>
+            {/* end unified card */}
           </div>
-        </div>
 
         </div>{/* end centered maxWidth wrapper */}
       </div>
