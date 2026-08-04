@@ -58,7 +58,7 @@ export default function UnifiedPage() {
     }}>
       {/* ── Header Area ── */}
       <div style={{
-        maxWidth: '1000px',
+        maxWidth: '1120px',
         width: '100%',
         margin: '0 auto',
         padding: '16px 24px 8px 24px',

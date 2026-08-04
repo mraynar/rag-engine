@@ -551,25 +551,32 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
         </div>
       )}
 
-      {/* Shell: sidebar (optional) + chat main */}
+      {/* Shell: sidebar (optional) + chat main — centered as a unit */}
       <div style={{ flex: '1', display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+        <div style={{
+          display: 'flex',
+          flex: '1',
+          maxWidth: showSidebar ? '1120px' : '900px',
+          width: '100%',
+          margin: '0 auto',
+          overflow: 'hidden',
+          minHeight: 0,
+        }}>
 
-        {/* ── Sidebar ── */}
-        {showSidebar && <Sidebar onNewChat={handleNewChat} />}
+          {/* ── Sidebar ── */}
+          {showSidebar && <Sidebar onNewChat={handleNewChat} />}
 
-        {/* ── Chat Main ── */}
-        <div className={s.chatMain}>
-          <div style={{
-            maxWidth: '860px',
-            width: '100%',
-            margin: '0 auto',
-            padding: '4px 20px 16px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            flex: '1',
-            overflow: 'hidden',
-            minHeight: 0,
-          }}>
+          {/* ── Chat Main ── */}
+          <div className={s.chatMain}>
+            <div style={{
+              width: '100%',
+              padding: '4px 20px 16px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              flex: '1',
+              overflow: 'hidden',
+              minHeight: 0,
+            }}>
             {/* Chat Card */}
             <div style={{
               display: 'flex',
@@ -728,6 +735,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
           </div>
         </div>
 
+        </div>{/* end centered maxWidth wrapper */}
       </div>
     </div>
   );
