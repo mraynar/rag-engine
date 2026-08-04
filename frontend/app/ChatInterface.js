@@ -57,8 +57,24 @@ function MessageBubble({ role, content, sources }) {
   return (
     <div className={`${s.bubbleRow} ${isUser ? s.bubbleRowUser : s.bubbleRowAi}`}>
       {!isUser && (
-        <div className={s.bubbleAvatar} aria-hidden="true">
-          <SunIcon size={16} />
+        <div className={s.bubbleAvatar} aria-hidden="true" style={{
+          backgroundColor: '#fff',
+          border: '1px solid var(--color-border)',
+          borderRadius: '4px',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <img
+            src="/images/Logo Pelindo.png"
+            alt="Pelindo"
+            style={{
+              width: '85%',
+              height: '85%',
+              objectFit: 'contain'
+            }}
+          />
         </div>
       )}
       <div className={s.bubbleContent}>
@@ -273,7 +289,7 @@ function ChatInterfaceInner({ hideHeader = false }) {
           maxWidth: '1000px',
           width: '100%',
           margin: '0 auto',
-          padding: '10px 24px 24px 24px',
+          padding: '4px 24px 16px 24px',
           display: 'flex',
           flexDirection: 'column',
           flex: '1',
@@ -297,7 +313,7 @@ function ChatInterfaceInner({ hideHeader = false }) {
             <div style={{
               backgroundColor: 'var(--color-navy)',
               color: '#fff',
-              padding: '16px 20px',
+              padding: '12px 20px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -316,8 +332,24 @@ function ChatInterfaceInner({ hideHeader = false }) {
               {/* Default Welcome Message when conversation is empty */}
               {messages.length === 0 && (
                 <div className={`${s.bubbleRow} ${s.bubbleRowAi}`}>
-                  <div className={s.bubbleAvatar} aria-hidden="true">
-                    <SunIcon size={16} />
+                  <div className={s.bubbleAvatar} aria-hidden="true" style={{
+                    backgroundColor: '#fff',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '4px',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <img
+                      src="/images/Logo Pelindo.png"
+                      alt="Pelindo"
+                      style={{
+                        width: '85%',
+                        height: '85%',
+                        objectFit: 'contain'
+                      }}
+                    />
                   </div>
                   <div className={s.bubbleContent}>
                     <div className={`${s.bubble} ${s.bubbleAi}`}>
@@ -351,12 +383,12 @@ function ChatInterfaceInner({ hideHeader = false }) {
 
             {/* Suggestion Chips Box */}
             <div style={{
-              padding: '12px 20px',
+              padding: '8px 20px',
               borderTop: '1px solid var(--color-border)',
               background: '#fff',
               flexShrink: 0
             }}>
-              <p style={{ margin: '0 0 8px 0', fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-text-light)' }}>
+              <p style={{ margin: '0 0 6px 0', fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-text-light)' }}>
                 Pertanyaan yang sering diajukan:
               </p>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -397,7 +429,7 @@ function ChatInterfaceInner({ hideHeader = false }) {
 
             {/* Input Area */}
             <div style={{
-              padding: '16px 20px',
+              padding: '10px 20px',
               borderTop: '1px solid var(--color-border)',
               background: '#fff',
               flexShrink: 0
