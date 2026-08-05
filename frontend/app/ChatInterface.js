@@ -177,11 +177,23 @@ function ConvItem({ conv, isActive, onSelect, onRename, onPin, onDelete }) {
   const [hovered, setHovered]   = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraftTitle]  = useState(conv.title);
+  const [contextMenu, setContextMenu] = useState(null); // { x, y }
   const inputRef = useRef(null);
 
   useEffect(() => {
     if (renaming) { inputRef.current?.focus(); inputRef.current?.select(); }
   }, [renaming]);
+
+  // Click outside to close context menu
+  useEffect(() => {
+    const closeMenu = () => setContextMenu(null);
+    window.addEventListener('click', closeMenu);
+    window.addEventListener('contextmenu', closeMenu);
+    return () => {
+      window.removeEventListener('click', closeMenu);
+      window.removeEventListener('contextmenu', closeMenu);
+    };
+  }, []);
 
   function commitRename() {
     const trimmed = draft.trim();
@@ -194,12 +206,18 @@ function ConvItem({ conv, isActive, onSelect, onRename, onPin, onDelete }) {
     if (e.key === 'Escape') { setDraftTitle(conv.title); setRenaming(false); }
   }
 
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
   return (
     <div
       className={`${s.convItem} ${isActive ? s.convItemActive : ''}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => !renaming && onSelect(conv.id)}
+      onContextMenu={handleContextMenu}
       role="button"
       aria-current={isActive ? 'true' : undefined}
       tabIndex={0}
@@ -260,6 +278,83 @@ function ConvItem({ conv, isActive, onSelect, onRename, onPin, onDelete }) {
             aria-label="Hapus percakapan"
           >
             <TrashIcon size={12} />
+          </button>
+        </div>
+      )}
+
+      {/* Right-click custom context menu */}
+      {contextMenu && (
+        <div
+          style={{
+            position: 'fixed',
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`,
+            backgroundColor: '#ffffff',
+            border: '1px solid var(--color-border)',
+            borderRadius: '6px',
+            boxShadow: 'var(--shadow-md)',
+            padding: '4px',
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column',
+            minWidth: '140px',
+          }}
+          onClick={e => e.stopPropagation()}
+          onContextMenu={e => e.preventDefault()}
+        >
+          <button
+            onClick={() => {
+              onPin(conv.id, !conv.pinned);
+              setContextMenu(null);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 12px',
+              fontSize: '0.8rem',
+              color: 'var(--color-text)',
+              textAlign: 'left',
+              width: '100%',
+              borderRadius: '4px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: '550',
+              transition: 'background 0.15s ease',
+            }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--color-bg)'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <PinIcon size={12} filled={conv.pinned} style={{ color: 'var(--color-accent)' }} />
+            {conv.pinned ? 'Lepas Sematan' : 'Sematkan'}
+          </button>
+          <button
+            onClick={() => {
+              onDelete(conv.id);
+              setContextMenu(null);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 12px',
+              fontSize: '0.8rem',
+              color: 'var(--color-error)',
+              textAlign: 'left',
+              width: '100%',
+              borderRadius: '4px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: '550',
+              transition: 'background 0.15s ease',
+            }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <TrashIcon size={12} style={{ color: 'var(--color-error)' }} />
+            Hapus
           </button>
         </div>
       )}
@@ -604,8 +699,8 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
 
               {/* Top bar — merges visually with sidebar corporate navy */}
               <div style={{
-                backgroundColor: '#111B27',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                backgroundColor: 'var(--color-navy)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
                 color: '#fff',
                 padding: '12.5px 20px',
                 display: 'flex',
