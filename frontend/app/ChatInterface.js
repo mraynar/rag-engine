@@ -602,11 +602,12 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                 backgroundColor: '#fff',
               }}>
 
-              {/* Top bar — merges visually with sidebar blue */}
+              {/* Top bar — merges visually with sidebar corporate navy */}
               <div style={{
-                backgroundColor: 'var(--color-navy)',
+                backgroundColor: '#111B27',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
                 color: '#fff',
-                padding: '12px 20px',
+                padding: '12.5px 20px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',

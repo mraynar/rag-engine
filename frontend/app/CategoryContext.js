@@ -18,17 +18,27 @@ export function CategoryProvider({ children }) {
     initializedRef.current = true;
     try {
       const stored = localStorage.getItem(LS_KEY);
+      console.log('CategoryContext mount. Stored key:', stored);
       if (stored) _setSelectedCategory(stored);
-    } catch {}
+    } catch (e) {
+      console.error('CategoryContext mount error:', e);
+    }
   }, []);
 
   // Wrapped setter to also update localStorage
   const setSelectedCategory = useCallback((category) => {
+    console.log('CategoryContext setSelectedCategory called with:', category);
     _setSelectedCategory(category);
     try {
-      if (category) localStorage.setItem(LS_KEY, category);
-      else localStorage.removeItem(LS_KEY);
-    } catch {}
+      if (category) {
+        localStorage.setItem(LS_KEY, category);
+        console.log('CategoryContext saved to LS:', category);
+      } else {
+        localStorage.removeItem(LS_KEY);
+      }
+    } catch (e) {
+      console.error('CategoryContext setItem error:', e);
+    }
   }, []);
 
   const [categories, setCategories] = useState([]);
