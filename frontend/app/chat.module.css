@@ -348,10 +348,10 @@
 .sidebar {
   width: 260px;
   flex-shrink: 0;
-  background: #111B27; /* Rich deep corporate dark navy */
+  background: var(--color-navy); /* Reverted to Pelindo brand blue */
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
   overflow: hidden;
   transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -369,14 +369,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 1.25rem 1.125rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   flex-shrink: 0;
 }
 
 .sidebarTitle {
   font-size: 0.78125rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.75); /* Increased contrast */
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -385,8 +385,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  background: var(--color-accent);
-  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   color: #fff;
   border-radius: var(--radius-sm);
   padding: 0.425rem 0.85rem;
@@ -394,14 +394,12 @@
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(43, 127, 214, 0.2);
-  transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+  transition: background var(--transition), transform var(--transition);
 }
 
 .newConvBtn:hover {
-  background: var(--color-accent-hover);
+  background: rgba(255, 255, 255, 0.3);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(43, 127, 214, 0.35);
 }
 
 .newConvBtn:active {
@@ -410,9 +408,9 @@
 
 .newConvBtnShake {
   animation: shake 0.55s ease;
-  background: rgba(239, 68, 68, 0.15) !important;
-  border: 1px solid rgba(239, 68, 68, 0.3) !important;
-  color: #fca5a5 !important;
+  background: rgba(239, 68, 68, 0.2) !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  color: #fff !important;
   box-shadow: none !important;
 }
 
@@ -441,18 +439,18 @@
 }
 
 .convList::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 99px;
 }
 
 .convList::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .convGroupLabel {
   font-size: 0.6875rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.75); /* Increased contrast */
   letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 0.85rem 1.125rem 0.35rem;
@@ -462,13 +460,13 @@
   display: flex;
   justify-content: center;
   padding: 2rem 0;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .convEmpty {
   text-align: center;
   font-size: 0.8125rem;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.5);
   padding: 2.5rem 1.125rem;
 }
 
@@ -487,31 +485,31 @@
 }
 
 .convItem:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .convItemActive {
-  background: rgba(43, 127, 214, 0.12) !important;
-  border-left: 3px solid var(--color-accent);
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-left: 3px solid #fff; /* White border on blue for high-contrast active state */
   padding-left: calc(1.125rem - 3px);
 }
 
 .convItemActive:hover {
-  background: rgba(43, 127, 214, 0.16) !important;
+  background: rgba(255, 255, 255, 0.22) !important;
 }
 
 .convPin {
   position: absolute;
   top: 0.75rem;
   right: 0.75rem;
-  color: var(--color-accent);
+  color: #fff;
   opacity: 0.85;
 }
 
 .convTitle {
   font-size: 0.875rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600; /* Bolder font for clean readability */
+  color: #ffffff; /* Crisp white titles */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -521,7 +519,7 @@
 
 .convTime {
   font-size: 0.71875rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.65); /* Increased contrast */
 }
 
 .convActions {
@@ -531,10 +529,10 @@
   transform: translateY(-50%);
   display: flex;
   gap: 0.25rem;
-  background: #111B27; /* Must match parent bg for flawless overlap */
+  background: var(--color-navy); /* Matches converted sidebar bg */
   border-radius: var(--radius-sm);
   padding: 0.25rem;
-  box-shadow: -8px 0 12px #111B27; /* Smooth gradient masking out text */
+  box-shadow: -8px 0 12px var(--color-navy); /* Smooth gradient masking out text */
 }
 
 .convActionBtn {
@@ -544,25 +542,25 @@
   width: 24px;
   height: 24px;
   border-radius: 4px;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   background: transparent;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
 .convActionBtn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.15);
   color: #fff;
 }
 
 .convActionDanger:hover {
-  background: rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.35);
+  color: #fff;
 }
 
 .convRenameInput {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid var(--color-accent);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid #fff;
   border-radius: 4px;
   color: #fff;
   font-size: 0.875rem;
