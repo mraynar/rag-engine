@@ -1,4 +1,4 @@
-# TPS RAG Engine 
+# TPS RAG Engine
 
 Proyek mesin pencari pintar berbasis **RAG (Retrieval-Augmented Generation)** menggunakan Next.js (frontend), FastAPI (backend), ChromaDB (vector store lokal), dan Gemini (embedding & text generation).
 
@@ -7,7 +7,7 @@ Sistem ini dirancang untuk mensinkronisasi dan mengindeks dokumen secara dinamis
 ---
 
 > [!IMPORTANT]  
-> **Panduan Cepat untuk Mentor / Penguji:**
+> **Panduan Cepat Pengujian:**
 > 1. Jalankan aplikasi menggunakan **Docker Compose** (rekomendasi) atau **Manual Setup**.
 > 2. Buka tab **Konfigurasi** di UI web ([http://localhost:3000](http://localhost:3000)).
 > 3. Masukkan **Gemini API Key** Anda di kolom kandidat utama, lalu klik **Simpan** dan **Aktifkan**.
@@ -77,7 +77,7 @@ Jika Anda ingin menjalankan atau memprogram ulang service di luar container:
 
 ---
 
-## ⚙️ Langkah Konfigurasi Kredensial (Live UI)
+## Langkah Konfigurasi Kredensial (Live UI)
 
 Sistem ini menggunakan konfigurasi dinamis berbasis JSON (`data/config_store.json`). **Tidak memerlukan restart server** saat Anda memperbarui API Key.
 
@@ -93,7 +93,7 @@ Setelah web terbuka di browser, buka tab **"Konfigurasi"** di menu navigasi:
 
 ---
 
-## 📂 Alur Sinkronisasi & Manajemen Data
+## Alur Sinkronisasi & Manajemen Data
 
 1. Buka tombol dropdown **"Sumber Data"** di bagian kanan atas navbar.
 2. Klik tombol **"Kelola Sumber Data"** untuk menampilkan modal konfigurasi.
@@ -107,7 +107,7 @@ Setelah web terbuka di browser, buka tab **"Konfigurasi"** di menu navigasi:
 
 ---
 
-## 🏗️ Struktur Folder Utama
+## Struktur Folder Utama
 
 ```
 rag-engine/
@@ -144,7 +144,7 @@ rag-engine/
 
 ---
 
-## 💡 Fitur Unggulan Tambahan
+## Fitur Unggulan Tambahan
 - **Smart Rate Limiting**: Membatasi laju request embedding agar tidak melebihi kapasitas Gemini API Free Tier (maksimal 15 RPM) dengan mekanisme *exponential backoff* otomatis saat mendeteksi `RESOURCE_EXHAUSTED`.
 - **Row-by-Row Tabular Parsing**: Pemecahan berkas spreadsheet (`.xlsx`, `.csv`) dilakukan per baris agar setiap informasi baris menjadi satu kesatuan dokumen utuh di database vektor.
 - **Multimodal OCR**: Mendukung unggahan gambar (`.png`, `.jpg`, `.jpeg`, `.webp`), di mana sistem menggunakan kemampuan multimodal Gemini untuk membaca teks dan menganalisis visual sebelum disimpan.
