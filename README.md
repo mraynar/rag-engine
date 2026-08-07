@@ -1,4 +1,4 @@
-# TPS RAG Engine 🚀
+# TPS RAG Engine 
 
 Proyek mesin pencari pintar berbasis **RAG (Retrieval-Augmented Generation)** menggunakan Next.js (frontend), FastAPI (backend), ChromaDB (vector store lokal), dan Gemini (embedding & text generation).
 
