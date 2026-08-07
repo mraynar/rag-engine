@@ -1,33 +1,42 @@
-# TPS RAG Engine
+# TPS RAG Engine 🚀
 
-Proyek mesin pencari pintar berbasis **RAG (Retrieval-Augmented Generation)** menggunakan Next.js (frontend), FastAPI (backend), ChromaDB (vector store lokal), dan Gemini (embedding & text generation). 
+Proyek mesin pencari pintar berbasis **RAG (Retrieval-Augmented Generation)** menggunakan Next.js (frontend), FastAPI (backend), ChromaDB (vector store lokal), dan Gemini (embedding & text generation).
 
-Sistem ini mendukung pencarian dokumen berdasarkan kategori dinamis yang tersinkronisasi langsung dari folder/berkas Excel di **SharePoint/OneDrive TPS** serta dokumen yang diunggah secara manual.
+Sistem ini dirancang untuk mensinkronisasi dan mengindeks dokumen secara dinamis dari **SharePoint/OneDrive**, **Google Drive/Sheets**, serta file manual (PDF, Excel, Word, PPTX, TXT, dan Gambar) untuk memberikan jawaban berbasis konteks dokumen organisasi.
 
 ---
 
-## 🛠️ Persyaratan Sistem & Instalasi
+> [!IMPORTANT]  
+> **Panduan Cepat untuk Mentor / Penguji:**
+> 1. Jalankan aplikasi menggunakan **Docker Compose** (rekomendasi) atau **Manual Setup**.
+> 2. Buka tab **Konfigurasi** di UI web ([http://localhost:3000](http://localhost:3000)).
+> 3. Masukkan **Gemini API Key** Anda di kolom kandidat utama, lalu klik **Simpan** dan **Aktifkan**.
+> 4. Untuk pengujian cepat, masuk ke menu **Kelola Sumber Data** di dropdown kanan atas, pilih tab **Dokumen Manual**, dan unggah berkas contoh bawaan di: `data/documents/OVERVIEW VESSEL.xlsx`.
+> 5. Lakukan sinkronisasi (jika cloud) atau pastikan berkas manual aktif, lalu beralih ke halaman **Chat** untuk mulai bertanya.
 
-Ada dua cara untuk menjalankan proyek ini: menggunakan **Docker** (Sangat Direkomendasikan) atau **Manual Setup**.
+---
+
+## Persyaratan Sistem & Instalasi
+
+Pilih salah satu dari dua cara untuk menjalankan aplikasi ini:
 
 ### Cara 1: Menggunakan Docker (Rekomendasi & Instan)
 
-Anda hanya perlu memasang **Docker & Docker Desktop** di komputer Anda.
+Pastikan Anda memiliki **Docker** & **Docker Desktop** terpasang di komputer Anda.
 
-1. **Clone & Masuk ke Folder Project**
+1. **Masuk ke Folder Project**
    ```bash
-   git clone https://github.com/mraynar/rag-engine.git
    cd rag-engine
    ```
 
-2. **Jalankan Project dengan Docker Compose**
+2. **Jalankan Aplikasi**
    ```bash
    docker compose down && docker compose up --build
    ```
    *Perintah ini otomatis mengunduh dependencies, membangun container backend (FastAPI, port `8000`) dan frontend (Next.js, port `3000`), lalu menjalankannya secara paralel.*
 
-3. **Akses Aplikasi**
-   - **Frontend UI:** [http://localhost:3000](http://localhost:3000)
+3. **Akses Layanan**
+   - **Frontend Web UI:** [http://localhost:3000](http://localhost:3000)
    - **Backend API Docs (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
@@ -36,13 +45,13 @@ Anda hanya perlu memasang **Docker & Docker Desktop** di komputer Anda.
 
 Jika Anda ingin menjalankan atau memprogram ulang service di luar container:
 
-#### A. RUN BACKEND (FastAPI)
+#### A. BACKEND (FastAPI)
 1. Masuk ke folder root `rag-engine/` dan buat virtual environment Python:
    ```bash
    python3 -m venv venv
    source venv/bin/activate  # Untuk Windows: venv\Scripts\activate
    ```
-2. Install package pendukung dari `requirements.txt`:
+2. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
@@ -51,7 +60,7 @@ Jika Anda ingin menjalankan atau memprogram ulang service di luar container:
    uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
    ```
 
-#### B. RUN FRONTEND (Next.js)
+#### B. FRONTEND (Next.js)
 1. Buka terminal baru dan masuk ke folder `frontend/`:
    ```bash
    cd frontend
@@ -64,38 +73,37 @@ Jika Anda ingin menjalankan atau memprogram ulang service di luar container:
    ```bash
    npm run dev
    ```
-   Aplikasi Next.js akan berjalan di [http://localhost:3000](http://localhost:3000).
+   Aplikasi frontend akan berjalan di [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## ⚙️ Langkah Konfigurasi Kredensial AI & Azure AD (Live UI)
+## ⚙️ Langkah Konfigurasi Kredensial (Live UI)
 
-Sistem ini menggunakan penyimpanan konfigurasi dinamis (`data/config_store.json`), sehingga **TIDAK memerlukan restart server** saat Anda memperbarui API Key atau kredensial.
+Sistem ini menggunakan konfigurasi dinamis berbasis JSON (`data/config_store.json`). **Tidak memerlukan restart server** saat Anda memperbarui API Key.
 
-Setelah web terbuka di `http://localhost:3000`, klik tab **"Konfigurasi"** di atas untuk mengatur parameter berikut:
+Setelah web terbuka di browser, buka tab **"Konfigurasi"** di menu navigasi:
 
 1. **Gemini API Key (Wajib)**
-   - Tambah kandidat baru dengan memasukkan kunci API Anda (didapat dari Google AI Studio).
-   - Klik tombol **"Aktifkan"** pada kandidat tersebut.
-2. **Kredensial Azure / Microsoft Graph API (Opsional untuk Sync SharePoint Resmi)**
-   - Jika Anda memiliki Azure App Registration di organisasi TPS, masukkan:
-     - `AZURE_TENANT_ID`
-     - `AZURE_CLIENT_ID`
-     - `AZURE_CLIENT_SECRET` (Pastikan menginput *Value-nya*, bukan Secret ID).
-   - Konfirmasi permission pada registrasi Azure tersebut tipe **Application** dengan akses **`Files.Read.All`** atau **`Sites.Read.All`** dan sudah disetujui (*admin consent*).
-   - Klik **"Aktifkan"** setelah disimpan.
+   - Cari baris **gemini_api_key**. Anda bisa mengedit kandidat yang ada atau menambahkan kandidat API key baru (didapatkan dari Google AI Studio).
+   - Klik tombol **"Aktifkan"** pada kandidat API Key yang ingin Anda gunakan.
+2. **Kredensial Azure / Microsoft Graph API (Opsional)**
+   - Digunakan untuk sinkronisasi resmi OneDrive/SharePoint organisasi TPS.
+   - Masukkan JSON credential format: `{"tenant_id": "...", "client_id": "...", "client_secret": "..."}`.
+   - Jika belum diisi, sistem otomatis masuk ke **Fallback Mode** (menggunakan tautan public share dengan parameter `download=1`).
 
 ---
 
-## 📂 Alur Manajemen Sumber Data (Syncing Data)
+## 📂 Alur Sinkronisasi & Manajemen Data
 
-1. Buka dropdown **"Sumber Data: Semua Data"** di bagian kanan atas navbar.
-2. Klik tombol **"Kelola Sumber Data"** di bagian paling bawah untuk memunculkan modal overlay.
-3. Di modal tersebut, Anda memiliki 2 tab utama:
-   - **OneDrive SharePoint:** Daftarkan kategori baru dan masukkan link sharing OneDrive Anda (file `.xlsx` spreadsheet).
-     - *Catatan Sync:* Jika kredensial Azure di atas **belum diisi**, sistem otomatis menggunakan **Fallback mode** (`&download=1`). Pastikan link dibuat lewat tombol **Share > Copy Link** di SharePoint dengan izin akses publik (*Anyone with the link*).
-   - **Dokumen Manual:** Unggah berkas dokumen Anda secara manual (`.pdf`, `.docx`, `.txt`, `.xlsx`) sebagai alternatif sekunder.
-4. Klik tombol **Sync** pada baris kategori yang baru dibuat untuk mengekstrak, memecah (*chunking*), membuat embedding, dan mengindeks data ke database vektor.
+1. Buka tombol dropdown **"Sumber Data"** di bagian kanan atas navbar.
+2. Klik tombol **"Kelola Sumber Data"** untuk menampilkan modal konfigurasi.
+3. Di dalam modal tersebut, terdapat 2 pilihan tipe data:
+   - **OneDrive / SharePoint / Google Drive:**
+     - Masukkan nama kategori baru dan tautan berbagi berkas Excel spreadsheet Anda.
+     - Klik tombol **Sync** untuk memicu pengunduhan, parsing spreadsheet, pembuatan embedding, dan pengindeksan ke ChromaDB.
+   - **Dokumen Manual:**
+     - Unggah file manual Anda langsung (`.pdf`, `.docx`, `.txt`, `.xlsx`, `.pptx`, dan berkas gambar seperti `.png`, `.jpg` untuk OCR).
+     - Anda dapat menonaktifkan/mengaktifkan berkas secara dinamis dengan mengklik tombol toggle status aktif dokumen.
 
 ---
 
@@ -104,25 +112,42 @@ Setelah web terbuka di `http://localhost:3000`, klik tab **"Konfigurasi"** di at
 ```
 rag-engine/
 ├── app/
-│   ├── main.py                 # Titik masuk (entrypoint) FastAPI
-│   ├── api/routes/             # Router endpoint /chat, /config, dan /sources
+│   ├── main.py                 # Titik masuk (entrypoint) FastAPI & migrasi berkas bawaan
+│   ├── api/routes/             # Router REST API (/chat, /config, /sources, /documents)
 │   ├── services/
-│   │   ├── sharepoint_fetcher.py # Logic download SharePoint (Graph API & Fallback)
-│   │   ├── config_store.py      # Pengelolaan API Key & Kredensial dinamis
-│   │   ├── retrieval.py         # Pencarian semantik dan filtering kategori
-│   │   └── ingestion.py         # Parsing dokumen excel/pdf dan simpan ke ChromaDB
-│   └── core/config.py          # Loader dynamic client Gemini & Azure
+│   │   ├── config_store.py      # Pengelolaan konfigurasi AI & Kredensial dinamis
+│   │   ├── ingestion.py         # Parsing multi-format dokumen & injeksi ke ChromaDB
+│   │   ├── retrieval.py         # Pencarian semantik (similarity search) & filter kategori
+│   │   ├── generation.py        # Pembuatan prompt cerdas & interaksi Gemini API
+│   │   ├── sharepoint_fetcher.py# Unduh file OneDrive/Sharepoint (Graph & Fallback)
+│   │   ├── googledrive_fetcher.py # Parser & downloader Google Drive/Sheets
+│   │   └── chat_store.py        # Pengelolaan database riwayat chat lokal
+│   └── core/config.py          # Loader dynamic client Gemini & konstanta threshold
 ├── data/
-│   ├── config_store.json       # Database kredensial (Grouped-Candidate)
-│   ├── sources_store.json      # Database link SharePoint kategori terdaftar
-│   └── documents/              # Dokumen lokal untuk upload manual
+│   ├── config_store.json       # Database konfigurasi kredensial (Grouped-Candidate)
+│   ├── sources_store.json      # Database kategori sync SharePoint terdaftar
+│   ├── documents_store.json    # Database list metadata file manual terdaftar
+│   ├── conversations.json      # Database riwayat chat lengkap
+│   ├── documents/              # Penyimpanan fisik file manual (ada berkas contoh)
+│   └── vector_store/           # Database biner ChromaDB (vektor indeks)
 ├── frontend/
 │   ├── app/
-│   │   ├── page.js             # Layout SPA dengan tab Umum & Konfigurasi
-│   │   ├── CategorySelector.js # Combo box pemilih kategori di navbar
-│   │   ├── DataManagementModal.js # Modal manajemen OneDrive & Manual upload
-│   │   └── ChatInterface.js    # Tampilan antarmuka chat dengan chatbot
-│   └── package.json            # Daftar NodeJS packages
-├── docker-compose.yml          # Konfigurasi container orkestrasi docker
-└── README.md                   # Panduan dokumentasi proyek
+│   │   ├── page.js             # Kontainer SPA utama (Tab Obrolan & Konfigurasi)
+│   │   ├── ChatInterface.js    # Area interface tanya jawab & referensi dokumen
+│   │   ├── ConfigManager.js    # Pengelolaan dinamis API Key & kredensial
+│   │   ├── DocumentManager.js  # Area drag-and-drop manual upload file
+│   │   └── OneDriveManager.js  # Panel CRUD kategori sync cloud drive
+│   └── package.json            # Daftar dependencies NodeJS
+├── docker-compose.yml          # Konfigurasi container orkestrasi Docker
+└── README.md                   # Panduan dokumentasi proyek (file ini)
 ```
+
+---
+
+## 💡 Fitur Unggulan Tambahan
+- **Smart Rate Limiting**: Membatasi laju request embedding agar tidak melebihi kapasitas Gemini API Free Tier (maksimal 15 RPM) dengan mekanisme *exponential backoff* otomatis saat mendeteksi `RESOURCE_EXHAUSTED`.
+- **Row-by-Row Tabular Parsing**: Pemecahan berkas spreadsheet (`.xlsx`, `.csv`) dilakukan per baris agar setiap informasi baris menjadi satu kesatuan dokumen utuh di database vektor.
+- **Multimodal OCR**: Mendukung unggahan gambar (`.png`, `.jpg`, `.jpeg`, `.webp`), di mana sistem menggunakan kemampuan multimodal Gemini untuk membaca teks dan menganalisis visual sebelum disimpan.
+- **WIB Time-Aware Prompting**: Menyertakan konteks waktu WIB (Waktu Indonesia Barat) ke dalam system prompt agar AI dapat menganalisis referensi waktu seperti "bulan lalu" atau "kemarin" secara akurat.
+- **Session & Pinned Chats**: Riwayat chat dapat dihapus, disematkan (*pinned*), dan diganti namanya secara dinamis.
+
