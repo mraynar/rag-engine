@@ -25,12 +25,23 @@ def retrieve_relevant_chunks(question: str, category: Optional[str] = None) -> t
     chroma_client = chromadb.PersistentClient(path=str(VECTOR_STORE_DIR))
     collection = chroma_client.get_or_create_collection(name="tps_docs")
 
-    if category and category != "Semua Data":
+    category_clean = category.strip() if category else None
+    if category_clean and category_clean.lower() not in ("semua data", "all", ""):
         active_sources = get_active_filenames()
-        if category in active_sources:
-            where_filter = {"source": category}
+        matched_source = next((s for s in active_sources if s.lower() == category_clean.lower()), None)
+        if matched_source:
+            where_filter = {"source": matched_source}
         else:
-            where_filter = {"category": category}
+            from app.services.sources_store import list_sources
+            matched_cat = None
+            try:
+                for s in list_sources():
+                    if s.get("category_name", "").strip().lower() == category_clean.lower():
+                        matched_cat = s["category_name"]
+                        break
+            except Exception:
+                pass
+            where_filter = {"category": matched_cat if matched_cat else category_clean}
     else:
         active_sources = get_active_filenames()
         from app.services.sources_store import list_sources
