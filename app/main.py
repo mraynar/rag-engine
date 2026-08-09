@@ -7,6 +7,7 @@ from app.api.routes.chat import router as chat_router
 from app.api.routes.config import router as config_router
 from app.api.routes.conversations import router as conversations_router
 from app.api.routes.documents import router as documents_router
+from app.api.routes.health import router as health_router
 from app.api.routes.sources import router as sources_router
 
 
@@ -77,3 +78,4 @@ app.include_router(config_router)
 app.include_router(documents_router)
 app.include_router(conversations_router)
 app.include_router(sources_router)
+app.include_router(health_router)
