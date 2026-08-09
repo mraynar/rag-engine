@@ -38,6 +38,7 @@ Pastikan Anda memiliki **Docker** & **Docker Desktop** terpasang di komputer And
 3. **Akses Layanan**
    - **Frontend Web UI:** [http://localhost:3000](http://localhost:3000)
    - **Backend API Docs (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
+   - **Healthcheck & Status API:** [http://localhost:8000/health](http://localhost:8000/health)
 
 ---
 
@@ -55,7 +56,11 @@ Jika Anda ingin menjalankan atau memprogram ulang service di luar container:
    ```bash
    pip install -r requirements.txt
    ```
-3. Jalankan server FastAPI dengan Uvicorn:
+3. (Opsional) Jalankan Unit & Integration Test Suite:
+   ```bash
+   python3 -m unittest discover tests
+   ```
+4. Jalankan server FastAPI dengan Uvicorn:
    ```bash
    uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
    ```
@@ -113,16 +118,20 @@ Setelah web terbuka di browser, buka tab **"Konfigurasi"** di menu navigasi:
 rag-engine/
 ├── app/
 │   ├── main.py                 # Titik masuk (entrypoint) FastAPI & migrasi berkas bawaan
-│   ├── api/routes/             # Router REST API (/chat, /config, /sources, /documents)
+│   ├── api/routes/             # Router REST API (/chat, /config, /sources, /documents, /health)
 │   ├── services/
 │   │   ├── config_store.py      # Pengelolaan konfigurasi AI & Kredensial dinamis
 │   │   ├── ingestion.py         # Parsing multi-format dokumen & injeksi ke ChromaDB
-│   │   ├── retrieval.py         # Pencarian semantik (similarity search) & filter kategori
-│   │   ├── generation.py        # Pembuatan prompt cerdas & interaksi Gemini API
+│   │   ├── retrieval.py         # Pencarian semantik (case-insensitive) & filter kategori
+│   │   ├── generation.py        # Pembuatan prompt modular & interaksi Gemini API
 │   │   ├── sharepoint_fetcher.py# Unduh file OneDrive/Sharepoint (Graph & Fallback)
 │   │   ├── googledrive_fetcher.py # Parser & downloader Google Drive/Sheets
 │   │   └── chat_store.py        # Pengelolaan database riwayat chat lokal
 │   └── core/config.py          # Loader dynamic client Gemini & konstanta threshold
+├── tests/                      # Unit dan integration test suite (Python unittest)
+│   ├── test_ingestion.py       # Pengujian pemecahan kalimat dan parsing baris Excel
+│   ├── test_stores.py          # Pengujian lifecycle config store & source store
+│   └── test_api_routes.py      # Pengujian endpoint REST API FastAPI
 ├── data/
 │   ├── config_store.json       # Database konfigurasi kredensial (Grouped-Candidate)
 │   ├── sources_store.json      # Database kategori sync SharePoint terdaftar
@@ -138,6 +147,7 @@ rag-engine/
 │   │   ├── DocumentManager.js  # Area drag-and-drop manual upload file
 │   │   └── OneDriveManager.js  # Panel CRUD kategori sync cloud drive
 │   └── package.json            # Daftar dependencies NodeJS
+├── .dockerignore               # Aturan pengecualian context build Docker
 ├── docker-compose.yml          # Konfigurasi container orkestrasi Docker
 └── README.md                   # Panduan dokumentasi proyek (file ini)
 ```
