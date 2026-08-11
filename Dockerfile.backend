@@ -14,9 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # git) - nanti otomatis dibuat dari .example saat container pertama start,
 # atau diisi lewat volume mount di docker-compose.yml
 COPY app/ app/
-COPY data/documents/ data/documents/
-COPY data/vector_store/ data/vector_store/
 COPY data/config_store.json.example data/config_store.json.example
+RUN mkdir -p data/documents data/vector_store
 
 EXPOSE 8000
 
