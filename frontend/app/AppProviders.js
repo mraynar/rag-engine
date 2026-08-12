@@ -1,14 +1,11 @@
-// frontend/app/AppProviders.js
-// 'use client' wrapper — needed because layout.js must stay a Server Component
-// (it exports `metadata`). All client-side context providers live here.
 'use client';
 
 import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUpload, UploadProvider } from './UploadContext';
+import { CategoryProvider } from './CategoryContext';
+import { ConversationProvider } from './ConversationContext';
 import styles from './upload.module.css';
-
-// ---- Inline SVG icons (no emoji, consistent with the rest of the app) ----
 
 function UploadIcon({ size = 14 }) {
   return (
@@ -65,8 +62,6 @@ function SpinnerIcon({ size = 13 }) {
   );
 }
 
-// ---- Upload status pill shown in the topnav ----
-
 function UploadStatusPill({ u, onDismiss, router }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -82,7 +77,7 @@ function UploadStatusPill({ u, onDismiss, router }) {
                       styles.pillError
       } ${expanded ? styles.pillExpanded : ''}`}
       role={!isUploading ? 'alert' : undefined}
-      title={u.message || `Mengupload: ${u.filename}`}
+      title={u.message || `Uploading: ${u.filename}`}
     >
       {expanded ? (
         <div className={styles.expandedContent}>
@@ -94,7 +89,7 @@ function UploadStatusPill({ u, onDismiss, router }) {
             <button
               className={styles.pillDismiss}
               onClick={() => onDismiss(u.id)}
-              aria-label="Tutup notifikasi"
+              aria-label="Close notification"
             >
               <XIcon size={11} />
             </button>
@@ -106,36 +101,33 @@ function UploadStatusPill({ u, onDismiss, router }) {
             <button
               className={styles.pillNav}
               onClick={() => setExpanded(false)}
-              aria-label="Sembunyikan detail error"
+              aria-label="Hide error details"
             >
-              Sembunyikan
+              Hide
             </button>
           </div>
         </div>
       ) : (
         <>
-          {/* Icon */}
           <span className={styles.pillIcon}>
             {isUploading && <SpinnerIcon size={13} />}
             {isSuccess   && <CheckIcon   size={13} />}
             {isError     && <AlertIcon   size={13} />}
           </span>
 
-          {/* Label */}
           <span className={styles.pillLabel}>
             {isUploading
-              ? `Mengupload: ${u.filename}`
+              ? `Uploading: ${u.filename}`
               : u.message}
           </span>
 
-          {/* Action buttons */}
           {isError && (
             <button
               className={styles.pillNav}
               onClick={() => setExpanded(true)}
-              aria-label="Lihat detail error"
+              aria-label="View error details"
             >
-              Lihat
+              View
             </button>
           )}
 
@@ -143,18 +135,17 @@ function UploadStatusPill({ u, onDismiss, router }) {
             <button
               className={styles.pillNav}
               onClick={() => router.push('/documents')}
-              aria-label="Buka halaman dokumen"
+              aria-label="Open documents page"
             >
-              Lihat
+              View
             </button>
           )}
 
-          {/* Dismiss */}
           {!isUploading && (
             <button
               className={styles.pillDismiss}
               onClick={() => onDismiss(u.id)}
-              aria-label="Tutup notifikasi"
+              aria-label="Close notification"
             >
               <XIcon size={11} />
             </button>
@@ -184,11 +175,6 @@ function UploadStatusArea() {
     </div>
   );
 }
-
-// ---- Root providers wrapper ----
-
-import { CategoryProvider } from './CategoryContext';
-import { ConversationProvider } from './ConversationContext';
 
 export default function AppProviders({ children }) {
   return (

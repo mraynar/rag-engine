@@ -90,6 +90,6 @@ from app.services.reset_service import reset_all_data
 def reset_system_data() -> dict:
     try:
         reset_all_data()
-        return {"message": "Sistem berhasil di-reset. Semua data kategori, dokumen, riwayat chat, dan indeks ChromaDB telah dibersihkan."}
+        return {"message": "System data reset successfully. All categories, documents, chat histories, and ChromaDB vector indices have been cleared."}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Gagal me-reset data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to reset data: {str(e)}")

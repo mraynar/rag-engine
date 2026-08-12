@@ -41,7 +41,7 @@ def create_source(category_name: str, onedrive_url: str) -> dict:
 
     for entry in store:
         if entry["category_name"].lower() == category_name.lower():
-            raise ValueError(f"Kategori '{category_name}' sudah terdaftar.")
+            raise ValueError(f"Category '{category_name}' is already registered.")
 
     new_entry = {
         "id": f"src_{uuid.uuid4().hex[:8]}",
@@ -71,13 +71,13 @@ def update_source(
             break
 
     if found is None:
-        raise KeyError(f"Source ID '{id}' tidak ditemukan.")
+        raise KeyError(f"Source ID '{id}' not found.")
 
     if category_name is not None:
         category_name_stripped = category_name.strip()
         for entry in store:
             if entry["id"] != id and entry["category_name"].lower() == category_name_stripped.lower():
-                raise ValueError(f"Kategori '{category_name_stripped}' sudah terdaftar.")
+                raise ValueError(f"Category '{category_name_stripped}' is already registered.")
         found["category_name"] = category_name_stripped
 
     if onedrive_url is not None:
@@ -97,7 +97,7 @@ def delete_source(id: str) -> None:
     store = _load_store()
     new_store = [e for e in store if e["id"] != id]
     if len(new_store) == len(store):
-        raise KeyError(f"Source ID '{id}' tidak ditemukan.")
+        raise KeyError(f"Source ID '{id}' not found.")
     _save_store(new_store)
 
 
@@ -110,7 +110,7 @@ def mark_synced(id: str, chunk_count: int, fetch_method: str = "graph_api") -> d
             found = entry
             break
     if found is None:
-        raise KeyError(f"Source ID '{id}' tidak ditemukan.")
+        raise KeyError(f"Source ID '{id}' not found.")
     found["sync_status"] = "success"
     found["last_synced_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
     found["chunk_count"] = chunk_count
@@ -128,7 +128,7 @@ def mark_failed(id: str, error_message: str) -> dict:
             found = entry
             break
     if found is None:
-        raise KeyError(f"Source ID '{id}' tidak ditemukan.")
+        raise KeyError(f"Source ID '{id}' not found.")
     found["sync_status"] = "failed"
     found["last_error"] = error_message
     _save_store(store)

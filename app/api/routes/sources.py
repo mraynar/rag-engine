@@ -36,7 +36,7 @@ def create_new_source(request: SourceCreateRequest) -> dict:
             category_name=request.category_name,
             onedrive_url=request.onedrive_url,
         )
-        return {"message": "Kategori berhasil ditambahkan.", "source": new_entry}
+        return {"message": "Category added successfully.", "source": new_entry}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -49,7 +49,7 @@ def update_existing_source(id: str, request: SourceUpdateRequest) -> dict:
             category_name=request.category_name,
             onedrive_url=request.onedrive_url,
         )
-        return {"message": "Kategori berhasil diperbarui.", "source": updated}
+        return {"message": "Category updated successfully.", "source": updated}
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
@@ -65,7 +65,7 @@ def delete_existing_source(id: str) -> dict:
             from app.services.ingestion import delete_category_vector_data
             delete_category_vector_data(category_name)
         delete_source(id)
-        return {"message": "Kategori berhasil dihapus."}
+        return {"message": "Category deleted successfully."}
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -76,43 +76,38 @@ def sync_source(id: str) -> dict:
         if id in _syncing_sources:
             raise HTTPException(
                 status_code=409,
-                detail="Sinkronisasi untuk kategori ini masih berjalan, mohon tunggu."
+                detail="Synchronization for this category is currently in progress."
             )
         _syncing_sources.add(id)
 
     try:
         source = get_source(id)
         if not source:
-            raise HTTPException(status_code=404, detail="Kategori tidak ditemukan.")
+            raise HTTPException(status_code=404, detail="Category not found.")
 
         url = source["onedrive_url"].strip().lower()
         is_gdrive = "drive.google.com" in url or "docs.google.com" in url
 
-        # Create temporary path for download
-        # We name the file using category name so that it identifies neatly in ingestion
         safe_category = source["category_name"].replace(" ", "_").replace("/", "_")
         temp_filename = f"{safe_category}.xlsx"
 
         with tempfile.TemporaryDirectory() as tmpdir:
             temp_path = Path(tmpdir) / temp_filename
             try:
-                # Download file from sharing link
                 if is_gdrive:
                     fetch_method = download_googledrive_file(source["onedrive_url"], temp_path)
                 else:
                     fetch_method = download_sharepoint_file(source["onedrive_url"], temp_path)
 
-                # Ingest downloaded document with category metadata
                 chunk_count = ingest_document(
                     file_path=temp_path,
                     filename=temp_filename,
                     category=source["category_name"],
                 )
 
-                # Update store as success
                 updated = mark_synced(id, chunk_count, fetch_method)
                 return {
-                    "message": f"Sinkronisasi berhasil. Terindeks {chunk_count} chunk.",
+                    "message": f"Synchronization successful. Indexed {chunk_count} chunks.",
                     "source": updated,
                 }
             except Exception as e:
@@ -120,7 +115,7 @@ def sync_source(id: str) -> dict:
                 mark_failed(id, error_msg)
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Sinkronisasi gagal: {error_msg}",
+                    detail=f"Synchronization failed: {error_msg}",
                 )
     finally:
         with _sync_lock:

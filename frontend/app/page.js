@@ -1,4 +1,3 @@
-// frontend/app/page.js
 'use client';
 
 import { useState } from 'react';
@@ -6,7 +5,6 @@ import ChatInterface from './ChatInterface';
 import ConfigManager from './ConfigManager';
 import { useCategory } from './CategoryContext';
 
-// ---- Inline SVG Icons ----
 function GlobeIcon({ size = 15 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -56,7 +54,6 @@ export default function UnifiedPage() {
       fontFamily: "'Inter', sans-serif",
       overflow: 'hidden',
     }}>
-      {/* ── Header Area ── */}
       <div style={{
         maxWidth: '1120px',
         width: '100%',
@@ -74,21 +71,19 @@ export default function UnifiedPage() {
           flexWrap: 'wrap',
           gap: '12px',
         }}>
-          {/* Title */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <h2 style={{ fontSize: '1.35rem', fontWeight: '700', color: 'var(--color-navy)', margin: 0 }}>
-              Chatbot TPS
+              TPS Chatbot
             </h2>
             <button style={{
               background: 'none', border: 'none',
               color: 'var(--color-muted)', cursor: 'pointer',
               padding: '4px', display: 'flex', alignItems: 'center',
-            }} title="Informasi Sistem">
+            }} title="System Information">
               <InfoIcon size={16} />
             </button>
           </div>
 
-          {/* Tab Switcher */}
           <div style={{ display: 'flex', gap: '4px' }}>
             <button
               onClick={() => setActiveTab('umum')}
@@ -101,7 +96,7 @@ export default function UnifiedPage() {
                 transition: 'all 0.2s',
               }}
             >
-              <GlobeIcon size={14} /> Umum
+              <GlobeIcon size={14} /> Chat
             </button>
             <button
               onClick={() => setActiveTab('konfigurasi')}
@@ -114,27 +109,21 @@ export default function UnifiedPage() {
                 transition: 'all 0.2s',
               }}
             >
-              <GearIcon size={14} /> Konfigurasi
+              <GearIcon size={14} /> Configuration
             </button>
           </div>
         </div>
 
-        {/* Context description */}
         <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--color-muted)' }}>
           {activeTab === 'umum' ? (
-            <>Mode Umum: Pertanyaan tentang layanan, operasional, dan informasi umum TPS (Kategori Aktif: <strong style={{ color: 'var(--color-navy)' }}>{selectedCategory}</strong>)</>
+            <>Chat Mode: Inquiries based on internal TPS documentation (Active Category: <strong style={{ color: 'var(--color-navy)' }}>{selectedCategory}</strong>)</>
           ) : (
-            <>Mode Konfigurasi: Manajemen kredensial API key, model embedding/generation, dan Microsoft Graph</>
+            <>Configuration Mode: Manage AI API keys, embedding/generation models, and Microsoft Graph credentials</>
           )}
         </p>
       </div>
 
-      {/* ── Content ── */}
       <div style={{ flex: '1', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
-        {/*
-          Chat tab:  showSidebar={true}  → full sidebar + persistent conversation
-          Config tab: switched out, but ConversationContext keeps activeConvId in memory
-        */}
         {activeTab === 'umum' ? (
           <ChatInterface hideHeader={true} showSidebar={true} />
         ) : (

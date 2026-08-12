@@ -1,12 +1,8 @@
-// frontend/app/NavLinks.js
-// Client component — renders nav links with active-state highlighting.
-// Uses inline SVG icons instead of emoji to avoid SSR text-node mismatches.
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-// ---- Chat icon (speech bubble outline) ----
 function ChatNavIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -16,7 +12,6 @@ function ChatNavIcon() {
   );
 }
 
-// ---- Settings / config icon (gear outline) ----
 function ConfigNavIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -27,7 +22,6 @@ function ConfigNavIcon() {
   );
 }
 
-// ---- Documents / data source icon (file outline) ----
 function DocumentsNavIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -42,16 +36,16 @@ function DocumentsNavIcon() {
 }
 
 const links = [
-  { href: '/',          label: 'Umum',        Icon: ChatNavIcon },
-  { href: '/documents', label: 'Sumber Data', Icon: DocumentsNavIcon },
-  { href: '/config',    label: 'Konfigurasi', Icon: ConfigNavIcon },
+  { href: '/',          label: 'Chat',          Icon: ChatNavIcon },
+  { href: '/documents', label: 'Data Sources',  Icon: DocumentsNavIcon },
+  { href: '/config',    label: 'Configuration', Icon: ConfigNavIcon },
 ];
 
 export default function NavLinks() {
   const pathname = usePathname();
 
   return (
-    <nav className="topnav-links" aria-label="Navigasi utama">
+    <nav className="topnav-links" aria-label="Main navigation">
       {links.map(({ href, label, Icon }) => {
         const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
         return (

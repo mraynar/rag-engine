@@ -26,7 +26,7 @@ def retrieve_relevant_chunks(question: str, category: Optional[str] = None) -> t
     collection = chroma_client.get_or_create_collection(name="tps_docs")
 
     category_clean = category.strip() if category else None
-    if category_clean and category_clean.lower() not in ("semua data", "all", ""):
+    if category_clean and category_clean.lower() not in ("semua data", "all data", "all", ""):
         active_sources = get_active_filenames()
         matched_source = next((s for s in active_sources if s.lower() == category_clean.lower()), None)
         if matched_source:

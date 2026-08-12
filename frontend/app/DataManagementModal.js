@@ -1,4 +1,3 @@
-// frontend/app/DataManagementModal.js
 'use client';
 
 import { useState } from 'react';
@@ -11,11 +10,11 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export default function DataManagementModal() {
   const { isDataModalOpen, setIsDataModalOpen } = useCategory();
-  const [activeSubTab, setActiveSubTab] = useState('onedrive'); // 'onedrive' or 'manual'
+  const [activeSubTab, setActiveSubTab] = useState('onedrive');
   const [resetting, setResetting] = useState(false);
 
   async function handleResetData() {
-    if (!window.confirm("PENTING: Apakah Anda benar-benar yakin ingin menghapus seluruh data aplikasi (Kategori, Dokumen, Chat, Index Vektor)? Tindakan ini permanen.")) return;
+    if (!window.confirm("WARNING: Are you sure you want to delete all application data (Categories, Documents, Chats, Vector Index)? This action is permanent.")) return;
     
     setResetting(true);
     try {
@@ -25,10 +24,10 @@ export default function DataManagementModal() {
         throw new Error(err.detail || `Server error (${res.status})`);
       }
       const data = await res.json();
-      window.alert(data.message || "Reset berhasil.");
+      window.alert(data.message || "Reset completed successfully.");
       window.location.reload();
     } catch (err) {
-      window.alert(err.message || 'Gagal me-reset data.');
+      window.alert(err.message || 'Failed to reset data.');
     } finally {
       setResetting(false);
     }
@@ -51,7 +50,6 @@ export default function DataManagementModal() {
       zIndex: 9999,
       fontFamily: "'Inter', sans-serif"
     }}>
-      {/* Modal Dialog Container */}
       <div style={{
         backgroundColor: '#fff',
         width: '90%',
@@ -65,7 +63,6 @@ export default function DataManagementModal() {
         overflow: 'hidden'
       }}>
         
-        {/* Header Block */}
         <div style={{
           padding: '20px 24px',
           borderBottom: '1px solid var(--color-border)',
@@ -76,10 +73,10 @@ export default function DataManagementModal() {
         }}>
           <div>
             <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--color-navy)', fontWeight: '700' }}>
-              Manajemen Sumber Data
+              Data Source Management
             </h3>
             <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-muted)' }}>
-              Kelola sinkronisasi data online (OneDrive, Google Drive, Google Sheets) atau unggah dokumen manual.
+              Manage online data synchronization (OneDrive, Google Drive, Google Sheets) or upload manual documents.
             </p>
           </div>
           
@@ -97,13 +94,12 @@ export default function DataManagementModal() {
               justifyContent: 'center',
               transition: 'background-color 0.2s'
             }}
-            title="Tutup dialog"
+            title="Close dialog"
           >
             <XIcon size={16} />
           </button>
         </div>
 
-        {/* Tab Selection Area */}
         <div style={{
           padding: '12px 24px 0 24px',
           display: 'flex',
@@ -126,7 +122,7 @@ export default function DataManagementModal() {
               transition: 'all 0.15s ease'
             }}
           >
-            Sumber Data Online
+            Cloud Data Sources
           </button>
 
           <button
@@ -143,11 +139,10 @@ export default function DataManagementModal() {
               transition: 'all 0.15s ease'
             }}
           >
-            Dokumen Manual
+            Manual Documents
           </button>
         </div>
 
-        {/* Main Content Area - Scrollable */}
         <div style={{
           flex: 1,
           overflowY: 'auto',
@@ -159,7 +154,6 @@ export default function DataManagementModal() {
             <DocumentManager />
           )}
 
-          {/* Danger Zone (Reset Data) */}
           <div style={{
             marginTop: '40px',
             padding: '16px 20px',
@@ -169,7 +163,7 @@ export default function DataManagementModal() {
           }}>
             <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#C53030', fontWeight: '700' }}>Danger Zone (Reset Data)</h4>
             <p style={{ margin: '0 0 16px 0', fontSize: '0.78rem', color: '#9B2C2C', lineHeight: '1.4' }}>
-              Menghapus semua kategori data online (OneDrive/Google Drive/Google Sheets), dokumen manual, riwayat chat, dan indeks pencarian ChromaDB secara permanen dari server. Tindakan ini tidak dapat dibatalkan.
+              Permanently delete all cloud categories, manual documents, chat history, and ChromaDB search indices from the server. This action cannot be undone.
             </p>
             <button
               onClick={handleResetData}
@@ -189,10 +183,10 @@ export default function DataManagementModal() {
                 opacity: resetting ? 0.7 : 1
               }}
             >
-              {resetting ? 'Mereset...' : (
+              {resetting ? 'Resetting...' : (
                 <>
                   <TrashIcon size={14} />
-                  Reset Semua Data Aplikasi
+                  Reset All Application Data
                 </>
               )}
             </button>

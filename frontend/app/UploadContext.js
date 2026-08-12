@@ -30,14 +30,7 @@ export function UploadProvider({ children }) {
     setUploads((prev) => prev.filter((u) => u.id !== id));
   }, []);
 
-  /**
-   * Start an upload — the fetch() is fired here in the provider, not in the
-   * page component, so navigating away does not abort it.
-   *
-   * @param {File} file
-   * @param {string} label  optional user-supplied label
-   * @returns {{ id: number }}  the upload record id so callers can track it
-   */
+  // Trigger file upload in the background to persist across page navigation
   const startUpload = useCallback((file, label) => {
     const id = ++_nextId;
     const filename = file.name;
@@ -62,19 +55,18 @@ export function UploadProvider({ children }) {
               ? {
                   ...u,
                   status: 'success',
-                  message: `"${filename}" diupload (${chunkCount} chunk)`,
+                  message: `"${filename}" uploaded (${chunkCount} chunks)`,
                 }
               : u
           )
         );
-        // If Documents page is still mounted, refresh its list
         onCompleteRef.current?.();
       })
       .catch((err) => {
         setUploads((prev) =>
           prev.map((u) =>
             u.id === id
-              ? { ...u, status: 'error', message: err.message || 'Upload gagal' }
+              ? { ...u, status: 'error', message: err.message || 'Upload failed' }
               : u
           )
         );

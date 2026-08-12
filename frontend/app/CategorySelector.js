@@ -60,7 +60,7 @@ function WarningDotIcon() {
       display: 'inline-block',
       marginLeft: '6px',
       flexShrink: 0
-    }} title="Belum disinkronkan" />
+    }} title="Unsynced" />
   );
 }
 
@@ -76,7 +76,6 @@ export default function CategorySelector() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -99,8 +98,6 @@ export default function CategorySelector() {
 
   const selectedSource = categories.find(c => c.category_name === selectedCategory);
   const needsSync = selectedSource && selectedSource.sync_status === 'never_synced';
-
-  // Get only active manual documents
   const activeDocs = documents.filter(doc => doc.is_active);
 
   return (
@@ -111,7 +108,7 @@ export default function CategorySelector() {
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <span className="category-selector-label">Sumber Data:</span>
+        <span className="category-selector-label">Data Source:</span>
         <span className="category-selector-value">
           {selectedCategory}
           {needsSync && <WarningDotIcon />}
@@ -121,7 +118,6 @@ export default function CategorySelector() {
 
       {isOpen && (
         <div className="category-selector-dropdown" role="listbox">
-          {/* Main "Semua Data" fallback */}
           <div
             className={`category-selector-item ${selectedCategory === 'Semua Data' ? 'selected' : ''}`}
             role="option"
@@ -130,12 +126,11 @@ export default function CategorySelector() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FolderIcon size={14} />
-              <span>Semua Data (Default)</span>
+              <span>All Data (Default)</span>
             </div>
           </div>
           
-          {/* Section: OneDrive Categories */}
-          <div className="category-section-header">Kategori OneDrive</div>
+          <div className="category-section-header">OneDrive Categories</div>
           {categories.map((cat) => {
             const isUnsynced = cat.sync_status === 'never_synced';
             return (
@@ -152,16 +147,15 @@ export default function CategorySelector() {
                     {cat.category_name}
                   </span>
                 </div>
-                {isUnsynced && <span className="category-selector-warning-badge">Belum Sync</span>}
+                {isUnsynced && <span className="category-selector-warning-badge">Unsynced</span>}
               </div>
             );
           })}
           {categories.length === 0 && !loadingCategories && (
-            <div className="category-selector-empty">Tidak ada kategori OneDrive</div>
+            <div className="category-selector-empty">No OneDrive categories found</div>
           )}
 
-          {/* Section: Manual Documents */}
-          <div className="category-section-header">Dokumen Manual (Aktif)</div>
+          <div className="category-section-header">Manual Documents (Active)</div>
           {activeDocs.map((doc) => {
             return (
               <div
@@ -181,10 +175,9 @@ export default function CategorySelector() {
             );
           })}
           {activeDocs.length === 0 && (
-            <div className="category-selector-empty">Tidak ada dokumen manual aktif</div>
+            <div className="category-selector-empty">No active manual documents</div>
           )}
 
-          {/* Bottom Action: Manage Data */}
           <hr className="category-selector-divider" />
           <div
             className="category-selector-manage-btn"
@@ -192,7 +185,7 @@ export default function CategorySelector() {
             role="button"
           >
             <SettingsIcon size={14} />
-            <span>Kelola Sumber Data</span>
+            <span>Manage Data Sources</span>
           </div>
         </div>
       )}
