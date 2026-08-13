@@ -5,7 +5,7 @@ __pycache__/
 venv/
 .venv/
 .DS_Store
-data/config_store.json
+data/
 
 frontend/node_modules/
 frontend/.next/
