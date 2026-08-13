@@ -105,3 +105,6 @@ python-docx
 pdfplumber
 python-pptx
 python-multipart
+psycopg2-binary
+sqlalchemy
+

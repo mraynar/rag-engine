@@ -64,6 +64,20 @@ def delete_existing_source(id: str) -> dict:
             category_name = source["category_name"]
             from app.services.ingestion import delete_category_vector_data
             delete_category_vector_data(category_name)
+
+            # Clean up Supabase Postgres tables as well
+            from app.services.db import get_db_conn
+            from sqlalchemy import text
+            try:
+                with get_db_conn() as conn:
+                    with conn.begin():
+                        conn.execute(
+                            text("DELETE FROM data_sources WHERE category_name = :category_name"),
+                            {"category_name": category_name}
+                        )
+            except Exception as e:
+                print(f"[sources] Warning: failed to delete '{category_name}' from Supabase: {e}")
+
         delete_source(id)
         return {"message": "Category deleted successfully."}
     except KeyError as e:
@@ -88,35 +102,31 @@ def sync_source(id: str) -> dict:
         url = source["onedrive_url"].strip().lower()
         is_gdrive = "drive.google.com" in url or "docs.google.com" in url
 
-        safe_category = source["category_name"].replace(" ", "_").replace("/", "_")
-        temp_filename = f"{safe_category}.xlsx"
+        try:
+            # Call new zero-AI tabular sync pipeline
+            from app.services.tabular_ingestion import sync_tabular_source
+            db_source = sync_tabular_source(
+                category_name=source["category_name"],
+                source_url=source["onedrive_url"],
+                source_type="google_sheets" if is_gdrive else "sharepoint"
+            )
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            temp_path = Path(tmpdir) / temp_filename
-            try:
-                if is_gdrive:
-                    fetch_method = download_googledrive_file(source["onedrive_url"], temp_path)
-                else:
-                    fetch_method = download_sharepoint_file(source["onedrive_url"], temp_path)
+            chunk_count = db_source.get("row_count", 0)
+            fetch_method = db_source.get("fetch_method", "unknown")
 
-                chunk_count = ingest_document(
-                    file_path=temp_path,
-                    filename=temp_filename,
-                    category=source["category_name"],
-                )
-
-                updated = mark_synced(id, chunk_count, fetch_method)
-                return {
-                    "message": f"Synchronization successful. Indexed {chunk_count} chunks.",
-                    "source": updated,
-                }
-            except Exception as e:
-                error_msg = str(e)
-                mark_failed(id, error_msg)
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Synchronization failed: {error_msg}",
-                )
+            # Keep local sources_store.json in sync for frontend compatibility
+            updated = mark_synced(id, chunk_count, fetch_method)
+            return {
+                "message": f"Synchronization successful. Indexed {chunk_count} rows in Supabase.",
+                "source": updated,
+            }
+        except Exception as e:
+            error_msg = str(e)
+            mark_failed(id, error_msg)
+            raise HTTPException(
+                status_code=400,
+                detail=f"Synchronization failed: {error_msg}",
+            )
     finally:
         with _sync_lock:
             _syncing_sources.discard(id)

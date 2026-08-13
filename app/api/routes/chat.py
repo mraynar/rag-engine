@@ -10,16 +10,38 @@ router = APIRouter()
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
-    chunks, sources = retrieve_relevant_chunks(request.message, request.category)
+    # Check if this category belongs to Supabase tabular sources
+    is_supabase_category = False
+    if request.category:
+        try:
+            from app.services.db import get_db_conn
+            from sqlalchemy import text
+            with get_db_conn() as conn:
+                res = conn.execute(
+                    text("SELECT id FROM data_sources WHERE category_name = :category"),
+                    {"category": request.category}
+                ).fetchone()
+                if res:
+                    is_supabase_category = True
+        except Exception as e:
+            print(f"[chat] Warning: failed to check data_sources: {e}")
 
-
-    if not chunks:
-        answer = "Maaf, saya tidak menemukan informasi ini di dokumen."
-        sources = []
+    if is_supabase_category:
+        # Use Supabase + pandas + Gemini function calling query pipeline
+        from app.services.tabular_query import answer_tabular_question
+        result = answer_tabular_question(request.message, request.category)
+        answer = result["answer"]
+        sources = result["sources"]
     else:
-        prompt = build_prompt(request.message, chunks)
-        answer = generate_answer(prompt)
-        sources = list(dict.fromkeys(sources))
+        # Fall back to ChromaDB semantic vector search pipeline
+        chunks, sources = retrieve_relevant_chunks(request.message, request.category)
+        if not chunks:
+            answer = "Maaf, saya tidak menemukan informasi ini di dokumen."
+            sources = []
+        else:
+            prompt = build_prompt(request.message, chunks)
+            answer = generate_answer(prompt)
+            sources = list(dict.fromkeys(sources))
 
     try:
         append_messages(
@@ -29,7 +51,6 @@ def chat(request: ChatRequest) -> ChatResponse:
             sources=sources,
         )
     except KeyError:
-        # missing conversation_id — don't abort the response
         print(f"[chat] WARNING: conversation '{request.conversation_id}' not found, message not persisted")
 
     return ChatResponse(answer=answer, sources=sources)
