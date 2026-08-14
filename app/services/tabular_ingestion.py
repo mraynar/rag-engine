@@ -62,12 +62,14 @@ def sync_tabular_source(category_name: str, source_url: str, source_type: str) -
         with tempfile.TemporaryDirectory() as tmpdir:
             temp_path = Path(tmpdir) / temp_filename
 
+            print(f"[sync_tabular_source] Starting fetch/download for '{category_name}'...")
             # Download using existing fetchers
             if is_gdrive:
                 fetch_method = download_googledrive_file(source_url, temp_path)
             else:
                 fetch_method = download_sharepoint_file(source_url, temp_path)
 
+            print(f"[sync_tabular_source] Download complete via {fetch_method}. File size: {temp_path.stat().st_size if temp_path.exists() else 0} bytes. Parsing Excel/CSV...")
             # Parse to pandas DataFrame per sheet
             if suffix == ".xlsx":
                 xls = pd.read_excel(str(temp_path), sheet_name=None)
@@ -82,14 +84,14 @@ def sync_tabular_source(category_name: str, source_url: str, source_type: str) -
                         continue
                 if df_csv is None:
                     raise ValueError("Failed to parse CSV file with standard encodings.")
-                xls = {"Sheet1": df_csv}
-
+                print(f"[sync_tabular_source] Parsing complete. Sheets found: {list(xls.keys())}")
             # Clear old rows in database and prepare batch insert
             column_schema = {}
             total_rows = 0
             all_row_inserts = []
 
             for sheet_name, df in xls.items():
+                print(f"[sync_tabular_source] Sheet '{sheet_name}': shape={df.shape}. Processing records...")
                 # Clean up NaN / NaT values to None so they serialize to JSON properly
                 df = df.where(df.notnull(), None)
 
@@ -129,6 +131,7 @@ def sync_tabular_source(category_name: str, source_url: str, source_type: str) -
             # Perform DB transaction
             with get_db_conn() as conn:
                 with conn.begin():
+                    print(f"[sync_tabular_source] Connected. Deleting old rows for source_id={source_id}...")
                     # Delete old rows
                     conn.execute(
                         text("DELETE FROM data_rows WHERE source_id = :source_id"),
@@ -141,9 +144,14 @@ def sync_tabular_source(category_name: str, source_url: str, source_type: str) -
                         INSERT INTO data_rows (source_id, sheet_name, row_index, row_data)
                         VALUES (:source_id, :sheet_name, :row_index, :row_data)
                     """)
+                    total_batches = (len(all_row_inserts) - 1) // batch_size + 1
+                    print(f"[sync_tabular_source] Starting batch inserts. Total records: {len(all_row_inserts)} in {total_batches} batches...")
                     for i in range(0, len(all_row_inserts), batch_size):
                         batch = all_row_inserts[i : i + batch_size]
+                        current_batch = i // batch_size + 1
+                        print(f"[sync_tabular_source] Inserting batch {current_batch}/{total_batches}...")
                         conn.execute(insert_stmt, batch)
+                    print("[sync_tabular_source] All batches inserted successfully.")
 
                     # Update status to success
                     conn.execute(
