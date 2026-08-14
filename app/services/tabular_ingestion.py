@@ -138,20 +138,43 @@ def sync_tabular_source(category_name: str, source_url: str, source_type: str) -
                         {"source_id": source_id}
                     )
 
-                    # Bulk insert row data in batches of 500
-                    batch_size = 500
-                    insert_stmt = text("""
-                        INSERT INTO data_rows (source_id, sheet_name, row_index, row_data)
-                        VALUES (:source_id, :sheet_name, :row_index, :row_data)
-                    """)
-                    total_batches = (len(all_row_inserts) - 1) // batch_size + 1
-                    print(f"[sync_tabular_source] Starting batch inserts. Total records: {len(all_row_inserts)} in {total_batches} batches...")
-                    for i in range(0, len(all_row_inserts), batch_size):
-                        batch = all_row_inserts[i : i + batch_size]
-                        current_batch = i // batch_size + 1
-                        print(f"[sync_tabular_source] Inserting batch {current_batch}/{total_batches}...")
-                        conn.execute(insert_stmt, batch)
-                    print("[sync_tabular_source] All batches inserted successfully.")
+                    # Bulk insert row data
+                    dialect_name = conn.dialect.name
+                    if dialect_name == "postgresql":
+                        from psycopg2.extras import execute_values
+                        dbapi_conn = conn.connection.dbapi_connection
+                        cursor = dbapi_conn.cursor()
+
+                        query = """
+                            INSERT INTO data_rows (source_id, sheet_name, row_index, row_data)
+                            VALUES %s
+                        """
+                        # Convert list of dicts to list of tuples
+                        tuples = [(x["source_id"], x["sheet_name"], x["row_index"], x["row_data"]) for x in all_row_inserts]
+
+                        batch_size = 1000
+                        total_batches = (len(tuples) - 1) // batch_size + 1
+                        print(f"[sync_tabular_source] Inserting {len(tuples)} records in {total_batches} batches using execute_values fast-path...")
+                        for i in range(0, len(tuples), batch_size):
+                            batch = tuples[i : i + batch_size]
+                            current_batch = i // batch_size + 1
+                            print(f"[sync_tabular_source] Inserting batch {current_batch}/{total_batches}...")
+                            execute_values(cursor, query, batch)
+                        cursor.close()
+                    else:
+                        batch_size = 500
+                        insert_stmt = text("""
+                            INSERT INTO data_rows (source_id, sheet_name, row_index, row_data)
+                            VALUES (:source_id, :sheet_name, :row_index, :row_data)
+                        """)
+                        total_batches = (len(all_row_inserts) - 1) // batch_size + 1
+                        print(f"[sync_tabular_source] Inserting {len(all_row_inserts)} records in {total_batches} batches using fallback insert...")
+                        for i in range(0, len(all_row_inserts), batch_size):
+                            batch = all_row_inserts[i : i + batch_size]
+                            current_batch = i // batch_size + 1
+                            print(f"[sync_tabular_source] Inserting batch {current_batch}/{total_batches}...")
+                            conn.execute(insert_stmt, batch)
+                    print("[sync_tabular_source] All rows inserted successfully.")
 
                     # Update status to success
                     conn.execute(
