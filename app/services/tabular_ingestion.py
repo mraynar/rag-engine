@@ -93,8 +93,11 @@ def sync_tabular_source(category_name: str, source_url: str, source_type: str) -
                 # Clean up NaN / NaT values to None so they serialize to JSON properly
                 df = df.where(df.notnull(), None)
 
+                # Strip leading/trailing whitespaces from column names
+                df.columns = [str(col).strip() for col in df.columns]
+
                 # Populate column schema (dict of sheet_name -> list of columns)
-                column_schema[sheet_name] = [str(col) for col in df.columns]
+                column_schema[sheet_name] = list(df.columns)
 
                 # Convert records to list of dicts
                 records = df.to_dict("records")

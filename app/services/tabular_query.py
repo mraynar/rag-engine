@@ -33,7 +33,7 @@ def answer_tabular_question(question: str, category_name: str) -> dict:
     prompt_p1 = f"""You are a database helper that translates natural language questions into structured pandas query parameters.
 Based on the question and the column schemas provided below, you must output a JSON object with the following structure:
 {{
-  "sheet": "Name of the sheet to query",
+  "sheet": "Name of the sheet to query" | null,
   "filters": [
     {{"column": "Column Name", "operator": "==", "value": 4170}}
   ],
@@ -45,6 +45,10 @@ Based on the question and the column schemas provided below, you must output a J
 }}
 
 Available operators: '==', '!=', '>', '<', '>=', '<=', 'contains', 'in'.
+Instructions for "sheet" parameter:
+- Set "sheet" to the name of the sheet (e.g. "DOMESTIC" or "INTERNATIONAL") if specified or if the data only exists in that sheet.
+- Set "sheet" to null if the sheet is not specified, if the query should look into both/all sheets, or if you are not sure where the data resides.
+
 For string values in filters, use the exact match from the context if possible.
 If the question requests an aggregation (like total, sum, average, max, highest, etc.), populate the 'aggregation' block.
 Ensure that column names match the provided schema exactly (case-sensitive).
@@ -144,16 +148,19 @@ Question: {question}
             print(f"[tabular_query] Applying filter: column='{col}', operator='{op}', value='{val}'")
 
             if col not in df.columns:
-                # Case-insensitive column matching fallback
-                matched_col = next((c for c in df.columns if c.lower() == col.lower()), None)
+                # Case-insensitive column matching fallback (stripped)
+                matched_col = next((c for c in df.columns if c.strip().lower() == col.strip().lower()), None)
                 if matched_col:
                     col = matched_col
                 else:
                     continue
 
-            # Handle type coercion for numeric comparison
+            # Handle type coercion for numeric comparison and date/datetime comparison
             if isinstance(val, (int, float)):
                 df[col] = pd.to_numeric(df[col], errors='coerce')
+            elif "date" in col.lower() or "tanggal" in col.lower():
+                df[col] = pd.to_datetime(df[col], errors='coerce')
+                val = pd.to_datetime(val, errors='coerce')
 
             # Apply operator
             if op == "==":
@@ -188,7 +195,7 @@ Question: {question}
     try:
         if agg_func and agg_func != "null":
             if agg_col and agg_col not in df.columns:
-                matched_col = next((c for c in df.columns if c.lower() == agg_col.lower()), None)
+                matched_col = next((c for c in df.columns if c.strip().lower() == agg_col.strip().lower()), None)
                 if matched_col:
                     agg_col = matched_col
 
