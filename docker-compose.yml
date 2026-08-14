@@ -11,6 +11,8 @@ services:
       # container di-restart/rebuild. Vector store & dokumen dari host
       # (hasil git pull) juga dipakai langsung lewat sini.
       - ./data:/app/data
+    env_file:
+      - .env
     restart: unless-stopped
 
   frontend:
