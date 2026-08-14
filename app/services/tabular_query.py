@@ -86,6 +86,9 @@ Question: {question}
             "sources": []
         }
 
+    print(f"[tabular_query] Question: {question}")
+    print(f"[tabular_query] Parsed params: {json.dumps(parsed_params)}")
+
     sheet = parsed_params.get("sheet")
     filters = parsed_params.get("filters") or []
     aggregation = parsed_params.get("aggregation") or {}
@@ -130,6 +133,7 @@ Question: {question}
         records.append(r_data)
 
     df = pd.DataFrame(records)
+    print(f"[tabular_query] Loaded {len(df)} rows. Columns in DB: {list(df.columns)}")
 
     # 4. Apply filters locally using pandas
     try:
@@ -137,6 +141,7 @@ Question: {question}
             col = f.get("column")
             op = f.get("operator")
             val = f.get("value")
+            print(f"[tabular_query] Applying filter: column='{col}', operator='{op}', value='{val}'")
 
             if col not in df.columns:
                 # Case-insensitive column matching fallback
@@ -167,7 +172,9 @@ Question: {question}
                 df = df[df[col].astype(str).str.contains(str(val), case=False, na=False)]
             elif op == "in" and isinstance(val, list):
                 df = df[df[col].isin(val)]
+        print(f"[tabular_query] Row count after filters: {len(df)}")
     except Exception as e:
+        print(f"[tabular_query] Filter execution failed: {e}")
         return {
             "answer": f"Gagal memproses filter data menggunakan pandas: {e}",
             "sources": []
@@ -208,7 +215,9 @@ Question: {question}
             if len(df) > 30:
                 pandas_result_summary += f"\n\n... (Truncated. Total matching rows: {len(df)})"
 
+        print(f"[tabular_query] Aggregation result: {pandas_result_summary}")
     except Exception as e:
+        print(f"[tabular_query] Aggregation execution failed: {e}")
         return {
             "answer": f"Gagal menghitung agregasi data: {e}",
             "sources": []
