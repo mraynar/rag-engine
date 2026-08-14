@@ -99,8 +99,22 @@ def sync_tabular_source(category_name: str, source_url: str, source_type: str) -
                 # Convert records to list of dicts
                 records = df.to_dict("records")
                 for idx, record in enumerate(records):
-                    # Clean column names to strings and filter out None keys
-                    clean_record = {str(k): v for k, v in record.items()}
+                    # Clean column names to strings and convert non-serializable values (Timestamps, NaT)
+                    clean_record = {}
+                    for k, v in record.items():
+                        if pd.isnull(v):
+                            v_clean = None
+                        elif hasattr(v, "isoformat"):
+                            v_clean = v.isoformat()
+                        elif hasattr(v, "item"):
+                            try:
+                                v_clean = v.item()
+                            except Exception:
+                                v_clean = str(v)
+                        else:
+                            v_clean = v
+                        clean_record[str(k)] = v_clean
+
                     all_row_inserts.append({
                         "source_id": str(source_id),
                         "sheet_name": sheet_name,
