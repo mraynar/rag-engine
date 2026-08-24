@@ -1,0 +1,34 @@
+[
+  {
+    "key": "gemini_api_key",
+    "group": "gemini_api_key",
+    "description": "API key untuk akses Gemini API (dari Google AI Studio)",
+    "value": "ISI_API_KEY_ANDA_DI_SINI",
+    "is_secret": true,
+    "is_active": true
+  },
+  {
+    "key": "embedding_model",
+    "group": "embedding_model",
+    "description": "Model AI untuk membuat embedding (mengubah teks jadi vektor) — gemini-embedding-001",
+    "value": "gemini-embedding-001",
+    "is_secret": false,
+    "is_active": true
+  },
+  {
+    "key": "generation_model",
+    "group": "generation_model",
+    "description": "Model AI untuk generate jawaban — Gemini 2.5 Flash",
+    "value": "gemini-2.5-flash",
+    "is_secret": false,
+    "is_active": true
+  },
+  {
+    "key": "azure_graph_placeholder",
+    "group": "azure_graph",
+    "description": "Kredensial Azure / Microsoft Graph API (Belum Dikonfigurasi)",
+    "value": "{\"tenant_id\": \"\", \"client_id\": \"\", \"client_secret\": \"\"}",
+    "is_secret": true,
+    "is_active": false
+  }
+]
