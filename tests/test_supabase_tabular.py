@@ -133,7 +133,7 @@ class TestSupabaseTabular(unittest.TestCase):
         output = answer_tabular_question("Berapa TEUS TIL?", self.category_name)
 
         # Assert correct formatting and values
-        self.assertIn("4170", output["answer"])
+        self.assertTrue(any(v in output["answer"] for v in ["4170", "4.170"]))
         self.assertIn("Test Tabular Category", output["sources"][0])
 
 

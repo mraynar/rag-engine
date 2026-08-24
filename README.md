@@ -82,6 +82,35 @@ Jika Anda ingin menjalankan atau memprogram ulang service di luar container:
 
 ---
 
+## Supabase Database & Auth Setup
+
+Proyek ini terintegrasi dengan **Supabase Auth** untuk autentikasi user dan **Supabase Database (PostgreSQL)** untuk penyimpanan history chat yang aman.
+
+### 1. Inisialisasi Environment Variables
+Salin file template environment ke `.env` lokal:
+* **Backend (`rag-engine/`):**
+  ```bash
+  cp .env.example .env
+  ```
+  *Buka `.env` dan masukkan `DATABASE_URL` (pooler), `DIRECT_URL` (direct connection), `SUPABASE_URL`, dan `SUPABASE_ANON_KEY` proyek Supabase Anda.*
+* **Frontend (`rag-engine/frontend/`):**
+  ```bash
+  cp frontend/.env.local.example frontend/.env.local
+  ```
+  *Buka `frontend/.env.local` dan masukkan `NEXT_PUBLIC_SUPABASE_URL` serta `NEXT_PUBLIC_SUPABASE_ANON_KEY`.*
+
+### 2. Jalankan Migrasi Database
+Untuk membuat tabel `profiles`, `conversations`, dan `messages` beserta relasi, index, RLS (Row Level Security), policy keamanan, dan trigger otomatis, jalankan script migrasi di direktori root:
+```bash
+python scripts/migrate_supabase.py
+```
+*Script ini akan memindai folder `supabase/migrations/` dan mengeksekusi migrasi SQL secara berurutan.*
+
+### 3. Konfigurasi Autentikasi di Supabase Dashboard
+Pastikan Anda mengaktifkan **Email Auth Provider** di tab *Authentication -> Providers* pada dashboard Supabase Anda.
+
+---
+
 ## Langkah Konfigurasi Kredensial (Live UI)
 
 Sistem ini menggunakan konfigurasi dinamis berbasis JSON (`data/config_store.json`). **Tidak memerlukan restart server** saat Anda memperbarui API Key.

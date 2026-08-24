@@ -48,6 +48,7 @@ export function CategoryProvider({ children }) {
   const [loadingDocuments, setLoadingDocuments] = useState(true);
 
   const [isDataModalOpen, setIsDataModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const refreshCategories = useCallback(async () => {
     try {
@@ -95,6 +96,8 @@ export function CategoryProvider({ children }) {
         refreshDocuments,
         isDataModalOpen,
         setIsDataModalOpen,
+        isAuthModalOpen,
+        setIsAuthModalOpen,
       }}
     >
       {children}

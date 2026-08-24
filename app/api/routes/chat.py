@@ -1,15 +1,16 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from typing import Optional
 
 from app.schemas.chat import ChatRequest, ChatResponse
-from app.services.chat_store import append_messages
+from app.core.auth import get_current_user
+from app.services.db_chat_store import append_user_messages
 from app.services.generation import build_prompt, generate_answer
 from app.services.retrieval import retrieve_relevant_chunks
 
 router = APIRouter()
 
-
 @router.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest) -> ChatResponse:
+def chat(request: ChatRequest, user: Optional[dict] = Depends(get_current_user)) -> ChatResponse:
     # Check if this category belongs to Supabase tabular sources
     is_supabase_category = False
     if request.category:
@@ -43,14 +44,19 @@ def chat(request: ChatRequest) -> ChatResponse:
             answer = generate_answer(prompt)
             sources = list(dict.fromkeys(sources))
 
-    try:
-        append_messages(
-            conv_id=request.conversation_id,
-            user_content=request.message,
-            assistant_content=answer,
-            sources=sources,
-        )
-    except KeyError:
-        print(f"[chat] WARNING: conversation '{request.conversation_id}' not found, message not persisted")
+    # Persist the message only if user is logged in
+    if user:
+        try:
+            append_user_messages(
+                conv_id=request.conversation_id,
+                user_id=user["id"],
+                user_content=request.message,
+                assistant_content=answer,
+                sources=sources,
+            )
+        except KeyError:
+            print(f"[chat] WARNING: conversation '{request.conversation_id}' not found, message not persisted")
+    else:
+        print(f"[chat] Guest session chat processed: conversation_id={request.conversation_id}")
 
     return ChatResponse(answer=answer, sources=sources)

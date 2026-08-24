@@ -176,16 +176,20 @@ function UploadStatusArea() {
   );
 }
 
+import { AuthProvider } from './AuthContext';
+
 export default function AppProviders({ children }) {
   return (
-    <ConversationProvider>
-      <CategoryProvider>
-        <UploadProvider>
-          <UploadStatusArea />
-          {children}
-        </UploadProvider>
-      </CategoryProvider>
-    </ConversationProvider>
+    <AuthProvider>
+      <ConversationProvider>
+        <CategoryProvider>
+          <UploadProvider>
+            <UploadStatusArea />
+            {children}
+          </UploadProvider>
+        </CategoryProvider>
+      </ConversationProvider>
+    </AuthProvider>
   );
 }
 

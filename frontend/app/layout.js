@@ -15,6 +15,8 @@ export const metadata = {
 import AppProviders from './AppProviders';
 import CategorySelector from './CategorySelector';
 import DataManagementModal from './DataManagementModal';
+import AuthNav from './AuthNav';
+import AuthModal from './AuthModal';
 
 export default function RootLayout({ children }) {
   return (
@@ -60,6 +62,9 @@ export default function RootLayout({ children }) {
 
                   {/* Dropdown Category Selector */}
                   <CategorySelector />
+
+                  {/* Auth Navigation */}
+                  <AuthNav />
                 </div>
 
               </div>
@@ -71,6 +76,7 @@ export default function RootLayout({ children }) {
             </main>
           </div>
           <DataManagementModal />
+          <AuthModal />
         </AppProviders>
       </body>
     </html>

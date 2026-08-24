@@ -1,0 +1,254 @@
+"""
+Formatter module for rendering query results into natural-language responses.
+Part of the Phase 2H implementation (TDD Green Phase).
+"""
+import math
+from typing import Optional, Dict, Any
+
+import numpy as np
+import pandas as pd
+
+from app.services.tabular.domain_models import (
+    QueryAST,
+    QueryPlan,
+    QueryType,
+    UserIntent,
+    ExecutionResult,
+    ResultQuality,
+    ResolvedEntities,
+)
+
+
+def format_number(val: Any) -> str:
+    """
+    Format numeric values to Indonesian standard representation (dot for thousands, comma for decimals).
+    
+    Args:
+        val: Any value (int, float, or string)
+        
+    Returns:
+        Formatted string representation of the value
+    """
+    if isinstance(val, (int, float, np.integer, np.floating)):
+        if pd.isna(val) or (isinstance(val, float) and math.isnan(val)):
+            return "kosong"
+        val_float = float(val)
+        if val_float.is_integer():
+            return f"{int(val_float):,}".replace(",", ".")
+        else:
+            val_rounded = round(val_float, 2)
+            if val_rounded.is_integer():
+                return f"{int(val_rounded):,}".replace(",", ".")
+            parts = f"{val_rounded:.2f}".split(".")
+            integer_part = f"{int(parts[0]):,}".replace(",", ".")
+            # Strip trailing zeros in decimals if appropriate, but keeping at least 1 or 2
+            dec = parts[1]
+            if dec.endswith("0"):
+                dec = dec[:-1]
+            return f"{integer_part},{dec}"
+    return str(val)
+
+
+def format_response(
+    question: str,
+    results: Dict[int, ExecutionResult],
+    ast: QueryAST,
+    resolved: ResolvedEntities,
+    dataset: str,
+    original_plan: QueryPlan,
+) -> str:
+    """
+    Generate natural-language response based on query execution results and semantic context.
+    
+    Args:
+        question: Original question string
+        results: Dict mapping step number -> ExecutionResult
+        ast: Parsed QueryAST containing intent
+        resolved: ResolvedEntities from parsing
+        dataset: Dataset category name
+        original_plan: Base QueryPlan used
+        
+    Returns:
+        String containing natural-language response
+    """
+    if not results:
+        return "Data tidak ditemukan untuk kriteria pencarian tersebut."
+
+    # 1. Quality-based early exit handlers (prioritizing worst-quality signal first)
+    qualities = [r.quality for r in results.values()]
+    if ResultQuality.EMPTY in qualities:
+        return "Data tidak ditemukan untuk kriteria pencarian tersebut."
+    if ResultQuality.NAN in qualities:
+        return "Data tersedia, tetapi nilai yang diminta tidak dapat dihitung."
+    if ResultQuality.ALL_ZERO in qualities:
+        if ast.query_type not in [QueryType.RANKING, QueryType.TREND, QueryType.COMPARISON] \
+           and ast.intent not in [UserIntent.TOP_N, UserIntent.BOTTOM_N, UserIntent.COMPARISON, UserIntent.TREND_ANALYSIS]:
+            return "Berdasarkan data yang ditemukan, nilainya adalah 0."
+
+    # 2. Extract common context elements
+    metric = resolved.metrics[0].upper() if resolved.metrics else "NILAI"
+    operator = resolved.operators[0] if resolved.operators else None
+    year = resolved.month.year if resolved.month else None
+
+    # Handle Percentage lookup intent suffix
+    is_percentage = ast.intent == UserIntent.PERCENTAGE_LOOKUP or "%" in question or "market share" in question.lower()
+
+    # 3. Multi-Hop / Chained results formatting
+    if len(results) > 1:
+        # Check if difference calculation requested
+        if any(w in question.lower() for w in ["selisih", "beda", "perbedaan", "difference"]):
+            if 1 in results and 2 in results:
+                val1 = results[1].data
+                val2 = results[2].data
+                if isinstance(val1, (int, float, np.integer, np.floating)) and isinstance(val2, (int, float, np.integer, np.floating)):
+                    diff = abs(val2 - val1)
+                    formatted_diff = format_number(diff)
+                    if is_percentage:
+                        formatted_diff = f"{formatted_diff}%"
+                    return f"Selisih {metric.lower()} adalah {formatted_diff}."
+        
+        # Check if percentage contribution requested
+        if any(w in question.lower() for w in ["persentase", "kontribusi", "percentage", "contribution"]):
+            if 1 in results and 2 in results:
+                val1 = results[1].data
+                val2 = results[2].data
+                if isinstance(val1, (int, float, np.integer, np.floating)) and isinstance(val2, (int, float, np.integer, np.floating)):
+                    if val2 != 0:
+                        pct = (val1 / val2) * 100
+                        formatted_pct = format_number(pct)
+                        sheet_word = "internasional" if any(w in question.lower() for w in ["internasional", "international"]) else "domestik"
+                        return f"Persentase kontribusi {metric.lower()} {sheet_word} adalah {formatted_pct}%."
+        
+        # Fallback for multi-hop: present step results sequentially
+        output_parts = []
+        for step, res in sorted(results.items()):
+            output_parts.append(f"Langkah {step}: {format_number(res.data)}")
+        return " | ".join(output_parts)
+
+    # 4. Single execution result formatting
+    exec_result = results[1]
+    data = exec_result.data
+
+    # Formatting pandas.Series result
+    if isinstance(data, pd.Series):
+        lines = []
+        for idx, val in data.items():
+            lines.append(f"{idx}: {format_number(val)}")
+        return "\n".join(lines)
+
+    # Formatting pandas.DataFrame result
+    if isinstance(data, pd.DataFrame):
+        if data.empty:
+            return "Data tidak ditemukan untuk kriteria pencarian tersebut."
+
+        if ast.query_type == QueryType.SIMPLE or ast.intent in [UserIntent.VALUE_LOOKUP, UserIntent.PERCENTAGE_LOOKUP]:
+            metric_cols = [c for c in data.columns if resolved.metrics and any(m.lower() == c.lower() for m in resolved.metrics)]
+            if metric_cols:
+                metric_col = metric_cols[0]
+                series_numeric = pd.to_numeric(data[metric_col], errors='coerce')
+                if len(data) == 1:
+                    val = series_numeric.iloc[0]
+                    if pd.isna(val):
+                        val = data[metric_col].iloc[0]
+                else:
+                    if metric_col.upper() in ["TEUS", "BOXES", "20'", "40'", "ACTUAL", "BUDGET"]:
+                        val = series_numeric.sum()
+                    else:
+                        val = series_numeric.mean()
+                
+                formatted_val = format_number(val)
+                if is_percentage:
+                    formatted_val = f"{formatted_val}%"
+                op_str = f" {operator}" if operator else ""
+                period_str = f" pada tahun {year}" if year else ""
+                metric_name = resolved.metrics[0] if resolved.metrics else "nilai"
+                return f"{metric_name}{op_str}{period_str} adalah {formatted_val}."
+
+        # Trend analysis formatting
+        if ast.query_type == QueryType.TREND or ast.intent == UserIntent.TREND_ANALYSIS:
+            temporal_col = next((c for c in data.columns if c.upper() in ["MONTH", "YEAR", "MONTH_CODE", "BULAN"]), None)
+            val_cols = [c for c in data.columns if c != temporal_col]
+            val_col = val_cols[0] if val_cols else None
+            
+            if temporal_col and val_col:
+                lines = []
+                for _, row in data.iterrows():
+                    temp_val = row[temporal_col]
+                    if temporal_col.upper() == "YEAR":
+                        if isinstance(temp_val, (int, float, np.integer, np.floating)):
+                            temp_str = str(int(float(temp_val)))
+                        else:
+                            temp_str = str(temp_val)
+                    else:
+                        temp_str = format_number(temp_val)
+                    lines.append(f"- {temp_str}: {format_number(row[val_col])}")
+                return "\n".join(lines)
+
+        # Ranking formatting (TOP_N / BOTTOM_N)
+        if ast.query_type == QueryType.RANKING or ast.intent in [UserIntent.TOP_N, UserIntent.BOTTOM_N]:
+            row = data.iloc[0]
+            group_cols = [c for c in data.columns if c.upper() in ["LOP", "OPERATOR", "VESSEL OPERATOR", "MONTH", "YEAR", "BULAN"]]
+            group_col = group_cols[0] if group_cols else data.columns[0]
+            val_cols = [c for c in data.columns if c != group_col]
+            val_col = val_cols[0] if val_cols else data.columns[1] if len(data.columns) > 1 else group_col
+
+            rank_word = "terendah" if ast.intent == UserIntent.BOTTOM_N or (original_plan.sort == "asc") else "tertinggi"
+            formatted_val = format_number(row[val_col])
+            if is_percentage:
+                formatted_val = f"{formatted_val}%"
+
+            group_val = row[group_col]
+            if group_col.upper() in ["YEAR", "TANGGAL", "DATE"] and isinstance(group_val, (int, float, np.integer, np.floating)):
+                formatted_group = str(int(float(group_val)))
+            else:
+                formatted_group = format_number(group_val)
+                
+            return f"Berdasarkan data, {formatted_group} memiliki {metric.lower()} {rank_word} yaitu {formatted_val}."
+
+        if ast.query_type == QueryType.COMPARISON or ast.intent == UserIntent.COMPARISON or (ast.query_type == QueryType.MULTI_HOP and len(results) == 1):
+            group_cols = [c for c in data.columns if c.upper() in ["LOP", "OPERATOR", "VESSEL OPERATOR", "MONTH", "YEAR", "BULAN", "_SHEET"]]
+            group_col = group_cols[0] if group_cols else data.columns[0]
+            val_cols = [c for c in data.columns if c != group_col]
+            val_col = val_cols[0] if val_cols else data.columns[1] if len(data.columns) > 1 else group_col
+
+            lines = []
+            for _, row in data.iterrows():
+                group_val = row[group_col]
+                if group_col.upper() in ["YEAR", "TANGGAL", "DATE"] and isinstance(group_val, (int, float, np.integer, np.floating)):
+                    formatted_group = str(int(float(group_val)))
+                else:
+                    formatted_group = str(group_val)
+                lines.append(f"{formatted_group}: {format_number(row[val_col])}")
+            return "\n".join(lines)
+
+        # General DataFrame fallback
+        return data.to_string(index=False)
+
+    # Scalar formatting (single lookup or aggregation)
+    formatted_val = format_number(data)
+    if is_percentage:
+        formatted_val = f"{formatted_val}%"
+
+    if ast.query_type == QueryType.AGGREGATION:
+        agg_word = "total"
+        if original_plan.aggregation:
+            func = original_plan.aggregation.func.lower()
+            if func == "mean":
+                agg_word = "rata-rata"
+            elif func == "max":
+                agg_word = "tertinggi"
+            elif func == "min":
+                agg_word = "terendah"
+            elif func == "count":
+                agg_word = "jumlah"
+        
+        op_str = f" untuk {operator}" if operator else ""
+        period_str = f" pada tahun {year}" if year else ""
+        metric_name = resolved.metrics[0] if resolved.metrics else "nilai"
+        return f"{agg_word.capitalize()} {metric_name}{op_str}{period_str} adalah {formatted_val}."
+
+    # Simple lookup default
+    op_str = f" {operator}" if operator else ""
+    period_str = f" pada tahun {year}" if year else ""
+    metric_name = resolved.metrics[0] if resolved.metrics else "nilai"
+    return f"{metric_name}{op_str}{period_str} adalah {formatted_val}."

@@ -1,258 +1,271 @@
 import json
-import os
-from typing import Optional
-
-import pandas as pd
-from google.genai import types
+from dataclasses import replace
+from typing import Optional, Dict, List
 from sqlalchemy import text
 
-from app.core.config import get_gemini_client, get_generation_model
+from app.core.config import get_gemini_client
 from app.services.db import get_db_conn
+from app.services.tabular.domain_models import (
+    QueryAST,
+    QueryPlan,
+    ResolvedEntities,
+    ExecutionResult,
+    ResultQuality,
+)
+from app.services.tabular.resolver import (
+    route_dataset,
+    route_sheet,
+    resolve_entities,
+)
+from app.services.tabular.classifier import classify_query
+from app.services.tabular.decomposer import decompose_query
+from app.services.tabular.query_builder import build_query_plan, QueryBuildError
+from app.services.tabular.retry_engine import execute_with_retry
+from app.services.tabular.formatter import format_response
+from app.services.tabular.settings import RETURN_DEBUG_BLOCK
 
 
 def answer_tabular_question(question: str, category_name: str) -> dict:
-    """Answers a tabular question by querying the schema, translating to filter parameters with Gemini,
-
-    executing pandas aggregation, and formatting the response.
     """
-    # 1. Fetch source metadata from Supabase
-    with get_db_conn() as conn:
-        res = conn.execute(
-            text("SELECT id, column_schema FROM data_sources WHERE category_name = :category_name"),
-            {"category_name": category_name}
-        ).fetchone()
+    Answers a tabular question by delegating processing to specialized modular components
+    (Resolver, Classifier, Decomposer, Query Builder, Executor, Retry Engine, and Formatter).
+    
+    API Contract:
+        Returns: {"answer": str, "sources": list[str]}
+    """
+    try:
+        with get_db_conn() as conn:
+            res = conn.execute(
+                text("SELECT id, column_schema FROM data_sources WHERE category_name = :category_name"),
+                {"category_name": category_name}
+            ).fetchone()
+    except Exception as e:
+        return {
+            "answer": f"Gagal mengakses database: {str(e)}",
+            "sources": []
+        }
 
     if not res:
-        raise ValueError(f"Category '{category_name}' not found in data_sources database.")
+        return {
+            "answer": f"Maaf, dataset untuk kategori '{category_name}' tidak ditemukan di database. Kemungkinan dataset ini telah dihapus atau belum disinkronisasikan.",
+            "sources": []
+        }
 
     source_id, schema_raw = res
     column_schema = schema_raw if isinstance(schema_raw, dict) else json.loads(schema_raw or "{}")
 
-    # 2. Call Gemini (Call 1) in JSON mode to translate question to filter parameters
-    schema_context_str = json.dumps(column_schema, indent=2)
-    prompt_p1 = f"""You are a database helper that translates natural language questions into structured pandas query parameters.
-Based on the question and the column schemas provided below, you must output a JSON object with the following structure:
-{{
-  "sheet": "Name of the sheet to query" | null,
-  "filters": [
-    {{"column": "Column Name", "operator": "==", "value": 4170}}
-  ],
-  "aggregation": {{
-    "func": "sum" | "mean" | "max" | "min" | "count" | null,
-    "column": "Column Name to aggregate"
-  }},
-  "group_by": ["Column Name"] | null
-}}
+    route_res = route_dataset(question, category_name)
+    if category_name and route_res:
+        route_res.dataset = category_name
+        
+    if not route_res or not route_res.dataset:
+        return {
+            "answer": f"Maaf, tidak dapat menentukan dataset yang tepat untuk pertanyaan Anda.",
+            "sources": [f"Supabase Table: {category_name}"]
+        }
+    try:
+        resolved = resolve_entities(question, route_res.dataset)
+        sheets = route_sheet(question, route_res.dataset)
+        if not sheets and route_res.dataset == "Transhipment":
+            sheets = ["Transhipment"]
+        sheet = sheets[0] if sheets and len(sheets) == 1 else None
+    except Exception as e:
+        return {
+            "answer": f"Gagal menganalisis entitas pertanyaan: {str(e)}",
+            "sources": [f"Supabase Table: {route_res.dataset}"]
+        }
 
-Available operators: '==', '!=', '>', '<', '>=', '<=', 'contains', 'in'.
-Instructions for "sheet" parameter:
-- Set "sheet" to the name of the sheet (e.g. "DOMESTIC" or "INTERNATIONAL") if specified or if the data only exists in that sheet.
-- Set "sheet" to null if the sheet is not specified, if the query should look into both/all sheets, or if you are not sure where the data resides.
+    try:
+        ast = classify_query(question, resolved, route_res.dataset)
+        subqueries = decompose_query(ast, question, resolved, route_res.dataset)
+    except Exception as e:
+        return {
+            "answer": f"Gagal mengklasifikasikan pertanyaan: {str(e)}",
+            "sources": [f"Supabase Table: {route_res.dataset}"]
+        }
 
-For string values in filters, use the exact match from the context if possible.
-If the question requests an aggregation (like total, sum, average, max, highest, etc.), populate the 'aggregation' block.
-Ensure that column names match the provided schema exactly (case-sensitive).
-
----
-Column Schemas:
-{schema_context_str}
-
----
-Question: {question}
-"""
-
-    client = get_gemini_client()
-    model = get_generation_model()
-
-    # Retry loop for JSON generation and parsing
-    parsed_params = None
-    last_err = None
-    for attempt in range(2):
+    results = {}
+    last_plan = None
+    steps_debug = {}
+    
+    for sub_q in subqueries:
         try:
-            response = client.models.generate_content(
-                model=model,
-                contents=prompt_p1,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    temperature=0.0,
-                )
+            sub_resolved = resolve_entities(sub_q.question, route_res.dataset)
+            sub_ast = classify_query(sub_q.question, sub_resolved, route_res.dataset)
+            
+            plan = build_query_plan(
+                sub_ast, 
+                sub_q.question, 
+                resolved, 
+                route_res.dataset, 
+                schema=column_schema, 
+                subquery=sub_q
             )
-            resp_text = response.text.strip()
-            parsed_params = json.loads(resp_text)
-            break
+            
+            sub_sheets = route_sheet(sub_q.question, route_res.dataset)
+            sub_sheet = sub_sheets[0] if sub_sheets and len(sub_sheets) == 1 else None
+            if not sub_sheet and len(subqueries) == 1 and (not sub_sheets or len(sub_sheets) == 1):
+                sub_sheet = sheet
+            if sub_sheet and not plan.sheet:
+                plan = replace(plan, sheet=sub_sheet)
+                
+            last_plan = plan
+            
+            exec_res = execute_with_retry(
+                source_id=str(source_id),
+                plan=plan,
+                question=sub_q.question,
+                resolved=resolved,
+                dataset=route_res.dataset,
+                db_schema=column_schema
+            )
+            results[sub_q.step] = exec_res
+            steps_debug[sub_q.step] = {
+                "sub_q": sub_q,
+                "sub_ast": sub_ast,
+                "plan": plan,
+                "exec_res": exec_res
+            }
+            
+        except QueryBuildError as qbe:
+            return {
+                "answer": f"Gagal menyusun rencana query: {str(qbe)}",
+                "sources": [f"Supabase Table: {route_res.dataset}"]
+            }
         except Exception as e:
-            last_err = e
-            prompt_p1 += f"\n\nRetry Notice: Your previous output failed to parse or was invalid: {e}. Please ensure it is strict JSON."
-
-    if parsed_params is None:
-        return {
-            "answer": f"Saya tidak dapat menerjemahkan pertanyaan ke parameter query tabular (Error: {last_err}).",
-            "sources": []
-        }
-
-    print(f"[tabular_query] Question: {question}")
-    print(f"[tabular_query] Parsed params: {json.dumps(parsed_params)}")
-
-    sheet = parsed_params.get("sheet")
-    filters = parsed_params.get("filters") or []
-    aggregation = parsed_params.get("aggregation") or {}
-    group_by = parsed_params.get("group_by")
-
-    # 3. Pull relevant row data from Supabase
-    # If a specific sheet was identified, we limit loading to that sheet.
-    with get_db_conn() as conn:
-        if sheet:
-            rows = conn.execute(
-                text("""
-                    SELECT sheet_name, row_data
-                    FROM data_rows
-                    WHERE source_id = :source_id AND LOWER(sheet_name) = :sheet
-                """),
-                {"source_id": source_id, "sheet": sheet.lower()}
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                text("""
-                    SELECT sheet_name, row_data
-                    FROM data_rows
-                    WHERE source_id = :source_id
-                """),
-                {"source_id": source_id}
-            ).fetchall()
-
-    if not rows:
-        return {
-            "answer": f"Tidak ditemukan data untuk kategori '{category_name}' (Sheet: '{sheet or 'Semua'}') di database.",
-            "sources": []
-        }
-
-    # Normalize JSONB rows into a flat DataFrame
-    records = []
-    for r in rows:
-        r_data = r[1]
-        if isinstance(r_data, str):
-            r_data = json.loads(r_data)
-        # Include sheet name for reference
-        r_data["_sheet"] = r[0]
-        records.append(r_data)
-
-    df = pd.DataFrame(records)
-    print(f"[tabular_query] Loaded {len(df)} rows. Columns in DB: {list(df.columns)}")
-
-    # 4. Apply filters locally using pandas
-    try:
-        for f in filters:
-            col = f.get("column")
-            op = f.get("operator")
-            val = f.get("value")
-            print(f"[tabular_query] Applying filter: column='{col}', operator='{op}', value='{val}'")
-
-            if col not in df.columns:
-                # Case-insensitive column matching fallback (stripped)
-                matched_col = next((c for c in df.columns if c.strip().lower() == col.strip().lower()), None)
-                if matched_col:
-                    col = matched_col
-                else:
-                    continue
-
-            # Handle type coercion for numeric comparison and date/datetime comparison
-            if isinstance(val, (int, float)):
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-            elif "date" in col.lower() or "tanggal" in col.lower():
-                df[col] = pd.to_datetime(df[col], errors='coerce')
-                val = pd.to_datetime(val, errors='coerce')
-
-            # Apply operator
-            if op == "==":
-                df = df[df[col] == val]
-            elif op == "!=":
-                df = df[df[col] != val]
-            elif op == ">":
-                df = df[df[col] > val]
-            elif op == "<":
-                df = df[df[col] < val]
-            elif op == ">=":
-                df = df[df[col] >= val]
-            elif op == "<=":
-                df = df[df[col] <= val]
-            elif op == "contains":
-                df = df[df[col].astype(str).str.contains(str(val), case=False, na=False)]
-            elif op == "in" and isinstance(val, list):
-                df = df[df[col].isin(val)]
-        print(f"[tabular_query] Row count after filters: {len(df)}")
-    except Exception as e:
-        print(f"[tabular_query] Filter execution failed: {e}")
-        return {
-            "answer": f"Gagal memproses filter data menggunakan pandas: {e}",
-            "sources": []
-        }
-
-    # 5. Apply aggregation
-    agg_func = aggregation.get("func")
-    agg_col = aggregation.get("column")
-    pandas_result_summary = ""
+            return {
+                "answer": f"Gagal mengeksekusi data: {str(e)}",
+                "sources": [f"Supabase Table: {route_res.dataset}"]
+            }
 
     try:
-        if agg_func and agg_func != "null":
-            if agg_col and agg_col not in df.columns:
-                matched_col = next((c for c in df.columns if c.strip().lower() == agg_col.strip().lower()), None)
-                if matched_col:
-                    agg_col = matched_col
-
-            if agg_func == "count":
-                count_val = len(df)
-                pandas_result_summary = f"Total Count (Rows matching): {count_val}"
-            elif agg_col:
-                # Coerce to numeric for calculation
-                df[agg_col] = pd.to_numeric(df[agg_col], errors='coerce')
-                if agg_func == "sum":
-                    pandas_result_summary = f"Sum of {agg_col}: {df[agg_col].sum()}"
-                elif agg_func == "mean":
-                    pandas_result_summary = f"Average of {agg_col}: {df[agg_col].mean()}"
-                elif agg_func == "max":
-                    pandas_result_summary = f"Maximum value of {agg_col}: {df[agg_col].max()}"
-                elif agg_func == "min":
-                    pandas_result_summary = f"Minimum value of {agg_col}: {df[agg_col].min()}"
-            else:
-                pandas_result_summary = f"Rows matching filter count: {len(df)}"
-        else:
-            # If no aggregation, summarize filtered rows (max 30 rows to prevent blowing context)
-            df_display = df.drop(columns=["_sheet"], errors="ignore")
-            pandas_result_summary = df_display.head(30).to_string(index=False)
-            if len(df) > 30:
-                pandas_result_summary += f"\n\n... (Truncated. Total matching rows: {len(df)})"
-
-        print(f"[tabular_query] Aggregation result: {pandas_result_summary}")
-    except Exception as e:
-        print(f"[tabular_query] Aggregation execution failed: {e}")
-        return {
-            "answer": f"Gagal menghitung agregasi data: {e}",
-            "sources": []
-        }
-
-    # 6. Call Gemini (Call 2) to format the response naturally based on pandas result
-    prompt_p2 = f"""You are a professional assistant for PT Terminal Petikemas Surabaya (TPS).
-Answer the user's question naturally based on the pre-aggregated/pre-filtered data result from pandas below.
-Your answer must be in Indonesian, formal, and accurate to the data provided.
-
----
-Pandas Query Execution Results:
-{pandas_result_summary}
-
----
-Question: {question}
-"""
-
-    try:
-        response2 = client.models.generate_content(
-            model=model,
-            contents=prompt_p2
+        answer = format_response(
+            question=question,
+            results=results,
+            ast=ast,
+            resolved=resolved,
+            dataset=route_res.dataset,
+            original_plan=last_plan
         )
-        answer = response2.text.strip()
     except Exception as e:
-        answer = f"Gagal merumuskan jawaban akhir: {e}. Hasil mentah perhitungan: {pandas_result_summary}"
+        answer = f"Gagal merumuskan kalimat jawaban: {str(e)}."
+
+    if RETURN_DEBUG_BLOCK:
+        debug_lines = [
+            "\n",
+            "---",
+            "### Debug Information",
+            "",
+            "**Input**",
+            f"- Question: `{question}`",
+            f"- Category: `{category_name}`",
+            "",
+            "**Dataset Routing**",
+            f"- Dataset: `{route_res.dataset}`",
+            f"- Method: `{route_res.method.value if route_res.method else 'None'}`",
+            f"- Score: `{route_res.score}`",
+            f"- Candidates: `{route_res.candidates}`",
+            "",
+            "**Sheet Routing**",
+            f"- Resolved: `{sheets}`",
+            f"- Plan Sheet: `{sheet}`",
+            "",
+            "**Entities**",
+            f"- Operators: `{resolved.operators}`",
+            f"- Metrics: `{resolved.metrics}`",
+            f"- Columns: `{resolved.columns}`",
+            f"- Month: `{resolved.month.month_str if resolved.month else 'None'}`",
+            f"- Month Code: `{resolved.month.month_code if resolved.month else 'None'}`",
+            f"- Year: `{resolved.month.year if resolved.month else 'None'}`",
+            "",
+            "**Classification**",
+            f"- Query Type: `{ast.query_type.value}`",
+            f"- Intent: `{ast.intent.value}`",
+            f"- Build Method: `{ast.build_method.value}`",
+            "",
+            "**Decomposition**"
+        ]
+        
+        for sq in subqueries:
+            debug_lines.extend([
+                f"- Step {sq.step}",
+                f"  - Question: `{sq.question}`",
+                f"  - Template: `{sq.template_type.value}`",
+                f"  - Depends On: `{sq.depends_on}`"
+            ])
+            
+        debug_lines.append("")
+        
+        for step, step_info in sorted(steps_debug.items()):
+            sub_q = step_info["sub_q"]
+            sub_ast = step_info["sub_ast"]
+            plan = step_info["plan"]
+            exec_res = step_info["exec_res"]
+            
+            debug_lines.extend([
+                f"**AST — Step {step}**",
+                f"- Query Type: `{sub_ast.query_type.value}`",
+                f"- Intent: `{sub_ast.intent.value}`",
+                f"- Filters: `{[f.column + ' ' + f.operator.value + ' ' + str(f.value) for f in sub_ast.filters]}`",
+                f"- Aggregation: `{sub_ast.aggregation.func + '(' + str(sub_ast.aggregation.column) + ')' if sub_ast.aggregation else 'None'}`",
+                f"- Build Method: `{sub_ast.build_method.value}`",
+                "",
+                f"**Query Plan — Step {step}**",
+                f"- Sheet: `{plan.sheet}`",
+                f"- Filters: `{[f.column + ' ' + f.operator.value + ' ' + str(f.value) for f in plan.filters]}`",
+                f"- Aggregation: `{plan.aggregation.func + '(' + str(plan.aggregation.column) + ')' if plan.aggregation else 'None'}`",
+                f"- Group By: `{plan.group_by}`",
+                f"- Sort: `{plan.sort}`",
+                f"- Limit: `{plan.limit}`",
+                f"- Build Method: `{plan.build_method.value}`",
+                "",
+                f"**Execution Result — Step {step}**",
+                f"- Quality: `{exec_res.quality.value}`",
+                f"- Row Count: `{exec_res.row_count}`",
+                f"- Retry Count: `{exec_res.retry_count}`",
+                f"- Last Retry Strategy: `{exec_res.last_retry_strategy.value if exec_res.last_retry_strategy else 'None'}`"
+            ])
+            
+            data = exec_res.data
+            import pandas as pd
+            if isinstance(data, pd.DataFrame):
+                preview = data.head(5).to_string(index=False)
+                debug_lines.extend([
+                    "- Data Type: `DataFrame`",
+                    f"- Shape: `{data.shape}`",
+                    f"- Columns: `{list(data.columns)}`",
+                    "- Preview:",
+                    "```",
+                    preview,
+                    "```"
+                ])
+            elif isinstance(data, pd.Series):
+                preview = data.head(5).to_string()
+                debug_lines.extend([
+                    "- Data Type: `Series`",
+                    f"- Name: `{data.name}`",
+                    f"- Length: `{len(data)}`",
+                    "- Preview:",
+                    "```",
+                    preview,
+                    "```"
+                ])
+            else:
+                debug_lines.extend([
+                    f"- Data Type: `{type(data).__name__}`",
+                    f"- Data: `{data}`"
+                ])
+            debug_lines.append("")
+
+        debug_lines.extend([
+            "**Formatter**",
+            f"- Result Steps: `{list(results.keys())}`",
+            f"- Final Answer: `{answer}`"
+        ])
+        
+        answer += "\n".join(debug_lines)
 
     return {
         "answer": answer,
-        "sources": [f"Supabase Table: {category_name}"]
+        "sources": [f"Supabase Table: {route_res.dataset}"]
     }

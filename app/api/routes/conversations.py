@@ -1,66 +1,60 @@
-"""
-Conversations API — CRUD endpoints for persistent chat conversations.
-"""
-
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
 
-from app.services.chat_store import (
-    list_conversations,
-    get_conversation,
-    create_conversation,
-    rename_conversation,
-    toggle_pin,
-    delete_conversation,
+from app.core.auth import get_current_user, require_user
+from app.services.db_chat_store import (
+    list_user_conversations,
+    get_user_conversation,
+    create_user_conversation,
+    rename_user_conversation,
+    toggle_user_pin,
+    delete_user_conversation,
 )
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
-
 
 class PatchConversationRequest(BaseModel):
     title:  Optional[str]  = None
     pinned: Optional[bool] = None
 
-
 @router.get("")
-def list_convs():
-    """List all conversations (summaries, pinned-first then newest-first)."""
-    return list_conversations()
-
+def list_convs(user: Optional[dict] = Depends(get_current_user)):
+    """List all conversations for the authenticated user, ordered by pinned then updated_at."""
+    if not user:
+        # Guests don't store private history in database
+        return []
+    return list_user_conversations(user["id"])
 
 @router.post("", status_code=201)
-def create_conv():
-    """Create a new empty conversation. Returns the full conversation record."""
-    return create_conversation()
-
+def create_conv(user: dict = Depends(require_user)):
+    """Create a new empty conversation for the authenticated user."""
+    return create_user_conversation(user["id"])
 
 @router.get("/{conv_id}")
-def get_conv(conv_id: str):
-    """Return full conversation detail including all messages."""
+def get_conv(conv_id: str, user: dict = Depends(require_user)):
+    """Return full conversation detail including messages for the authenticated user."""
     try:
-        return get_conversation(conv_id)
+        return get_user_conversation(conv_id, user["id"])
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
-
 
 @router.patch("/{conv_id}")
-def patch_conv(conv_id: str, body: PatchConversationRequest):
-    """Update title and/or pinned status of a conversation."""
+def patch_conv(conv_id: str, body: PatchConversationRequest, user: dict = Depends(require_user)):
+    """Update title and/or pinned status of a conversation, validating ownership."""
     try:
         if body.title is not None:
-            rename_conversation(conv_id, body.title)
+            rename_user_conversation(conv_id, user["id"], body.title)
         if body.pinned is not None:
-            toggle_pin(conv_id, body.pinned)
-        return get_conversation(conv_id)
+            toggle_user_pin(conv_id, user["id"], body.pinned)
+        return get_user_conversation(conv_id, user["id"])
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-
 @router.delete("/{conv_id}", status_code=204)
-def delete_conv(conv_id: str):
-    """Delete a conversation. Returns 204 No Content."""
+def delete_conv(conv_id: str, user: dict = Depends(require_user)):
+    """Delete a conversation, validating ownership."""
     try:
-        delete_conversation(conv_id)
+        delete_user_conversation(conv_id, user["id"])
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))

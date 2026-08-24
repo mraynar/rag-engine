@@ -130,6 +130,28 @@ function SourceTag({ label }) {
 
 function MessageBubble({ role, content, sources }) {
   const isUser = role === 'user';
+  
+  let mainContent = content;
+  let debugContent = '';
+
+  if (!isUser && content && content.includes('\n---\n### Debug Information')) {
+    const parts = content.split('\n---\n### Debug Information');
+    mainContent = parts[0];
+    debugContent = '### Debug Information' + parts[1];
+  } else if (!isUser && content && content.includes('---') && content.includes('Debug Information')) {
+    const parts = content.split('---');
+    for (let idx = 0; idx < parts.length; idx++) {
+      if (parts[idx].includes('Debug Information')) {
+        mainContent = parts.slice(0, idx).join('---');
+        debugContent = parts.slice(idx).join('---');
+        if (!debugContent.startsWith('###') && debugContent.includes('Debug Information')) {
+          debugContent = '### ' + debugContent.trim();
+        }
+        break;
+      }
+    }
+  }
+
   return (
     <div className={`${s.bubbleRow} ${isUser ? s.bubbleRowUser : s.bubbleRowAi}`}>
       {!isUser && (
@@ -152,14 +174,32 @@ function MessageBubble({ role, content, sources }) {
       <div className={s.bubbleContent}>
         <div className={`${s.bubble} ${isUser ? s.bubbleUser : s.bubbleAi}`}>
           {isUser
-            ? content
+            ? mainContent
             : (
               <div className={s.markdownContent}>
-                <ReactMarkdown>{content}</ReactMarkdown>
+                <ReactMarkdown>{mainContent}</ReactMarkdown>
               </div>
             )
           }
         </div>
+        {!isUser && debugContent && (
+          <div style={{
+            marginTop: '12px',
+            padding: '12px',
+            backgroundColor: '#f8fafc',
+            border: '1px solid var(--color-border)',
+            borderRadius: '6px',
+            fontSize: '0.8rem',
+            color: 'var(--color-text-light)',
+            width: '100%',
+            maxWidth: '100%',
+            overflowX: 'auto',
+          }}>
+            <div className={s.markdownContent}>
+              <ReactMarkdown>{debugContent}</ReactMarkdown>
+            </div>
+          </div>
+        )}
         {!isUser && sources && sources.length > 0 && (
           <div className={s.sourcesRow} aria-label="Sumber dokumen">
             <span className={s.sourcesLabel}>Sumber:</span>
@@ -368,6 +408,7 @@ function Sidebar({ onNewChat }) {
   const {
     activeConvId, setActiveConvId,
     conversations, loadConversations,
+    renameConversation, togglePin, deleteConversation
   } = useConversation();
 
   const [shake, setShake] = useState(false);
@@ -380,30 +421,16 @@ function Sidebar({ onNewChat }) {
   }
 
   async function handleRename(id, newTitle) {
-    await fetch(`${API_URL}/conversations/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: newTitle }),
-    });
-    loadConversations();
+    await renameConversation(id, newTitle);
   }
 
   async function handlePin(id, pinned) {
-    await fetch(`${API_URL}/conversations/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pinned }),
-    });
-    loadConversations();
+    await togglePin(id, pinned);
   }
 
   async function handleDelete(id) {
     if (!window.confirm('Hapus percakapan ini?')) return;
-    await fetch(`${API_URL}/conversations/${id}`, { method: 'DELETE' });
-    if (id === activeConvId) {
-      setActiveConvId(null);
-    }
-    await loadConversations();
+    await deleteConversation(id);
   }
 
   return (
@@ -481,6 +508,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
     activeConvId, setActiveConvId,
     conversations, loadingConvs,
     loadConversations,
+    createConversation, getConversation, postChatMessage
   } = useConversation();
 
   const [messages, setMessages] = useState([]);
@@ -508,14 +536,11 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
       setActiveConvId(empty ? empty.id : conversations[0].id);
     } else {
       // No conversations at all → create one silently
-      fetch(`${API_URL}/conversations`, { method: 'POST' })
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (data) {
-            setActiveConvId(data.id);
-            loadConversations();
-          }
-        });
+      createConversation().then(data => {
+        if (data) {
+          setActiveConvId(data.id);
+        }
+      });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadingConvs, activeConvId]);
@@ -528,8 +553,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
     // Restore draft for this conversation
     setInput(getDraft(activeConvId));
 
-    fetch(`${API_URL}/conversations/${activeConvId}`)
-      .then(r => r.ok ? r.json() : null)
+    getConversation(activeConvId)
       .then(data => {
         if (!data) return;
         loadedConvRef.current = activeConvId;
@@ -562,11 +586,9 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
     if (messages.length === 0) {
       return false;
     }
-    const res = await fetch(`${API_URL}/conversations`, { method: 'POST' });
-    if (!res.ok) return false;
-    const data = await res.json();
+    const data = await createConversation();
+    if (!data) return false;
     setActiveConvId(data.id);
-    await loadConversations();
     return true;
   }
 
@@ -582,23 +604,8 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
     setError(null);
 
     try {
-      const res = await fetch(`${API_URL}/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          conversation_id: activeConvId,
-          category: selectedCategory === 'Semua Data' ? null : selectedCategory,
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `Server error (${res.status})`);
-      }
-      const data = await res.json();
+      const data = await postChatMessage(activeConvId, text, selectedCategory);
       setMessages(prev => [...prev, { role: 'ai', content: data.answer, sources: data.sources || [] }]);
-      // Refresh sidebar so the title updates after first message
-      await loadConversations();
     } catch (err) {
       setError(err.message || 'Gagal terhubung ke server.');
     } finally {
