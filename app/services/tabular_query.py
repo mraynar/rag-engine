@@ -33,6 +33,8 @@ def answer_tabular_question(question: str, category_name: str) -> dict:
     API Contract:
         Returns: {"answer": str, "sources": list[str]}
     """
+    from app.services.tabular.resolver import sanitize_leading_number
+    question = sanitize_leading_number(question)
     try:
         with get_db_conn() as conn:
             res = conn.execute(

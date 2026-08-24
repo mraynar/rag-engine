@@ -65,6 +65,8 @@ def build_query_plan(
     Raises:
         QueryBuildError: When plan cannot be built deterministically
     """
+    from app.services.tabular.resolver import sanitize_leading_number
+    question = sanitize_leading_number(question)
     # Get template for this query type/intent
     template = get_template(ast.query_type, ast.intent)
     
@@ -180,16 +182,16 @@ def _build_aggregation(
     """
     Build aggregation spec from AST or template defaults.
     """
+    # Helper to resolve readable metric names
+    def get_metric_label(col: str) -> str:
+        return "market share" if col == "%" else col
+
     # If AST already has aggregation, use it
     if ast.aggregation:
         # Validate aggregation column
         if not validate_column(ast.aggregation.column, dataset, db_schema=schema):
-            if ast.aggregation.column == "%":
-                raise QueryBuildError(
-                    f"Metric 'market share' tidak tersedia pada dataset '{dataset}'"
-                )
             raise QueryBuildError(
-                f"Aggregation column '{ast.aggregation.column}' not found in dataset '{dataset}'"
+                f"Metric '{get_metric_label(ast.aggregation.column)}' tidak tersedia pada dataset '{dataset}'"
             )
         return ast.aggregation
     
@@ -197,22 +199,24 @@ def _build_aggregation(
     if template.get("requires_aggregation"):
         agg_func = template.get("default_agg_func", "sum")
         
-        # Get column from resolved entities
+        # Get column from resolved entities (excluding categorical grouping dimensions)
         column = None
+        candidates = []
         if resolved.columns:
-            column = resolved.columns[0]
-        elif resolved.metrics:
-            column = resolved.metrics[0]
+            candidates.extend(resolved.columns)
+        if resolved.metrics:
+            candidates.extend(resolved.metrics)
+            
+        for col in candidates:
+            if col.upper() not in ["VESSEL OPERATOR", "LOP", "OPERATOR", "YEAR", "MONTH", "BULAN", "_SHEET"]:
+                column = col
+                break
         
         if column:
             # Validate column
             if not validate_column(column, dataset, db_schema=schema):
-                if column == "%":
-                    raise QueryBuildError(
-                        f"Metric 'market share' tidak tersedia pada dataset '{dataset}'"
-                    )
                 raise QueryBuildError(
-                    f"Aggregation column '{column}' not found in dataset '{dataset}'"
+                    f"Metric '{get_metric_label(column)}' tidak tersedia pada dataset '{dataset}'"
                 )
             return AggregationSpec(func=agg_func, column=column)
         elif dataset == "Transhipment":
@@ -224,34 +228,40 @@ def _build_aggregation(
         question_lower = question.lower()
         if any(w in question_lower for w in ["domestic", "domestik", "international", "internasional"]):
             column = None
+            candidates = []
             if resolved.columns:
-                column = resolved.columns[0]
-            elif resolved.metrics:
-                column = resolved.metrics[0]
+                candidates.extend(resolved.columns)
+            if resolved.metrics:
+                candidates.extend(resolved.metrics)
+                
+            for col in candidates:
+                if col.upper() not in ["VESSEL OPERATOR", "LOP", "OPERATOR", "YEAR", "MONTH", "BULAN", "_SHEET"]:
+                    column = col
+                    break
+                    
             if column:
                 if not validate_column(column, dataset, db_schema=schema):
-                    if column == "%":
-                        raise QueryBuildError(
-                            f"Metric 'market share' tidak tersedia pada dataset '{dataset}'"
-                        )
                     raise QueryBuildError(
-                        f"Aggregation column '{column}' not found in dataset '{dataset}'"
+                        f"Metric '{get_metric_label(column)}' tidak tersedia pada dataset '{dataset}'"
                     )
                 return AggregationSpec(func="sum", column=column)
         elif len(resolved.operators) >= 2 or any(op.lower() in question_lower for op in resolved.operators):
             column = None
+            candidates = []
             if resolved.columns:
-                column = resolved.columns[0]
-            elif resolved.metrics:
-                column = resolved.metrics[0]
+                candidates.extend(resolved.columns)
+            if resolved.metrics:
+                candidates.extend(resolved.metrics)
+                
+            for col in candidates:
+                if col.upper() not in ["VESSEL OPERATOR", "LOP", "OPERATOR", "YEAR", "MONTH", "BULAN", "_SHEET"]:
+                    column = col
+                    break
+                    
             if column:
                 if not validate_column(column, dataset, db_schema=schema):
-                    if column == "%":
-                        raise QueryBuildError(
-                            f"Metric 'market share' tidak tersedia pada dataset '{dataset}'"
-                        )
                     raise QueryBuildError(
-                        f"Aggregation column '{column}' not found in dataset '{dataset}'"
+                        f"Metric '{get_metric_label(column)}' tidak tersedia pada dataset '{dataset}'"
                     )
                 return AggregationSpec(func="sum", column=column)
 

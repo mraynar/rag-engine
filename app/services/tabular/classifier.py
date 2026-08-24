@@ -47,6 +47,8 @@ def classify_query(
     Returns:
         QueryAST with query_type, intent, filters, aggregation, build_method
     """
+    from app.services.tabular.resolver import sanitize_leading_number
+    question = sanitize_leading_number(question)
     question_lower = question.lower()
     
     # Check if we have enough information for deterministic classification

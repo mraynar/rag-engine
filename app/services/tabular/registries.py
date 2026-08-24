@@ -94,6 +94,8 @@ COLUMN_ALIASES = {
     "aktivitas": "TEUS",
     "crane hours": "BCH",
     "ship hours": "BSH",
+    "bch": "BCH",
+    "bsh": "BSH",
     # Explicit container sizes for Transhipment
     "20'": "20'",
     "20’": "20'",

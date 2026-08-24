@@ -209,5 +209,93 @@ class TestTranshipmentQueries(unittest.TestCase):
         finally:
             SCHEMA_REGISTRY["Transhipment"]["columns"] = orig_cols
 
+    def test_new_targeted_bug_fixes(self):
+        from app.services.tabular.resolver import sanitize_leading_number, resolve_entities
+        from app.services.tabular.domain_models import QueryType, UserIntent
+        from app.services.tabular.query_builder import QueryBuildError, build_query_plan
+        from app.services.tabular.classifier import classify_query
+        # 1. Leading question number is removed before semantic parsing
+        self.assertEqual(
+            sanitize_leading_number("5 Bagaimana tren TEUS TIL per bulan pada tahun 2024?"),
+            "Bagaimana tren TEUS TIL per bulan pada tahun 2024?"
+        )
+        self.assertEqual(
+            sanitize_leading_number("5. Bagaimana tren TEUS TIL per bulan pada tahun 2024?"),
+            "Bagaimana tren TEUS TIL per bulan pada tahun 2024?"
+        )
+        self.assertEqual(
+            sanitize_leading_number("5) Bagaimana tren TEUS TIL per bulan pada tahun 2024?"),
+            "Bagaimana tren TEUS TIL per bulan pada tahun 2024?"
+        )
+        # Legitimate numbers are preserved
+        self.assertEqual(
+            sanitize_leading_number("20' untuk SPI tahun 2024"),
+            "20' untuk SPI tahun 2024"
+        )
+        self.assertEqual(
+            sanitize_leading_number("5 TEUS TIL"),
+            "5 TEUS TIL"
+        )
+
+        # 2. "5 Bagaimana tren TEUS TIL per bulan pada tahun 2024?" does not resolve month 5
+        res_5 = resolve_entities("5 Bagaimana tren TEUS TIL per bulan pada tahun 2024?", "Overview Vessel")
+        self.assertEqual(res_5.month.month_str, "")
+        self.assertEqual(res_5.month.month_code, 0)
+        self.assertEqual(res_5.month.year, 2024)
+
+        # 3. Trend TEUS TIL still uses: sum(TEUS) grouped by MONTH
+        ast_trend = classify_query("5 Bagaimana tren TEUS TIL per bulan pada tahun 2024?", res_5, "Overview Vessel")
+        self.assertEqual(ast_trend.query_type, QueryType.TREND)
+        self.assertEqual(ast_trend.intent, UserIntent.TREND_ANALYSIS)
+        
+        ov_schema = {
+            "DOMESTIC": ["YEAR", "MONTH", "LOP", "TEUS", "Boxes", "BCH", "BSH"]
+        }
+        plan_trend = build_query_plan(ast_trend, "5 Bagaimana tren TEUS TIL per bulan pada tahun 2024?", res_5, "Overview Vessel", ov_schema)
+        self.assertEqual(plan_trend.aggregation.func, "sum")
+        self.assertEqual(plan_trend.aggregation.column, "TEUS")
+        self.assertEqual(plan_trend.group_by, ["MONTH"])
+
+        # 4. BCH ranking on Transhipment is rejected because BCH does not exist
+        res_bch_trans = resolve_entities("Vessel operator mana yang memiliki BCH tertinggi pada tahun 2024?", "Transhipment")
+        ast_bch_trans = classify_query("Vessel operator mana yang memiliki BCH tertinggi pada tahun 2024?", res_bch_trans, "Transhipment")
+        
+        trans_schema = {
+            "Transhipment": ["VESSEL OPERATOR", "No", "SIZE", "YEAR", "DIRECT OR CY TRANS", "LOADING TERMINAL", "YARD REVENUE", "DISCHARGE TS", "Bulan", "20'", "40'", "MONTH"]
+        }
+        with self.assertRaises(QueryBuildError) as ctx:
+            build_query_plan(ast_bch_trans, "Vessel operator mana yang memiliki BCH tertinggi pada tahun 2024?", res_bch_trans, "Transhipment", trans_schema)
+        self.assertIn("Metric 'BCH' tidak tersedia pada dataset 'Transhipment'", str(ctx.exception))
+
+        # 5. BCH ranking on Overview Vessel continues to work with: max(BCH) grouped by LOP
+        res_bch_ov = resolve_entities("Operator mana yang memiliki BCH tertinggi pada tahun 2024?", "Overview Vessel")
+        ast_bch_ov = classify_query("Operator mana yang memiliki BCH tertinggi pada tahun 2024?", res_bch_ov, "Overview Vessel")
+        plan_bch_ov = build_query_plan(ast_bch_ov, "Operator mana yang memiliki BCH tertinggi pada tahun 2024?", res_bch_ov, "Overview Vessel", ov_schema)
+        self.assertEqual(plan_bch_ov.aggregation.func, "max")
+        self.assertEqual(plan_bch_ov.aggregation.column, "BCH")
+        self.assertEqual(plan_bch_ov.group_by, ["LOP"])
+
+        # 6. Existing Transhipment 20' ranking continues to use: sum(20') grouped by VESSEL OPERATOR
+        res_20_trans = resolve_entities("Vessel operator mana yang memiliki container 20' terbanyak pada tahun 2024?", "Transhipment")
+        ast_20_trans = classify_query("Vessel operator mana yang memiliki container 20' terbanyak pada tahun 2024?", res_20_trans, "Transhipment")
+        plan_20_trans = build_query_plan(ast_20_trans, "Vessel operator mana yang memiliki container 20' terbanyak pada tahun 2024?", res_20_trans, "Transhipment", trans_schema)
+        self.assertEqual(plan_20_trans.aggregation.func, "sum")
+        self.assertEqual(plan_20_trans.aggregation.column, "20'")
+        self.assertEqual(plan_20_trans.group_by, ["VESSEL OPERATOR"])
+
+        # 7. Existing Transhipment 40' ranking continues to use: sum(40') grouped by VESSEL OPERATOR
+        res_40_trans = resolve_entities("Vessel operator mana yang memiliki container 40' terbanyak pada tahun 2024?", "Transhipment")
+        ast_40_trans = classify_query("Vessel operator mana yang memiliki container 40' terbanyak pada tahun 2024?", res_40_trans, "Transhipment")
+        plan_40_trans = build_query_plan(ast_40_trans, "Vessel operator mana yang memiliki container 40' terbanyak pada tahun 2024?", res_40_trans, "Transhipment", trans_schema)
+        self.assertEqual(plan_40_trans.aggregation.func, "sum")
+        self.assertEqual(plan_40_trans.aggregation.column, "40'")
+        self.assertEqual(plan_40_trans.group_by, ["VESSEL OPERATOR"])
+
+        # 8. Existing ambiguous "Berapa total container untuk SPI pada tahun 2024?" remains safely rejected
+        res_ambig = resolve_entities("Berapa total container untuk SPI pada tahun 2024?", "Transhipment")
+        ast_ambig = classify_query("Berapa total container untuk SPI pada tahun 2024?", res_ambig, "Transhipment")
+        with self.assertRaises(QueryBuildError):
+            build_query_plan(ast_ambig, "Berapa total container untuk SPI pada tahun 2024?", res_ambig, "Transhipment", trans_schema)
+
 if __name__ == "__main__":
     unittest.main()

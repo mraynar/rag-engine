@@ -32,6 +32,26 @@ from app.services.tabular.registries import (
 from app.services.tabular.schema_registry import get_schema, validate_column
 
 
+def sanitize_leading_number(q: str) -> str:
+    if not q:
+        return q
+    match = re.match(r'^\s*(\d+)\s*([\.\)\-]?)\s+(\w+)', q)
+    if match:
+        num_str, separator, next_word = match.groups()
+        next_word_lower = next_word.lower()
+        query_starters = {
+            "bagaimana", "berapa", "apakah", "siapa", "mana", "vessel", "operator",
+            "tunjukkan", "tampilkan", "cari", "temukan", "hitung", "list", "daftar",
+            "what", "how", "who", "which", "show", "find", "get", "coba", "tolong",
+            "sebutkan", "jelaskan", "adakah"
+        }
+        if separator or next_word_lower in query_starters:
+            word_idx = q.find(next_word)
+            if word_idx != -1:
+                return q[word_idx:]
+    return q
+
+
 def route_dataset(
     question: str,
     category_name: Optional[str] = None,
@@ -53,6 +73,7 @@ def route_dataset(
     Returns:
         DatasetRouteResult with dataset, method, candidates, and score
     """
+    question = sanitize_leading_number(question)
     question_lower = question.lower()
     
     # P1: Explicit category_name always wins
@@ -133,6 +154,7 @@ def route_sheet(
         "data international" + Container Throughput → ["Internasional"]
         No sheet keyword → None (all sheets)
     """
+    question = sanitize_leading_number(question)
     question_lower = question.lower()
     
     if dataset not in SHEET_REGISTRY:
@@ -168,6 +190,7 @@ def resolve_entities(
     Returns:
         ResolvedEntities with operators, metrics, columns, month
     """
+    question = sanitize_leading_number(question)
     question_lower = question.lower()
     
     # Resolve operators with word boundaries
