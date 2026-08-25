@@ -31,17 +31,17 @@ export default function OneDriveManager() {
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedIds.length} kategori terpilih beserta seluruh data indeksnya?`)) return;
+    if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected categories and all of their indexed data?`)) return;
     setIsBulkDeleting(true);
     try {
       for (const id of selectedIds) {
         const res = await fetch(`${API_BASE}/sources/${id}`, { method: 'DELETE' });
         if (!res.ok) {
           const data = await res.json();
-          throw new Error(data.detail || `Gagal menghapus kategori ID ${id}`);
+          throw new Error(data.detail || `Failed to delete category ID ${id}`);
         }
       }
-      alert('Berhasil menghapus kategori yang terpilih.');
+      alert('Successfully deleted selected categories.');
       setSelectedIds([]);
       refreshCategories();
     } catch (err) {
@@ -78,7 +78,7 @@ export default function OneDriveManager() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Gagal menambahkan kategori.');
+      if (!res.ok) throw new Error(data.detail || 'Failed to add category.');
       
       setCategoryName('');
       setOnedriveUrl('');
@@ -99,8 +99,8 @@ export default function OneDriveManager() {
         method: 'POST',
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Sinkronisasi gagal.');
-      alert(data.message || 'Sinkronisasi berhasil.');
+      if (!res.ok) throw new Error(data.detail || 'Synchronization failed.');
+      alert(data.message || 'Synchronization successful.');
       refreshCategories();
     } catch (err) {
       alert(err.message);
@@ -112,14 +112,14 @@ export default function OneDriveManager() {
 
   // Delete category
   const handleDelete = async (id, name) => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus kategori "${name}"?`)) return;
+    if (!confirm(`Are you sure you want to delete category "${name}"?`)) return;
     try {
       const res = await fetch(`${API_BASE}/sources/${id}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.detail || 'Gagal menghapus kategori.');
+        throw new Error(data.detail || 'Failed to delete category.');
       }
       setSelectedIds(prev => prev.filter(x => x !== id));
       refreshCategories();
@@ -148,7 +148,7 @@ export default function OneDriveManager() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Gagal menyimpan perubahan.');
+      if (!res.ok) throw new Error(data.detail || 'Failed to save changes.');
       
       setEditingId(null);
       refreshCategories();
@@ -162,7 +162,7 @@ export default function OneDriveManager() {
       <div style={{ marginBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-navy)' }}>Kategori Sumber Data Online</h3>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-navy)' }}>Online Data Source Categories</h3>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             {selectedIds.length > 0 && (
@@ -184,9 +184,9 @@ export default function OneDriveManager() {
                   opacity: isBulkDeleting ? 0.7 : 1,
                 }}
               >
-                {isBulkDeleting ? 'Menghapus...' : (
+                {isBulkDeleting ? 'Deleting...' : (
                   <>
-                    <TrashIcon size={12} /> Hapus Terpilih ({selectedIds.length})
+                    <TrashIcon size={12} /> Delete Selected ({selectedIds.length})
                   </>
                 )}
               </button>
@@ -207,12 +207,12 @@ export default function OneDriveManager() {
                 cursor: 'pointer',
               }}
             >
-              <PlusIcon size={12} /> Tambah Kategori
+              <PlusIcon size={12} /> Add Category
             </button>
           </div>
         </div>
         <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-muted)' }}>
-          Hubungkan link spreadsheet online (OneDrive / Google Drive / Google Sheets) ke kategori data untuk pencarian yang presisi.
+          Link an online spreadsheet (OneDrive / Google Drive / Google Sheets) to a data category for precise semantic searches.
         </p>
       </div>
 
@@ -225,13 +225,13 @@ export default function OneDriveManager() {
           marginBottom: '20px',
           boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
         }}>
-          <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--color-navy)' }}>Tambah Kategori Baru</h4>
+          <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--color-navy)' }}>Add New Category</h4>
           <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
             <div style={{ flex: '1', minWidth: '200px' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-muted)', marginBottom: '4px' }}>Nama Kategori</label>
+              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-muted)', marginBottom: '4px' }}>Category Name</label>
               <input
                 type="text"
-                placeholder="Contoh: Vessel Service"
+                placeholder="Example: Vessel Service"
                 value={categoryName}
                 onChange={e => setCategoryName(e.target.value)}
                 required
@@ -245,10 +245,10 @@ export default function OneDriveManager() {
               />
             </div>
             <div style={{ flex: '2', minWidth: '300px' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-muted)', marginBottom: '4px' }}>Share URL OneDrive / Google Drive / Google Sheets</label>
+              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-muted)', marginBottom: '4px' }}>OneDrive / Google Drive / Google Sheets Share URL</label>
               <input
                 type="url"
-                placeholder="Contoh: https://1drv.ms/x/..., https://drive.google.com/..., atau https://docs.google.com/spreadsheets/d/..."
+                placeholder="Example: https://1drv.ms/x/..., https://drive.google.com/..., or https://docs.google.com/spreadsheets/d/..."
                 value={onedriveUrl}
                 onChange={e => setOnedriveUrl(e.target.value)}
                 required
@@ -276,7 +276,7 @@ export default function OneDriveManager() {
                 cursor: 'pointer',
               }}
             >
-              Batal
+              Cancel
             </button>
             <button
               type="submit"
@@ -293,7 +293,7 @@ export default function OneDriveManager() {
                 opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading ? <SpinnerIcon size={12} className="spin" /> : 'Simpan'}
+              {loading ? <SpinnerIcon size={12} className="spin" /> : 'Save'}
             </button>
           </div>
         </form>
@@ -311,11 +311,11 @@ export default function OneDriveManager() {
                   style={{ cursor: 'pointer' }}
                 />
               </th>
-              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600' }}>Kategori</th>
-              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600' }}>Tautan / Share URL</th>
-              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600' }}>Status Sinkronisasi</th>
+              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600' }}>Category</th>
+              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600' }}>Link / Share URL</th>
+              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600' }}>Sync Status</th>
               <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600', textAlign: 'center' }}>Chunk</th>
-              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600', textAlign: 'right' }}>Aksi</th>
+              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600', textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -323,16 +323,16 @@ export default function OneDriveManager() {
               const isEditing = editingId === cat.id;
               const isSyncing = syncingId === cat.id;
               
-              let statusLabel = 'Belum Sync';
+              let statusLabel = 'Not Synced';
               let statusColor = '#718096';
               let statusBg = '#EDF2F7';
               
               if (cat.sync_status === 'success') {
-                statusLabel = 'Sukses';
+                statusLabel = 'Success';
                 statusColor = '#38A169';
                 statusBg = '#C6F6D5';
               } else if (cat.sync_status === 'failed') {
-                statusLabel = 'Gagal';
+                statusLabel = 'Failed';
                 statusColor = '#E53E3E';
                 statusBg = '#FED7D7';
               }
@@ -394,7 +394,7 @@ export default function OneDriveManager() {
                   <td style={{ padding: '12px' }}>
                     {isSyncing ? (
                       <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--color-muted)' }}>
-                        <SpinnerIcon size={12} className="spin" /> Sinkronisasi...
+                        <SpinnerIcon size={12} className="spin" /> Syncing...
                       </span>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -446,7 +446,7 @@ export default function OneDriveManager() {
                         </div>
                         {cat.last_synced_at && (
                           <span style={{ fontSize: '0.7rem', color: 'var(--color-muted)' }}>
-                            Sync: {new Date(cat.last_synced_at + 'Z').toLocaleDateString('id-ID', {
+                            Sync: {new Date(cat.last_synced_at + 'Z').toLocaleDateString('en-US', {
                               day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
                             })}
                           </span>
@@ -462,7 +462,7 @@ export default function OneDriveManager() {
 
                   {/* Chunk count */}
                   <td style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold' }}>
-                    {cat.chunk_count?.toLocaleString('id-ID') || 0}
+                    {cat.chunk_count?.toLocaleString('en-US') || 0}
                   </td>
 
                   {/* Actions */}
@@ -556,7 +556,7 @@ export default function OneDriveManager() {
             {categories.length === 0 && (
               <tr>
                 <td colSpan="6" style={{ padding: '24px', textAlign: 'center', color: 'var(--color-muted)' }}>
-                  Belum ada kategori terdaftar. Silakan tambahkan kategori sumber data online menggunakan tombol di kanan atas.
+                  No categories registered yet. Please add an online data source category using the button in the top right.
                 </td>
               </tr>
             )}

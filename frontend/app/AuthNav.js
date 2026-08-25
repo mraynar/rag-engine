@@ -92,10 +92,10 @@ export default function AuthNav() {
             cursor: 'pointer',
             transition: 'all 0.15s ease'
           }}
-          title="Keluar dari akun"
+          title="Sign Out"
         >
           <LogOutIcon size={12} />
-          <span>Keluar</span>
+          <span>Sign Out</span>
         </button>
       </div>
     );
@@ -119,10 +119,10 @@ export default function AuthNav() {
         transition: 'all 0.15s ease',
         boxShadow: 'var(--shadow-sm)'
       }}
-      title="Masuk atau Daftar"
+      title="Sign In or Sign Up"
     >
       <LogInIcon size={12} />
-      <span>Masuk / Daftar</span>
+      <span>Sign In / Sign Up</span>
     </button>
   );
 }

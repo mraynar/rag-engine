@@ -119,10 +119,10 @@ export default function CategorySelector() {
       {isOpen && (
         <div className="category-selector-dropdown" role="listbox">
           <div
-            className={`category-selector-item ${selectedCategory === 'Semua Data' ? 'selected' : ''}`}
+            className={`category-selector-item ${selectedCategory === 'All Data' ? 'selected' : ''}`}
             role="option"
-            aria-selected={selectedCategory === 'Semua Data'}
-            onClick={() => handleSelect('Semua Data')}
+            aria-selected={selectedCategory === 'All Data'}
+            onClick={() => handleSelect('All Data')}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FolderIcon size={14} />

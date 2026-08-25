@@ -37,17 +37,17 @@ export default function AuthModal() {
     setSuccessMsg('');
 
     if (!email || !password) {
-      setErrorMsg('Email dan password wajib diisi.');
+      setErrorMsg('Email and password are required.');
       return;
     }
 
     if (mode === 'register') {
       if (password.length < 6) {
-        setErrorMsg('Password harus minimal 6 karakter.');
+        setErrorMsg('Password must be at least 6 characters.');
         return;
       }
       if (password !== confirmPassword) {
-        setErrorMsg('Konfirmasi password tidak cocok.');
+        setErrorMsg('Confirm password does not match.');
         return;
       }
     }
@@ -57,7 +57,7 @@ export default function AuthModal() {
     if (mode === 'login') {
       const { error } = await login(email, password);
       if (error) {
-        setErrorMsg(error.message || 'Gagal masuk. Silakan periksa kembali email & password Anda.');
+        setErrorMsg(error.message || 'Failed to sign in. Please check your email and password.');
         setLoading(false);
       } else {
         setLoading(false);
@@ -68,11 +68,11 @@ export default function AuthModal() {
       const name = displayName.strip ? displayName.strip() : displayName;
       const { error } = await register(email, password, name || email.split('@')[0]);
       if (error) {
-        setErrorMsg(error.message || 'Pendaftaran gagal. Silakan coba lagi.');
+        setErrorMsg(error.message || 'Registration failed. Please try again.');
         setLoading(false);
       } else {
         setLoading(false);
-        setSuccessMsg('Pendaftaran berhasil! Silakan periksa email konfirmasi Anda jika diwajibkan oleh server auth.');
+        setSuccessMsg('Registration successful! Please check your email for confirmation if required.');
         setTimeout(() => {
           setMode('login');
           setSuccessMsg('');
@@ -118,7 +118,7 @@ export default function AuthModal() {
           alignItems: 'center',
         }}>
           <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--color-navy)', fontWeight: '700' }}>
-            {mode === 'login' ? 'Masuk ke Akun' : 'Daftar Akun Baru'}
+            {mode === 'login' ? 'Sign In to Account' : 'Register New Account'}
           </h3>
           
           <button
@@ -135,7 +135,7 @@ export default function AuthModal() {
               justifyContent: 'center',
               transition: 'background-color 0.2s'
             }}
-            title="Tutup dialog"
+            title="Close dialog"
           >
             <XIcon size={16} />
           </button>
@@ -175,14 +175,14 @@ export default function AuthModal() {
           {mode === 'register' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label htmlFor="displayName" style={{ fontSize: '0.78rem', fontWeight: '600', color: 'var(--color-text-light)' }}>
-                Nama Tampilan (Opsional)
+                Display Name (Optional)
               </label>
               <input
                 id="displayName"
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Contoh: Muhammad Raynar"
+                placeholder="Example: John Doe"
                 style={{
                   padding: '10px 12px',
                   borderRadius: '6px',
@@ -197,14 +197,14 @@ export default function AuthModal() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label htmlFor="authEmail" style={{ fontSize: '0.78rem', fontWeight: '600', color: 'var(--color-text-light)' }}>
-              Alamat Email
+              Email Address
             </label>
             <input
               id="authEmail"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="nama@perusahaan.com"
+              placeholder="name@company.com"
               required
               style={{
                 padding: '10px 12px',
@@ -242,7 +242,7 @@ export default function AuthModal() {
           {mode === 'register' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label htmlFor="confirmPassword" style={{ fontSize: '0.78rem', fontWeight: '600', color: 'var(--color-text-light)' }}>
-                Konfirmasi Password
+                Confirm Password
               </label>
               <input
                 id="confirmPassword"
@@ -283,7 +283,7 @@ export default function AuthModal() {
               alignItems: 'center'
             }}
           >
-            {loading ? 'Memproses...' : (mode === 'login' ? 'Masuk' : 'Daftar')}
+            {loading ? 'Processing...' : (mode === 'login' ? 'Sign In' : 'Sign Up')}
           </button>
 
           {/* Footer toggle link */}
@@ -295,24 +295,24 @@ export default function AuthModal() {
           }}>
             {mode === 'login' ? (
               <>
-                Belum punya akun?{' '}
+                Don't have an account?{' '}
                 <button
                   type="button"
                   onClick={() => { setMode('register'); setErrorMsg(''); }}
                   style={{ color: 'var(--color-navy)', fontWeight: '600', textDecoration: 'underline', border: 'none', background: 'none', cursor: 'pointer' }}
                 >
-                  Daftar di sini
+                  Sign Up here
                 </button>
               </>
             ) : (
               <>
-                Sudah memiliki akun?{' '}
+                Already have an account?{' '}
                 <button
                   type="button"
                   onClick={() => { setMode('login'); setErrorMsg(''); }}
                   style={{ color: 'var(--color-navy)', fontWeight: '600', textDecoration: 'underline', border: 'none', background: 'none', cursor: 'pointer' }}
                 >
-                  Masuk di sini
+                  Sign In here
                 </button>
               </>
             )}

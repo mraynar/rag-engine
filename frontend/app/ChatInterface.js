@@ -92,21 +92,21 @@ function relativeTime(isoStr) {
   if (!isoStr) return '';
   const diff = Date.now() - new Date(isoStr + 'Z').getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1)   return 'Baru saja';
-  if (m < 60)  return `${m} mnt lalu`;
+  if (m < 1)   return 'Just now';
+  if (m < 60)  return `${m}m ago`;
   const h = Math.floor(m / 60);
-  if (h < 24)  return `${h} jam lalu`;
+  if (h < 24)  return `${h}h ago`;
   const d = Math.floor(h / 24);
-  if (d === 1) return 'Kemarin';
-  if (d < 7)   return `${d} hari lalu`;
-  return new Date(isoStr + 'Z').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+  if (d === 1) return 'Yesterday';
+  if (d < 7)   return `${d}d ago`;
+  return new Date(isoStr + 'Z').toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 }
 
 // ─── Thinking indicator ───────────────────────────────────────────────────────
 
 function ThinkingIndicator() {
   return (
-    <div className={s.thinkingRow} aria-label="AI sedang memproses">
+    <div className={s.thinkingRow} aria-label="AI is processing...">
       <div className={`${s.avatar} ${s.avatarAi}`}>
         <img
           src="/images/Logo Pelindo.png"
@@ -171,7 +171,7 @@ function MessageBubble({ role, content, sources }) {
           />
         </div>
         <div className={s.aiContent}>
-          <div className={s.aiSender}>Asisten TPS</div>
+          <div className={s.aiSender}>TPS Assistant</div>
           <div className={s.markdownContent}>
             <ReactMarkdown>{mainContent}</ReactMarkdown>
           </div>
@@ -194,8 +194,8 @@ function MessageBubble({ role, content, sources }) {
           )}
 
           {sources && sources.length > 0 && (
-            <div className={s.sourcesRow} aria-label="Sumber dokumen">
-              <span className={s.sourcesLabel}>Sumber:</span>
+            <div className={s.sourcesRow} aria-label="Document sources">
+              <span className={s.sourcesLabel}>Sources:</span>
               {Array.from(new Set(sources)).map((src, i) => (
                 <span key={i} className={s.sourceTag}>{src}</span>
               ))}
@@ -256,7 +256,7 @@ function ConvItem({ conv, isActive, onSelect, onRename, onPin, onDelete }) {
       onKeyDown={(e) => e.key === 'Enter' && !renaming && onSelect(conv.id)}
     >
       {conv.pinned && (
-        <span className={s.convPin} title="Disematkan">
+        <span className={s.convPin} title="Pinned">
           <PinIcon size={10} filled />
         </span>
       )}
@@ -271,7 +271,7 @@ function ConvItem({ conv, isActive, onSelect, onRename, onPin, onDelete }) {
           onBlur={commitRename}
           onClick={e => e.stopPropagation()}
           maxLength={80}
-          aria-label="Ganti nama percakapan"
+          aria-label="Rename conversation"
         />
       ) : (
         <span className={s.convTitle} title={conv.title}>{conv.title}</span>
@@ -280,32 +280,23 @@ function ConvItem({ conv, isActive, onSelect, onRename, onPin, onDelete }) {
       <span className={s.convTime}>{relativeTime(conv.updated_at)}</span>
 
       {(hovered || isActive) && !renaming && (
-        <div className={s.convActions} onClick={e => e.stopPropagation()}>
-          <button
-            className={s.convActionBtn}
-            title="Ganti Nama"
-            onClick={() => { setDraftTitle(conv.title); setRenaming(true); }}
-            aria-label="Ganti nama"
-          >
-            <PencilIcon size={12} />
-          </button>
-          <button
-            className={s.convActionBtn}
-            title={conv.pinned ? 'Lepas sematan' : 'Sematkan'}
-            onClick={() => onPin(conv.id, !conv.pinned)}
-            aria-label={conv.pinned ? 'Lepas sematan' : 'Sematkan'}
-          >
-            <PinIcon size={12} filled={conv.pinned} />
-          </button>
-          <button
-            className={`${s.convActionBtn} ${s.convActionDanger}`}
-            title="Hapus"
-            onClick={() => onDelete(conv.id)}
-            aria-label="Hapus percakapan"
-          >
-            <TrashIcon size={12} />
-          </button>
-        </div>
+        <button
+          className={s.convMenuBtn}
+          title="Options"
+          onClick={(e) => {
+            e.stopPropagation();
+            const rect = e.currentTarget.getBoundingClientRect();
+            // Position context menu underneath the button
+            setContextMenu({ x: rect.left, y: rect.bottom + window.scrollY });
+          }}
+          aria-label="Options"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="1.5" />
+            <circle cx="12" cy="5" r="1.5" />
+            <circle cx="12" cy="19" r="1.5" />
+          </svg>
+        </button>
       )}
 
       {contextMenu && (
@@ -329,13 +320,19 @@ function ConvItem({ conv, isActive, onSelect, onRename, onPin, onDelete }) {
         >
           {[
             {
-              label: conv.pinned ? 'Lepas Sematan' : 'Sematkan',
+              label: conv.pinned ? 'Unpin' : 'Pin',
               icon: <PinIcon size={12} filled={conv.pinned} />,
               onClick: () => { onPin(conv.id, !conv.pinned); setContextMenu(null); },
               danger: false,
             },
             {
-              label: 'Hapus',
+              label: 'Rename',
+              icon: <PencilIcon size={12} />,
+              onClick: () => { setDraftTitle(conv.title); setRenaming(true); setContextMenu(null); },
+              danger: false,
+            },
+            {
+              label: 'Delete',
               icon: <TrashIcon size={12} />,
               onClick: () => { onDelete(conv.id); setContextMenu(null); },
               danger: true,
@@ -383,12 +380,12 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
   const unpinned = conversations.filter(c => !c.pinned);
 
   async function handleDelete(id) {
-    if (!window.confirm('Hapus percakapan ini?')) return;
+    if (!window.confirm('Delete this conversation?')) return;
     await deleteConversation(id);
   }
 
   return (
-    <nav className={s.sidebar} aria-label="Riwayat percakapan">
+    <nav className={s.sidebar} aria-label="Conversation history">
       {/* Header with rounded White Card for TPS Logo and Close button */}
       <div style={{
         display: 'flex',
@@ -412,7 +409,7 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
           height: '36px'
         }}>
           <img
-            src="/images/Logo_TPS.png"
+            src="/images/Logo%20TPS%20Monokrom.png"
             alt="Logo TPS"
             style={{ width: '100%', height: '100%', objectFit: 'contain' }}
           />
@@ -421,7 +418,7 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
         {/* Sidebar Close Button */}
         <button
           onClick={() => setSidebarOpen(false)}
-          title="Tutup riwayat"
+          title="Close history"
           style={{
             color: 'rgba(255, 255, 255, 0.85)',
             cursor: 'pointer',
@@ -467,7 +464,7 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
           onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.22)'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.12)'}
         >
-          <PlusIcon size={14} /> Baru
+          <PlusIcon size={14} /> New conversation
         </button>
       </div>
 
@@ -475,7 +472,7 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
       <div className={s.convList} role="list">
         {pinned.length > 0 && (
           <>
-            <div className={s.convGroupLabel} aria-hidden="true">Disematkan</div>
+            <div className={s.convGroupLabel} aria-hidden="true">Pinned</div>
             {pinned.map(conv => (
               <ConvItem key={conv.id} conv={conv} isActive={conv.id === activeConvId && activeView === 'chat'}
                 onSelect={(id) => { setActiveView('chat'); setActiveConvId(id); }}
@@ -489,7 +486,7 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
 
         {unpinned.length > 0 && (
           <>
-            {pinned.length > 0 && <div className={s.convGroupLabel} aria-hidden="true">Terbaru</div>}
+            {pinned.length > 0 && <div className={s.convGroupLabel} aria-hidden="true">Recent</div>}
             {unpinned.map(conv => (
               <ConvItem key={conv.id} conv={conv} isActive={conv.id === activeConvId && activeView === 'chat'}
                 onSelect={(id) => { setActiveView('chat'); setActiveConvId(id); }}
@@ -502,7 +499,7 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
         )}
 
         {conversations.length === 0 && (
-          <div className={s.convEmpty}>Mulai percakapan baru untuk melihat riwayat di sini.</div>
+          <div className={s.convEmpty}>Start a new conversation to see history here.</div>
         )}
       </div>
 
@@ -542,7 +539,7 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
             <circle cx="12" cy="12" r="3" />
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
-          <span>Konfigurasi</span>
+          <span>Settings</span>
         </button>
 
         {/* Auth status block */}
@@ -580,7 +577,7 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
             </div>
             <button
               onClick={logout}
-              title="Keluar dari akun"
+              title="Sign Out"
               style={{
                 padding: '6px', borderRadius: 'var(--r-sm)',
                 color: 'rgba(255, 255, 255, 0.85)', cursor: 'pointer',
@@ -639,7 +636,7 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
               <polyline points="10 17 15 12 10 7" />
               <line x1="15" y1="12" x2="3" y2="12" />
             </svg>
-            <span>Masuk / Daftar</span>
+            <span>Sign In / Sign Up</span>
           </button>
         )}
       </div>
@@ -724,7 +721,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
       // Empty: reset to single-line default
       textarea.style.height = '';
     } else {
-      textarea.style.height = 'auto';
+      textarea.style.height = '0px';
       textarea.style.height = `${Math.min(textarea.scrollHeight, maxH)}px`;
     }
   }, [input]);
@@ -787,7 +784,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
       const data = await postChatMessage(activeConvId, text, selectedCategory);
       setMessages(prev => [...prev, { role: 'ai', content: data.answer, sources: data.sources || [] }]);
     } catch (err) {
-      setError(err.message || 'Gagal terhubung ke server.');
+      setError(err.message || 'Failed to connect to server.');
     } finally {
       setLoading(false);
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -829,8 +826,8 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
               <button
                 className={s.sidebarToggleBtn}
                 onClick={() => setSidebarOpen(true)}
-                title="Tampilkan riwayat"
-                aria-label="Buka sidebar"
+                title="Show history"
+                aria-label="Open sidebar"
               >
                 <SidebarToggleIcon size={17} />
               </button>
@@ -848,7 +845,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
             )}
 
             <span className={s.chatInnerTitle} style={{ fontSize: '0.9rem', fontWeight: '700' }}>
-              Asisten TPS
+              TPS Assistant
             </span>
           </div>
 
@@ -892,7 +889,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
               className={s.chatMessages}
               role="log"
               aria-live="polite"
-              aria-label="Percakapan"
+              aria-label="Conversation"
             >
               {messages.length === 0 && !loading && (
                 <div className={s.emptyState}>
@@ -903,10 +900,10 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                       style={{ width: '65%', height: '65%', objectFit: 'contain' }}
                     />
                   </div>
-                  <p className={s.emptyTitle}>Selamat datang di Asisten TPS</p>
+                  <p className={s.emptyTitle}>Welcome to TPS Assistant</p>
                   <p className={s.emptyDesc}>
-                    Tanyakan informasi seputar layanan Terminal Petikemas Surabaya.
-                    Saya siap membantu Anda.
+                    Ask anything about Terminal Petikemas Surabaya services.
+                    I am ready to help you.
                   </p>
                 </div>
               )}
@@ -921,7 +918,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                 <div className={s.errorBanner} role="alert">
                   <AlertCircleIcon size={16} />
                   <span>{error}</span>
-                  <button className={s.errorClose} onClick={() => setError(null)} aria-label="Tutup">
+                  <button className={s.errorClose} onClick={() => setError(null)} aria-label="Close">
                     <XIcon size={14} />
                   </button>
                 </div>
@@ -951,9 +948,9 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                     value={input}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
-                    placeholder="Ketik pertanyaan Anda…"
+                    placeholder="Type a message..."
                     disabled={loading}
-                    aria-label="Input pertanyaan"
+                    aria-label="Chat input"
                     style={{ width: '100%' }}
                   />
 
@@ -977,7 +974,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                             display: 'inline-block',
                             animation: 'pulse 1.2s infinite'
                           }} />
-                          Mendengarkan suara Anda...
+                          Listening...
                         </span>
                       ) : ''}
                     </div>
@@ -988,7 +985,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                       <button
                         onClick={toggleListening}
                         disabled={loading}
-                        title={isListening ? 'Hentikan mendengarkan' : 'Ketik dengan suara'}
+                        title={isListening ? 'Stop listening' : 'Voice typing'}
                         style={{
                           width: '42px',
                           height: '42px',
@@ -1019,7 +1016,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                         className={`${s.sendBtn}${loading ? ` ${s.sendBtnLoading}` : ''}`}
                         onClick={handleSend}
                         disabled={loading || !input.trim()}
-                        aria-label="Kirim"
+                        aria-label="Send"
                         style={{
                           width: '42px',
                           height: '42px',
@@ -1040,7 +1037,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                     </div>
                   </div>
                 </div>
-                <p className={s.inputHint}>Asisten TPS dapat menampilkan informasi yang kurang akurat. Asisten AI PT Terminal Petikemas Surabaya.</p>
+                <p className={s.inputHint}>TPS Assistant can make mistakes. AI Assistant of PT Terminal Petikemas Surabaya.</p>
               </div>
             </div>
           </>

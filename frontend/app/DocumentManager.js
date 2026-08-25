@@ -68,21 +68,21 @@ function ConfirmDialog({ filename, onConfirm, onCancel, isDeleting }) {
     <div className={s.confirmOverlay} role="dialog" aria-modal="true"
       aria-labelledby="confirm-title">
       <div className={s.confirmDialog}>
-        <p id="confirm-title" className={s.confirmTitle}>Hapus Dokumen</p>
+        <p id="confirm-title" className={s.confirmTitle}>Delete Document</p>
         <p className={s.confirmBody}>
-          Apakah kamu yakin ingin menghapus{' '}
+          Are you sure you want to delete{' '}
           <span className={s.confirmFilename}>{filename}</span>?
-          {' '}Semua chunk yang sudah diindeks akan dihapus dari vector store
-          dan tidak bisa dipulihkan.
+          {' '}All indexed chunks will be deleted from the vector store
+          and cannot be recovered.
         </p>
         <div className={s.confirmActions}>
           <button className={s.cancelBtn} onClick={onCancel} disabled={isDeleting}>
-            Batal
+            Cancel
           </button>
           <button className={s.confirmDeleteBtn} onClick={onConfirm} disabled={isDeleting}>
             {isDeleting
               ? <SpinnerIcon size={15} className={s.spin} />
-              : 'Hapus'}
+              : 'Delete'}
           </button>
         </div>
       </div>
@@ -93,7 +93,7 @@ function ConfirmDialog({ filename, onConfirm, onCancel, isDeleting }) {
 function DocumentRow({ doc, onToggle, onDelete, togglingFilename, deletingFilename, isSelected, onSelectToggle }) {
   const isToggling = togglingFilename === doc.filename;
   const date = doc.uploaded_at
-    ? new Date(doc.uploaded_at + 'Z').toLocaleDateString('id-ID', {
+    ? new Date(doc.uploaded_at + 'Z').toLocaleDateString('en-US', {
         day: '2-digit', month: 'short', year: 'numeric',
       })
     : '—';
@@ -116,7 +116,7 @@ function DocumentRow({ doc, onToggle, onDelete, togglingFilename, deletingFilena
         )}
       </td>
       <td><TypeBadge type={doc.file_type} /></td>
-      <td><span className={s.chunkCount}>{doc.chunk_count?.toLocaleString('id-ID')}</span></td>
+      <td><span className={s.chunkCount}>{doc.chunk_count?.toLocaleString('en-US')}</span></td>
       <td><span className={s.dateText}>{date}</span></td>
       <td className={s.toggleCell}>
         <label className={s.toggleLabel}>
@@ -126,7 +126,7 @@ function DocumentRow({ doc, onToggle, onDelete, togglingFilename, deletingFilena
             checked={doc.is_active}
             disabled={true}
             id={`toggle-${doc.filename}`}
-            aria-label={`Aktifkan ${doc.filename}`}
+            aria-label={`Activate ${doc.filename}`}
           />
           {isToggling && <SpinnerIcon size={13} className={s.spin} />}
         </label>
@@ -136,8 +136,8 @@ function DocumentRow({ doc, onToggle, onDelete, togglingFilename, deletingFilena
           className={s.deleteBtn}
           onClick={() => onDelete(doc.filename)}
           disabled={!!deletingFilename}
-          aria-label={`Hapus ${doc.filename}`}
-          title="Hapus dokumen"
+          aria-label={`Delete ${doc.filename}`}
+          title="Delete document"
           id={`delete-${doc.filename.replace(/\./g, '-')}`}
         >
           <TrashIcon size={15} />
@@ -169,17 +169,17 @@ export default function DocumentManager() {
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedFilenames.length} dokumen terpilih beserta seluruh data indeksnya?`)) return;
+    if (!confirm(`Are you sure you want to delete ${selectedFilenames.length} selected documents and all of their indexed data?`)) return;
     setIsBulkDeleting(true);
     try {
       for (const filename of selectedFilenames) {
         const res = await fetch(`${API_BASE}/documents/${encodeURIComponent(filename)}`, { method: 'DELETE' });
         if (!res.ok) {
           const data = await res.json();
-          throw new Error(data.detail || `Gagal menghapus dokumen ${filename}`);
+          throw new Error(data.detail || `Failed to delete document ${filename}`);
         }
       }
-      alert('Berhasil menghapus dokumen yang terpilih.');
+      alert('Successfully deleted selected documents.');
       setSelectedFilenames([]);
       fetchDocuments();
     } catch (err) {
@@ -206,7 +206,7 @@ export default function DocumentManager() {
     setFetchError('');
     try {
       const res = await fetch(`${API_BASE}/documents`);
-      if (!res.ok) throw new Error('Gagal memuat daftar dokumen.');
+      if (!res.ok) throw new Error('Failed to load document list.');
       setDocuments(await res.json());
     } catch (err) {
       setFetchError(err.message);
@@ -267,7 +267,7 @@ export default function DocumentManager() {
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.detail || 'Gagal mengubah status dokumen.');
+        throw new Error(data.detail || 'Failed to change document status.');
       }
       setDocuments(prev =>
         prev.map(d => d.filename === filename ? { ...d, is_active: isActive } : d)
@@ -292,7 +292,7 @@ export default function DocumentManager() {
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.detail || 'Gagal menghapus dokumen.');
+        throw new Error(data.detail || 'Failed to delete document.');
       }
       setSelectedFilenames(prev => prev.filter(x => x !== pendingDelete));
       setDocuments(prev => prev.filter(d => d.filename !== pendingDelete));
@@ -312,7 +312,7 @@ export default function DocumentManager() {
     <div style={{ marginTop: '20px' }}>
       {/* Upload Box */}
       <div className={s.uploadCard}>
-        <p className={s.uploadCardTitle}>Upload Dokumen Manual Baru</p>
+        <p className={s.uploadCardTitle}>Upload New Manual Document</p>
         <div
           className={`${s.dropZone} ${isDragOver ? s.dropZoneActive : ''}`}
           onDragOver={handleDragOver}
@@ -322,7 +322,7 @@ export default function DocumentManager() {
           role="button"
           tabIndex={0}
           onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
-          aria-label="Klik atau seret file ke sini untuk memilih"
+          aria-label="Click or drag file here to select"
           id="upload-drop-zone"
         >
           <input
@@ -344,25 +344,25 @@ export default function DocumentManager() {
             </span>
           ) : (
             <>
-              <span className={s.dropZoneText}>Klik atau seret file ke sini</span>
-              <span className={s.dropZoneTextSub}>Mendukung beberapa format dokumen</span>
+              <span className={s.dropZoneText}>Click or drag file here</span>
+              <span className={s.dropZoneTextSub}>Supports multiple document formats</span>
             </>
           )}
         </div>
 
         <p className={s.formatsHint}>
-          <strong>Format yang didukung:</strong> {SUPPORTED_LABEL}
+          <strong>Supported formats:</strong> {SUPPORTED_LABEL}
         </p>
 
         <div className={s.formRow}>
           <label htmlFor="label-input" className={s.formLabel}>
-            Label (opsional) - misal nama divisi
+            Label (optional) - e.g. division name
           </label>
           <input
             id="label-input"
             type="text"
             className={s.textInput}
-            placeholder="Contoh: Komersial - Vessel Service"
+            placeholder="Example: Commercial - Vessel Service"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
           />
@@ -374,23 +374,23 @@ export default function DocumentManager() {
           disabled={!selectedFile}
           id="upload-btn"
         >
-          Upload &amp; Indeks
+          Upload &amp; Index
         </button>
 
         <p className={s.uploadNote}>
-          Status upload ditampilkan di bar atas. Anda bisa berpindah halaman/tab saat upload berlangsung.
+          Upload status is shown in the top bar. You can navigate away while the upload is in progress.
         </p>
       </div>
 
       {/* Table Section */}
       <div className={s.listSection}>
         <div className={s.listHeader} style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '10px' }}>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-navy)' }}>Dokumen Terdaftar (Manual)</h3>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-navy)' }}>Registered Documents (Manual)</h3>
           {!loadingDocs && (
             <span className={s.listCount}>
-              {documents.length} dokumen
+              {documents.length} document(s)
               {documents.filter(d => d.is_active).length > 0 &&
-                `, ${documents.filter(d => d.is_active).length} aktif`}
+                `, ${documents.filter(d => d.is_active).length} active`}
             </span>
           )}
           {selectedFilenames.length > 0 && (
@@ -413,9 +413,9 @@ export default function DocumentManager() {
                 opacity: isBulkDeleting ? 0.7 : 1,
               }}
             >
-              {isBulkDeleting ? 'Menghapus...' : (
+              {isBulkDeleting ? 'Deleting...' : (
                 <>
-                  <TrashIcon size={12} /> Hapus Terpilih ({selectedFilenames.length})
+                  <TrashIcon size={12} /> Delete Selected ({selectedFilenames.length})
                 </>
               )}
             </button>
@@ -434,9 +434,9 @@ export default function DocumentManager() {
         ) : documents.length === 0 ? (
           <div className={s.emptyState}>
             <InboxIcon />
-            <p className={s.emptyTitle}>Belum ada dokumen</p>
+            <p className={s.emptyTitle}>No documents yet</p>
             <p className={s.emptyBody}>
-              Upload dokumen di atas untuk mulai mengindeks. Chatbot hanya mencari dokumen yang aktif jika category "Semua Data" terpilih.
+              Upload documents above to start indexing. The chatbot only searches active documents when category "All Data" is selected.
             </p>
           </div>
         ) : (
@@ -452,12 +452,12 @@ export default function DocumentManager() {
                       style={{ cursor: 'pointer' }}
                     />
                   </th>
-                  <th>Dokumen</th>
+                  <th>Document</th>
                   <th>Format</th>
                   <th>Chunk</th>
-                  <th>Diupload</th>
-                  <th>Aktif</th>
-                  <th>Aksi</th>
+                  <th>Uploaded</th>
+                  <th>Active</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>

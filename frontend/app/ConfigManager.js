@@ -17,17 +17,17 @@ function ConfirmDelete({ entry, onConfirm, onCancel, loading }) {
   return (
     <div className={s.confirmOverlay} role="dialog" aria-modal="true" aria-labelledby="confirm-title">
       <div className={s.confirmBox}>
-        <p className={s.confirmTitle} id="confirm-title">Hapus Entri Konfigurasi?</p>
+        <p className={s.confirmTitle} id="confirm-title">Delete Configuration Entry?</p>
         <p className={s.confirmDesc}>
-          Anda akan menghapus <strong>{entry.description || entry.key}</strong>.
-          {' '}Tindakan ini tidak bisa dibatalkan.
+          You are about to delete <strong>{entry.description || entry.key}</strong>.
+          {' '}This action cannot be undone.
           {entry.is_active && (
-            <> Karena ini entri aktif, sistem akan otomatis mengaktifkan kandidat lain.</>
+            <> Since this is the active entry, the system will automatically activate another candidate.</>
           )}
         </p>
         <div className={s.confirmActions}>
           <button className={s.cancelBtn} onClick={onCancel} disabled={loading}>
-            Batal
+            Cancel
           </button>
           <button
             className={s.confirmDeleteBtn}
@@ -39,7 +39,7 @@ function ConfirmDelete({ entry, onConfirm, onCancel, loading }) {
               ? <SpinnerIcon size={14} className={s.spinIcon} />
               : <TrashIcon size={14} />
             }
-            Hapus
+            Delete
           </button>
         </div>
       </div>
@@ -116,12 +116,12 @@ function AddCandidateForm({ group, onSaved, onCancel }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', width: '100%' }}>
             <div style={{ gridColumn: 'span 2' }}>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-navy)', marginBottom: '4px', textAlign: 'left' }}>
-                Deskripsi / Label
+                Description / Label
               </label>
               <input
                 ref={descRef}
                 className={s.addInput}
-                placeholder={isAzure ? "Contoh: Azure Prod TPS" : "Contoh: Gemini API Key Utama"}
+                placeholder={isAzure ? "Example: Azure Prod TPS" : "Example: Main Gemini API Key"}
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 required
@@ -175,12 +175,12 @@ function AddCandidateForm({ group, onSaved, onCancel }) {
             ) : (
               <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-navy)', textAlign: 'left' }}>
-                  Nilai Parameter
+                  Parameter Value
                 </label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
                   <input
                     className={s.addInput}
-                    placeholder="Masukkan nilai parameter"
+                    placeholder="Enter parameter value"
                     value={value}
                     onChange={e => setValue(e.target.value)}
                     type={isSecret ? 'password' : 'text'}
@@ -202,7 +202,7 @@ function AddCandidateForm({ group, onSaved, onCancel }) {
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
-                    title={isSecret ? "Tampilkan Nilai" : "Sembunyikan Nilai"}
+                    title={isSecret ? "Show Value" : "Hide Value"}
                   >
                     {isSecret ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
                   </button>
@@ -213,7 +213,7 @@ function AddCandidateForm({ group, onSaved, onCancel }) {
 
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '8px' }}>
             <button type="button" className={s.cancelBtn} onClick={onCancel} disabled={loading}>
-              Batal
+              Cancel
             </button>
             <button
               type="submit"
@@ -222,7 +222,7 @@ function AddCandidateForm({ group, onSaved, onCancel }) {
               id={`add-candidate-save-${group}`}
             >
               {loading ? <SpinnerIcon size={13} className={s.spinIcon} /> : <PlusIcon size={13} />}
-              Tambah
+              Add
             </button>
           </div>
         </form>
@@ -344,13 +344,13 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
       const res = await fetch(`${API_URL}/config/${entry.key}/reveal`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `Gagal memuat nilai (${res.status})`);
+        throw new Error(err.detail || `Failed to load value (${res.status})`);
       }
       const data = await res.json();
       setRevealedValue(data.value);
       setShowSecret(true);
     } catch (err) {
-      toast.push(err.message || 'Gagal menampilkan nilai rahasia.', 'error');
+      toast.push(err.message || 'Failed to reveal secret value.', 'error');
     } finally {
       setRevealing(false);
     }
@@ -404,7 +404,7 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
             value={editDesc}
             onChange={e => setEditDesc(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }}
-            aria-label="Edit deskripsi"
+            aria-label="Edit description"
           />
         </td>
         <td className={s.editCell}>
@@ -412,21 +412,21 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <input
                 className={s.editInput}
-                placeholder="Tenant ID (kosongkan = tidak berubah)"
+                placeholder="Tenant ID (leave blank = unchanged)"
                 value={azureTenant}
                 onChange={e => setAzureTenant(e.target.value)}
                 style={{ fontSize: '0.75rem' }}
               />
               <input
                 className={s.editInput}
-                placeholder="Client ID (kosongkan = tidak berubah)"
+                placeholder="Client ID (leave blank = unchanged)"
                 value={azureClient}
                 onChange={e => setAzureClient(e.target.value)}
                 style={{ fontSize: '0.75rem' }}
               />
               <input
                 className={s.editInput}
-                placeholder="Client Secret (kosongkan = tidak berubah)"
+                placeholder="Client Secret (leave blank = unchanged)"
                 value={azureSecret}
                 onChange={e => setAzureSecret(e.target.value)}
                 type="password"
@@ -440,14 +440,14 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
               onChange={e => setEditValue(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }}
               type="password"
-              placeholder="Kosongkan = tidak berubah"
-              aria-label="Edit nilai"
+              placeholder="Leave blank = unchanged"
+              aria-label="Edit value"
             />
           )}
         </td>
         <td className={`${s.td} ${s.tdCenter}`}>
           {entry.is_active
-            ? <span className={s.activePill}><CheckIcon size={10} /> Aktif</span>
+            ? <span className={s.activePill}><CheckIcon size={10} /> Active</span>
             : <span style={{ color: 'var(--color-muted)', fontSize: '0.75rem' }}>—</span>
           }
         </td>
@@ -457,8 +457,8 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
               className={`${s.iconBtn} ${s.iconBtnSave}`}
               onClick={handleSave}
               disabled={saving}
-              title="Simpan perubahan"
-              aria-label="Simpan perubahan"
+              title="Save changes"
+              aria-label="Save changes"
             >
               {saving ? <SpinnerIcon size={14} className={s.spinIcon} /> : <CheckIcon size={14} />}
             </button>
@@ -466,8 +466,8 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
               className={s.iconBtn}
               onClick={() => setIsEditing(false)}
               disabled={saving}
-              title="Batal"
-              aria-label="Batal edit"
+              title="Cancel"
+              aria-label="Cancel edit"
             >
               <XIcon size={14} />
             </button>
@@ -483,7 +483,7 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
         <div className={s.keyCell}>
           <code className={s.keyCode}>{entry.key}</code>
           {entry.is_secret && (
-            <span className={s.secretBadge} title="Nilai rahasia">
+            <span className={s.secretBadge} title="Secret value">
               <LockIcon size={11} />
             </span>
           )}
@@ -505,8 +505,8 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
             className={s.eyeBtn}
             onClick={handleToggleSecret}
             disabled={revealing}
-            title={showSecret ? 'Sembunyikan' : 'Tampilkan'}
-            aria-label={showSecret ? 'Sembunyikan nilai' : 'Tampilkan nilai'}
+            title={showSecret ? 'Hide' : 'Show'}
+            aria-label={showSecret ? 'Hide value' : 'Show value'}
           >
             {revealing ? (
               <SpinnerIcon size={14} className={s.spinIcon} />
@@ -522,7 +522,7 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
         {entry.is_active
           ? (
             <span className={s.activePill}>
-              <CheckIcon size={10} /> Aktif
+              <CheckIcon size={10} /> Active
             </span>
           ) : (
             <button
@@ -530,9 +530,9 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
               onClick={handleActivate}
               disabled={activating}
               id={`activate-btn-${entry.key}`}
-              aria-label={`Aktifkan ${entry.key}`}
+              aria-label={`Activate ${entry.key}`}
             >
-              {activating ? <SpinnerIcon size={12} className={s.spinIcon} /> : 'Aktifkan'}
+              {activating ? <SpinnerIcon size={12} className={s.spinIcon} /> : 'Activate'}
             </button>
           )
         }
@@ -542,7 +542,7 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
           <button
             className={s.iconBtn}
             onClick={() => setIsEditing(true)}
-            title="Edit entri ini"
+            title="Edit this entry"
             aria-label={`Edit ${entry.key}`}
             id={`edit-btn-${entry.key}`}
           >
@@ -553,9 +553,9 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
             onClick={() => onDelete(entry)}
             disabled={isOnlyInGroup}
             title={isOnlyInGroup
-              ? 'Tidak bisa dihapus — ini satu-satunya opsi di kategori ini'
-              : 'Hapus entri ini'}
-            aria-label={`Hapus ${entry.key}`}
+              ? 'Cannot delete — this is the only option in this category'
+              : 'Delete this entry'}
+            aria-label={`Delete ${entry.key}`}
             id={`delete-btn-${entry.key}`}
           >
             <TrashIcon size={14} />
@@ -573,10 +573,10 @@ function GroupSection({ groupName, entries, onRefresh, toast }) {
 
   // Group label translation for user friendliness
   const friendlyNames = {
-    gemini_api_key: "Kunci API Gemini",
-    embedding_model: "Model Embedding",
-    generation_model: "Model Generation (LLM)",
-    azure_graph: "Kredensial Azure / Microsoft Graph API"
+    gemini_api_key: "Gemini API Key",
+    embedding_model: "Embedding Model",
+    generation_model: "Generation Model (LLM)",
+    azure_graph: "Azure / Microsoft Graph API Credentials"
   };
 
   const displayName = friendlyNames[groupName] || groupName;
@@ -623,7 +623,7 @@ function GroupSection({ groupName, entries, onRefresh, toast }) {
         <div className={s.groupHeader}>
           <div>
             <div className={s.groupName}>{displayName}</div>
-            <div className={s.groupMeta}>{entries.length} kandidat</div>
+            <div className={s.groupMeta}>{entries.length} candidate(s)</div>
           </div>
           <button
             className={s.addBtn}
@@ -632,18 +632,18 @@ function GroupSection({ groupName, entries, onRefresh, toast }) {
             aria-expanded={showAddForm}
           >
             <PlusIcon size={12} />
-            Tambah Kandidat
+            Add Candidate
           </button>
         </div>
 
-        <table className={s.table} aria-label={`Konfigurasi grup ${groupName}`}>
+        <table className={s.table} aria-label={`Configuration group ${groupName}`}>
           <thead>
             <tr style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}>
               <th className={s.th} style={{ width: '22%' }}>Key</th>
-              <th className={s.th} style={{ width: '28%' }}>Deskripsi</th>
-              <th className={s.th} style={{ width: '28%' }}>Nilai / Kredensial</th>
+              <th className={s.th} style={{ width: '28%' }}>Description</th>
+              <th className={s.th} style={{ width: '28%' }}>Value / Credentials</th>
               <th className={`${s.th} ${s.thCenter}`} style={{ width: '12%' }}>Status</th>
-              <th className={`${s.th} ${s.thRight}`}  style={{ width: '10%' }}>Aksi</th>
+              <th className={`${s.th} ${s.thRight}`}  style={{ width: '10%' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -735,14 +735,12 @@ export default function ConfigManager() {
       const data = await res.json();
       setEntries(data);
     } catch (err) {
-      setFetchError(err.message || 'Gagal memuat konfigurasi.');
+      setFetchError(err.message || 'Failed to load configuration.');
       setEntries([]);
     } finally {
       setRefreshing(false);
     }
   }
-
-
 
   useEffect(() => { loadConfig(); }, []);
 
@@ -752,9 +750,9 @@ export default function ConfigManager() {
     <div style={{ marginTop: '10px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-navy)' }}>Tata Kelola Kredensial & Model</h3>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-navy)' }}>Credential & Model Governance</h3>
           <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-muted)' }}>
-            Kelola API Key Gemini, model embedding/generation, dan kredensial Microsoft Graph API.
+            Manage Gemini API Keys, embedding/generation models, and Microsoft Graph API credentials.
           </p>
         </div>
         <button
@@ -774,7 +772,7 @@ export default function ConfigManager() {
           }}
         >
           <RefreshIcon size={12} className={refreshing ? s.spinIcon : undefined} />
-          Muat Ulang
+          Reload
         </button>
       </div>
 
@@ -782,10 +780,10 @@ export default function ConfigManager() {
         <div className={s.pageError} role="alert" style={{ marginBottom: '16px' }}>
           <AlertCircleIcon size={18} />
           <div className={s.pageErrorBody}>
-            <strong>Gagal memuat konfigurasi</strong>
+            <strong>Failed to load configuration</strong>
             <p>{fetchError}</p>
           </div>
-          <button className={s.pageErrorRetry} onClick={loadConfig}>Coba Lagi</button>
+          <button className={s.pageErrorRetry} onClick={loadConfig}>Retry</button>
         </div>
       )}
 
@@ -795,7 +793,7 @@ export default function ConfigManager() {
         <div className={s.groupsList} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {displayGroups.length === 0 && !fetchError && (
             <p style={{ textAlign: 'center', color: 'var(--color-muted)', padding: '3rem' }}>
-              Tidak ada konfigurasi ditemukan.
+              No configurations found.
             </p>
           )}
           {displayGroups.map(name => (

@@ -9,7 +9,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 const LS_KEY = 'rag_selected_category';
 
 export function CategoryProvider({ children }) {
-  const [selectedCategory, _setSelectedCategory] = useState("Semua Data");
+  const [selectedCategory, _setSelectedCategory] = useState("All Data");
   const initializedRef = useRef(false);
 
   // Read initial value from localStorage on client-side mount

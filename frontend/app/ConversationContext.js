@@ -313,7 +313,7 @@ export function ConversationProvider({ children }) {
       body: JSON.stringify({
         message: messageText,
         conversation_id: convId,
-        category: category === 'Semua Data' ? null : category,
+        category: category === 'All Data' ? null : category,
       }),
     });
 
