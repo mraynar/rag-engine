@@ -4,6 +4,9 @@ import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useCategory } from './CategoryContext';
 import { useConversation } from './ConversationContext';
+import { useAuth } from './AuthContext';
+import CategorySelector from './CategorySelector';
+import ConfigManager from './ConfigManager';
 import s from './chat.module.css';
 import {
   AlertCircleIcon, XIcon, SendIcon, SpinnerIcon,
@@ -157,7 +160,6 @@ function MessageBubble({ role, content, sources }) {
     );
   }
 
-  // AI message — Claude/ChatGPT style: no bubble, direct text
   return (
     <div className={s.msgRow}>
       <div className={s.msgRowAiInner}>
@@ -365,12 +367,15 @@ function ConvItem({ conv, isActive, onSelect, onRename, onPin, onDelete }) {
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-function Sidebar({ onNewChat }) {
+function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
   const {
     activeConvId, setActiveConvId,
     conversations,
     renameConversation, togglePin, deleteConversation,
   } = useConversation();
+
+  const { user, loading: authLoading, logout } = useAuth();
+  const { setIsAuthModalOpen } = useCategory();
 
   const [shake, setShake] = useState(false);
 
@@ -384,27 +389,96 @@ function Sidebar({ onNewChat }) {
 
   return (
     <nav className={s.sidebar} aria-label="Riwayat percakapan">
-      <div className={s.sidebarHeader}>
-        <span className={s.sidebarTitle}>Riwayat</span>
+      {/* Header with rounded White Card for TPS Logo and Close button */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '16px 14px 12px',
+        borderBottom: '1px solid var(--sidebar-border)',
+        flexShrink: 0
+      }}>
+        {/* White Card Container for TPS Logo */}
+        <div style={{
+          backgroundColor: '#FFFFFF',
+          padding: '6px 12px',
+          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: 'var(--shadow-sm)',
+          border: '1px solid rgba(0, 0, 0, 0.05)',
+          width: '120px',
+          height: '36px'
+        }}>
+          <img
+            src="/images/Logo_TPS.png"
+            alt="Logo TPS"
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          />
+        </div>
+
+        {/* Sidebar Close Button */}
         <button
-          className={`${s.newConvBtn} ${shake ? s.newConvBtnShake : ''}`}
-          onClick={async () => {
-            const ok = await onNewChat();
-            if (!ok) { setShake(true); setTimeout(() => setShake(false), 600); }
+          onClick={() => setSidebarOpen(false)}
+          title="Tutup riwayat"
+          style={{
+            color: 'rgba(255, 255, 255, 0.85)',
+            cursor: 'pointer',
+            padding: '6px',
+            borderRadius: 'var(--r-sm)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'background-color 0.2s',
           }}
-          aria-label="Percakapan baru"
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
         >
-          <PlusIcon size={11} /> Baru
+          <SidebarToggleIcon size={18} />
         </button>
       </div>
 
+      {/* New Chat Button Row */}
+      <div style={{ padding: '12px 14px 4px 14px', flexShrink: 0 }}>
+        <button
+          className={`${s.newConvBtn} ${shake ? s.newConvBtnShake : ''}`}
+          onClick={async () => {
+            setActiveView('chat');
+            const ok = await onNewChat();
+            if (!ok) { setShake(true); setTimeout(() => setShake(false), 600); }
+          }}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            padding: '10px 14px',
+            borderRadius: 'var(--r-md)',
+            background: 'rgba(255, 255, 255, 0.12)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#fff',
+            fontWeight: '600',
+            fontSize: '0.85rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.22)'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.12)'}
+        >
+          <PlusIcon size={14} /> Baru
+        </button>
+      </div>
+
+      {/* Conversations List (Riwayat) */}
       <div className={s.convList} role="list">
         {pinned.length > 0 && (
           <>
             <div className={s.convGroupLabel} aria-hidden="true">Disematkan</div>
             {pinned.map(conv => (
-              <ConvItem key={conv.id} conv={conv} isActive={conv.id === activeConvId}
-                onSelect={setActiveConvId}
+              <ConvItem key={conv.id} conv={conv} isActive={conv.id === activeConvId && activeView === 'chat'}
+                onSelect={(id) => { setActiveView('chat'); setActiveConvId(id); }}
                 onRename={renameConversation}
                 onPin={togglePin}
                 onDelete={handleDelete}
@@ -417,8 +491,8 @@ function Sidebar({ onNewChat }) {
           <>
             {pinned.length > 0 && <div className={s.convGroupLabel} aria-hidden="true">Terbaru</div>}
             {unpinned.map(conv => (
-              <ConvItem key={conv.id} conv={conv} isActive={conv.id === activeConvId}
-                onSelect={setActiveConvId}
+              <ConvItem key={conv.id} conv={conv} isActive={conv.id === activeConvId && activeView === 'chat'}
+                onSelect={(id) => { setActiveView('chat'); setActiveConvId(id); }}
                 onRename={renameConversation}
                 onPin={togglePin}
                 onDelete={handleDelete}
@@ -431,11 +505,132 @@ function Sidebar({ onNewChat }) {
           <div className={s.convEmpty}>Mulai percakapan baru untuk melihat riwayat di sini.</div>
         )}
       </div>
+
+      {/* Sidebar Footer with Config & Login */}
+      <div style={{
+        borderTop: '1px solid var(--sidebar-border)',
+        padding: '12px 14px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        background: 'rgba(0, 0, 0, 0.08)',
+        flexShrink: 0
+      }}>
+        {/* Configuration Button */}
+        <button
+          onClick={() => setActiveView('config')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            width: '100%',
+            padding: '8px 10px',
+            borderRadius: 'var(--r-sm)',
+            color: '#fff',
+            fontSize: '0.85rem',
+            fontWeight: activeView === 'config' ? '600' : '500',
+            background: activeView === 'config' ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+            cursor: 'pointer',
+            textAlign: 'left',
+            transition: 'background-color 0.2s',
+          }}
+          onMouseEnter={e => { if (activeView !== 'config') e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'; }}
+          onMouseLeave={e => { if (activeView !== 'config') e.currentTarget.style.backgroundColor = 'transparent'; }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          <span>Konfigurasi</span>
+        </button>
+
+        {/* Auth status block */}
+        {authLoading ? (
+          <div style={{ height: '36px', background: 'rgba(255,255,255,0.08)', borderRadius: 'var(--r-sm)', animation: 'pulse 1.5s infinite' }} />
+        ) : user ? (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '8px 10px',
+            borderRadius: 'var(--r-sm)',
+            background: 'rgba(255, 255, 255, 0.08)',
+            gap: '8px',
+            width: '100%',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+              <div style={{
+                width: '28px', height: '28px', borderRadius: '50%',
+                background: '#fff', color: 'var(--color-brand)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: '700', fontSize: '0.8rem', flexShrink: 0
+              }}>
+                {(user.user_metadata?.display_name || user.email)[0].toUpperCase()}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <span style={{ fontSize: '0.8rem', color: '#fff', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }}>
+                  {user.user_metadata?.display_name || user.email.split('@')[0]}
+                </span>
+                <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }}>
+                  {user.email}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={logout}
+              title="Keluar dari akun"
+              style={{
+                padding: '6px', borderRadius: 'var(--r-sm)',
+                color: 'rgba(255, 255, 255, 0.8)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'background-color 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setIsAuthModalOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              width: '100%',
+              padding: '10px',
+              borderRadius: 'var(--r-sm)',
+              background: '#fff',
+              color: 'var(--color-brand)',
+              fontWeight: '600',
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              transition: 'transform 0.2s',
+              boxShadow: 'var(--shadow-sm)'
+            }}
+            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+              <polyline points="10 17 15 12 10 7" />
+              <line x1="15" y1="12" x2="3" y2="12" />
+            </svg>
+            <span>Masuk / Daftar</span>
+          </button>
+        )}
+      </div>
     </nav>
   );
 }
 
-// ─── Main Chat ────────────────────────────────────────────────────────────────
+// ─── Main Chat Interface Inner ───────────────────────────────────────────────
 
 function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
   const { selectedCategory } = useCategory();
@@ -443,7 +638,6 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
     activeConvId, setActiveConvId,
     conversations, loadingConvs,
     createConversation, getConversation, postChatMessage,
-    renameConversation, togglePin,
   } = useConversation();
 
   const [messages, setMessages] = useState([]);
@@ -451,12 +645,13 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeView, setActiveView]   = useState('chat'); // 'chat' or 'config'
 
   const loadedConvRef = useRef(null);
   const bottomRef     = useRef(null);
   const inputRef      = useRef(null);
 
-  // Bootstrap: ensure active conversation
+  // Bootstrap active conversation
   useEffect(() => {
     if (loadingConvs || activeConvId) return;
     if (conversations.length > 0) {
@@ -496,8 +691,10 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
 
   // Auto-scroll
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading]);
+    if (activeView === 'chat') {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, loading, activeView]);
 
   async function handleNewChat() {
     if (messages.length === 0) return false;
@@ -546,130 +743,182 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
       {/* ── Sidebar ── */}
       {showSidebar && (
         <div className={`${s.sidebar} ${sidebarOpen ? s.sidebarOpen : s.sidebarClosed}`}>
-          <Sidebar onNewChat={handleNewChat} />
+          <Sidebar
+            onNewChat={handleNewChat}
+            activeView={activeView}
+            setActiveView={setActiveView}
+            setSidebarOpen={setSidebarOpen}
+          />
         </div>
       )}
 
-      {/* ── Chat main ── */}
+      {/* ── Chat main panel ── */}
       <div className={s.chatMain}>
 
-        {/* Inner top bar */}
-        <div className={s.chatInnerHeader}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {showSidebar && (
+        {/* Top Navbar Header — industry standard */}
+        <div className={s.chatInnerHeader} style={{ height: '56px', padding: '0 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Sidebar toggle button (visible when sidebar is closed) */}
+            {showSidebar && !sidebarOpen && (
               <button
                 className={s.sidebarToggleBtn}
-                onClick={() => setSidebarOpen(o => !o)}
-                aria-label={sidebarOpen ? 'Sembunyikan sidebar' : 'Tampilkan sidebar'}
-                title={sidebarOpen ? 'Sembunyikan riwayat' : 'Tampilkan riwayat'}
+                onClick={() => setSidebarOpen(true)}
+                title="Tampilkan riwayat"
+                aria-label="Buka sidebar"
               >
                 <SidebarToggleIcon size={17} />
               </button>
             )}
-            <span className={s.chatInnerTitle}>Asisten TPS</span>
-          </div>
-          <div className={s.chatInnerSub}>
-            Kategori:&nbsp;
-            <span className={s.chatInnerSubBadge}>{selectedCategory}</span>
-          </div>
-        </div>
 
-        {/* Message list */}
-        <div
-          className={s.chatMessages}
-          role="log"
-          aria-live="polite"
-          aria-label="Percakapan"
-        >
-          {messages.length === 0 && !loading && (
-            <div className={s.emptyState}>
-              <div className={s.emptyIcon}>
+            {/* Shield Logo Pelindo (visible only when sidebar is closed) */}
+            {showSidebar && !sidebarOpen && (
+              <div style={{ height: '32px', display: 'flex', alignItems: 'center', marginRight: '4px' }}>
                 <img
                   src="/images/Logo Pelindo.png"
-                  alt="TPS"
-                  style={{ width: '65%', height: '65%', objectFit: 'contain' }}
+                  alt="Logo Pelindo"
+                  style={{ height: '100%', objectFit: 'contain' }}
                 />
               </div>
-              <p className={s.emptyTitle}>Selamat datang di Asisten TPS</p>
-              <p className={s.emptyDesc}>
-                Tanyakan informasi seputar layanan Terminal Petikemas Surabaya.
-                Saya siap membantu Anda.
-              </p>
+            )}
+
+            <span className={s.chatInnerTitle} style={{ fontSize: '0.9rem', fontWeight: '700' }}>
+              Asisten TPS
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Powered by Gemini Badge */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '5px',
+              fontSize: '0.72rem', fontWeight: '600',
+              color: '#1c6bbf',
+              background: 'var(--color-brand-light)',
+              border: '1px solid rgba(43,127,214,0.2)',
+              padding: '4px 10px',
+              borderRadius: 'var(--r-full)',
+              whiteSpace: 'nowrap',
+            }}>
+              <span style={{
+                width: '6px', height: '6px',
+                background: 'var(--color-brand)',
+                borderRadius: '50%',
+                flexShrink: 0,
+              }} />
+              Powered by Gemini
             </div>
-          )}
 
-          {messages.map((msg, i) => (
-            <MessageBubble key={i} role={msg.role} content={msg.content} sources={msg.sources} />
-          ))}
-
-          {loading && <ThinkingIndicator />}
-
-          {error && (
-            <div className={s.errorBanner} role="alert">
-              <AlertCircleIcon size={16} />
-              <span>{error}</span>
-              <button className={s.errorClose} onClick={() => setError(null)} aria-label="Tutup">
-                <XIcon size={14} />
-              </button>
-            </div>
-          )}
-
-          <div ref={bottomRef} aria-hidden="true" />
+            {/* Category dropdown */}
+            <CategorySelector />
+          </div>
         </div>
 
-        {/* Suggestions — full-width tinted strip, only when no messages */}
-        {messages.length === 0 && !loading && (
-          <div style={{
-            flexShrink: 0,
-            background: 'var(--color-surface-3)',
-            borderTop: '1px solid var(--color-border-soft)',
-          }}>
-            <div className={s.suggestionsWrap} style={{ maxWidth: '800px', margin: '0 auto' }}>
-              <p className={s.suggestionsLabel}>Pertanyaan umum</p>
-              <div className={s.suggestions}>
-                {SUGGESTIONS.map(q => (
-                  <button
-                    key={q}
-                    className={s.suggestionChip}
-                    onClick={() => { setInput(q); inputRef.current?.focus(); }}
-                  >
-                    {q}
+        {/* ── Content View routing (Chat vs Configuration) ── */}
+        {activeView === 'config' ? (
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, background: 'var(--color-bg)', padding: '24px 24px 48px' }}>
+            <div style={{ maxWidth: '960px', width: '100%', margin: '0 auto' }}>
+              <ConfigManager />
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Message list */}
+            <div
+              className={s.chatMessages}
+              role="log"
+              aria-live="polite"
+              aria-label="Percakapan"
+            >
+              {messages.length === 0 && !loading && (
+                <div className={s.emptyState}>
+                  <div className={s.emptyIcon}>
+                    <img
+                      src="/images/Logo Pelindo.png"
+                      alt="TPS"
+                      style={{ width: '65%', height: '65%', objectFit: 'contain' }}
+                    />
+                  </div>
+                  <p className={s.emptyTitle}>Selamat datang di Asisten TPS</p>
+                  <p className={s.emptyDesc}>
+                    Tanyakan informasi seputar layanan Terminal Petikemas Surabaya.
+                    Saya siap membantu Anda.
+                  </p>
+                </div>
+              )}
+
+              {messages.map((msg, i) => (
+                <MessageBubble key={i} role={msg.role} content={msg.content} sources={msg.sources} />
+              ))}
+
+              {loading && <ThinkingIndicator />}
+
+              {error && (
+                <div className={s.errorBanner} role="alert">
+                  <AlertCircleIcon size={16} />
+                  <span>{error}</span>
+                  <button className={s.errorClose} onClick={() => setError(null)} aria-label="Tutup">
+                    <XIcon size={14} />
                   </button>
-                ))}
+                </div>
+              )}
+
+              <div ref={bottomRef} aria-hidden="true" />
+            </div>
+
+            {/* Suggestions */}
+            {messages.length === 0 && !loading && (
+              <div style={{
+                flexShrink: 0,
+                background: 'var(--color-surface-3)',
+                borderTop: '1px solid var(--color-border-soft)',
+              }}>
+                <div className={s.suggestionsWrap} style={{ maxWidth: '800px', margin: '0 auto' }}>
+                  <p className={s.suggestionsLabel}>Pertanyaan umum</p>
+                  <div className={s.suggestions}>
+                    {SUGGESTIONS.map(q => (
+                      <button
+                        key={q}
+                        className={s.suggestionChip}
+                        onClick={() => { setInput(q); inputRef.current?.focus(); }}
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Input area */}
+            <div className={s.inputArea}>
+              <div className={s.inputBarWrap}>
+                <div className={s.inputWrapper}>
+                  <textarea
+                    ref={inputRef}
+                    id="chat-input"
+                    className={s.textarea}
+                    rows={1}
+                    value={input}
+                    onChange={handleInputChange}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Ketik pertanyaan Anda…"
+                    disabled={loading}
+                    aria-label="Input pertanyaan"
+                  />
+                  <button
+                    id="chat-send-btn"
+                    className={`${s.sendBtn}${loading ? ` ${s.sendBtnLoading}` : ''}`}
+                    onClick={handleSend}
+                    disabled={loading || !input.trim()}
+                    aria-label="Kirim"
+                  >
+                    {loading ? <SpinnerIcon size={16} className={s.spinIcon} /> : <SendIcon size={16} />}
+                  </button>
+                </div>
+                <p className={s.inputHint}>Enter untuk kirim · Shift+Enter untuk baris baru</p>
               </div>
             </div>
-          </div>
+          </>
         )}
-
-        {/* Input area */}
-        <div className={s.inputArea}>
-          <div className={s.inputBarWrap}>
-            <div className={s.inputWrapper}>
-              <textarea
-                ref={inputRef}
-                id="chat-input"
-                className={s.textarea}
-                rows={1}
-                value={input}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                placeholder="Ketik pertanyaan Anda…"
-                disabled={loading}
-                aria-label="Input pertanyaan"
-              />
-              <button
-                id="chat-send-btn"
-                className={`${s.sendBtn}${loading ? ` ${s.sendBtnLoading}` : ''}`}
-                onClick={handleSend}
-                disabled={loading || !input.trim()}
-                aria-label="Kirim"
-              >
-                {loading ? <SpinnerIcon size={16} className={s.spinIcon} /> : <SendIcon size={16} />}
-              </button>
-            </div>
-            <p className={s.inputHint}>Enter untuk kirim · Shift+Enter untuk baris baru</p>
-          </div>
-        </div>
 
       </div>
     </div>
