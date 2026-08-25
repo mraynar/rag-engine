@@ -715,12 +715,17 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
     }
   }, [messages, loading, activeView]);
 
-  // Auto-resize textarea height as content changes
+  // Auto-resize textarea height as content changes (max ~35% of viewport)
   useEffect(() => {
     const textarea = inputRef.current;
-    if (textarea) {
+    if (!textarea) return;
+    const maxH = Math.floor(window.innerHeight * 0.35);
+    if (!input) {
+      // Empty: reset to single-line default
+      textarea.style.height = '';
+    } else {
       textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 600)}px`;
+      textarea.style.height = `${Math.min(textarea.scrollHeight, maxH)}px`;
     }
   }, [input]);
 
@@ -949,7 +954,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                     placeholder="Ketik pertanyaan Anda…"
                     disabled={loading}
                     aria-label="Input pertanyaan"
-                    style={{ width: '100%', minHeight: '80px', maxHeight: '600px' }}
+                    style={{ width: '100%' }}
                   />
 
                   {/* Controls row occupies bottom */}
