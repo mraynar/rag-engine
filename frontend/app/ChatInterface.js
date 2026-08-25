@@ -255,11 +255,6 @@ function ConvItem({ conv, isActive, onSelect, onRename, onPin, onDelete }) {
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && !renaming && onSelect(conv.id)}
     >
-      {conv.pinned && (
-        <span className={s.convPin} title="Pinned">
-          <PinIcon size={10} filled />
-        </span>
-      )}
 
       {renaming ? (
         <input
@@ -395,23 +390,16 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
         borderBottom: '1px solid var(--sidebar-border)',
         flexShrink: 0
       }}>
-        {/* White Card Container for TPS Logo */}
+        {/* Container for TPS Logo */}
         <div style={{
-          backgroundColor: '#FFFFFF',
-          padding: '6px 12px',
-          borderRadius: '8px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: 'var(--shadow-sm)',
-          border: '1px solid rgba(0, 0, 0, 0.05)',
-          width: '120px',
-          height: '36px'
+          height: '32px'
         }}>
           <img
             src="/images/Logo%20TPS%20Monokrom.png"
             alt="Logo TPS"
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            style={{ height: '100%', width: 'auto', objectFit: 'contain' }}
           />
         </div>
 
