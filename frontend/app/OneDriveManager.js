@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useCategory } from './CategoryContext';
-import { SpinnerIcon, TrashIcon, PencilIcon, CheckIcon, XIcon, PlusIcon } from './icons';
+import { SpinnerIcon, TrashIcon, PencilIcon, CheckIcon, XIcon, PlusIcon, EyeIcon } from './icons';
+import PreviewModal from './PreviewModal';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
@@ -15,6 +16,7 @@ export default function OneDriveManager() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [previewTarget, setPreviewTarget] = useState(null);
 
   const toggleSelect = (id) => {
     setSelectedIds(prev =>
@@ -520,6 +522,27 @@ export default function OneDriveManager() {
                           >
                             Sync
                           </button>
+                          {cat.sync_status === 'success' && (
+                            <button
+                              onClick={() => setPreviewTarget({ id: cat.id, name: cat.category_name })}
+                              style={{
+                                padding: '6px 12px',
+                                backgroundColor: '#EDF2F7',
+                                color: 'var(--color-text)',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                              title="Preview synchronized data rows"
+                            >
+                              <EyeIcon size={12} /> Preview
+                            </button>
+                          )}
                           <button
                             onClick={() => startEdit(cat)}
                             style={{
@@ -563,6 +586,15 @@ export default function OneDriveManager() {
           </tbody>
         </table>
       </div>
+      
+      {/* Extraction Preview Dialog */}
+      <PreviewModal
+        isOpen={!!previewTarget}
+        onClose={() => setPreviewTarget(null)}
+        type="cloud"
+        idOrFilename={previewTarget?.id}
+        title={previewTarget?.name}
+      />
       
       <style jsx global>{`
         @keyframes spin {

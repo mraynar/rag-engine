@@ -134,3 +134,45 @@ def delete_document_entry(filename: str, user: dict = Depends(require_user)) -> 
         raise HTTPException(status_code=404, detail=str(e))
 
     return {"message": f"Document '{filename}' deleted successfully."}
+
+
+@router.get("/{filename}/preview")
+def get_document_preview(filename: str, limit: int = 100, offset: int = 0, user: dict = Depends(require_user)) -> dict:
+    """Fetch text chunks stored in ChromaDB for a manual document."""
+    try:
+        chroma_client = chromadb.PersistentClient(path=str(VECTOR_STORE_DIR))
+        collection = chroma_client.get_or_create_collection(name="tps_docs")
+        
+        # Get chunks matching filename
+        results = collection.get(
+            where={"source": filename},
+            limit=limit,
+            offset=offset,
+            include=["documents", "metadatas"]
+        )
+        
+        chunks = []
+        ids = results.get("ids", [])
+        documents = results.get("documents", [])
+        metadatas = results.get("metadatas", [])
+        
+        for i in range(len(ids)):
+            chunks.append({
+                "id": ids[i],
+                "content": documents[i] if i < len(documents) else "",
+                "metadata": metadatas[i] if i < len(metadatas) else {}
+            })
+            
+        # Get total chunk count by querying only ids
+        all_results = collection.get(where={"source": filename}, include=[])
+        total_chunks = len(all_results.get("ids", []))
+        
+        return {
+            "filename": filename,
+            "total_chunks": total_chunks,
+            "chunks": chunks,
+            "limit": limit,
+            "offset": offset
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch ChromaDB preview: {e}")

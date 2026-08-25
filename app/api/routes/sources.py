@@ -130,3 +130,63 @@ def sync_source(id: str, user: dict = Depends(require_user)) -> dict:
     finally:
         with _sync_lock:
             _syncing_sources.discard(id)
+
+
+@router.get("/{id}/preview")
+def get_source_preview(id: str, limit: int = 100, offset: int = 0, user: dict = Depends(require_user)) -> dict:
+    """Fetch database preview rows for a synchronized online data source."""
+    from app.services.db import get_db_conn
+    from sqlalchemy import text
+    import json
+    
+    # 1. Fetch category
+    source = get_source(id)
+    if not source:
+        raise HTTPException(status_code=404, detail="Category not found.")
+        
+    # 2. Query rows
+    try:
+        with get_db_conn() as conn:
+            # Count total rows
+            total_rows = conn.execute(
+                text("SELECT COUNT(*) FROM data_rows WHERE source_id = :source_id"),
+                {"source_id": id}
+            ).scalar() or 0
+            
+            # Fetch paginated rows
+            query = text("""
+                SELECT sheet_name, row_index, row_data 
+                FROM data_rows 
+                WHERE source_id = :source_id
+                ORDER BY sheet_name, row_index
+                LIMIT :limit OFFSET :offset
+            """)
+            db_rows = conn.execute(
+                query,
+                {"source_id": id, "limit": limit, "offset": offset}
+            ).fetchall()
+            
+            rows = []
+            sheets = set()
+            for r in db_rows:
+                sheets.add(r[0])
+                try:
+                    data_dict = json.loads(r[2]) if isinstance(r[2], str) else r[2]
+                except Exception:
+                    data_dict = {}
+                rows.append({
+                    "sheet_name": r[0],
+                    "row_index": r[1],
+                    "row_data": data_dict
+                })
+                
+            return {
+                "category_name": source["category_name"],
+                "total_rows": total_rows,
+                "sheets": sorted(list(sheets)),
+                "rows": rows,
+                "limit": limit,
+                "offset": offset
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch database preview: {e}")

@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertCircleIcon, CheckCircleIcon, SpinnerIcon, TrashIcon } from './icons';
+import { AlertCircleIcon, CheckCircleIcon, SpinnerIcon, TrashIcon, EyeIcon } from './icons';
 import { useUpload } from './UploadContext';
+import PreviewModal from './PreviewModal';
 import s from './documents/documents.module.css';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
@@ -90,7 +91,7 @@ function ConfirmDialog({ filename, onConfirm, onCancel, isDeleting }) {
   );
 }
 
-function DocumentRow({ doc, onToggle, onDelete, togglingFilename, deletingFilename, isSelected, onSelectToggle }) {
+function DocumentRow({ doc, onToggle, onDelete, onPreview, togglingFilename, deletingFilename, isSelected, onSelectToggle }) {
   const isToggling = togglingFilename === doc.filename;
   const date = doc.uploaded_at
     ? new Date(doc.uploaded_at + 'Z').toLocaleDateString('en-US', {
@@ -132,16 +133,35 @@ function DocumentRow({ doc, onToggle, onDelete, togglingFilename, deletingFilena
         </label>
       </td>
       <td>
-        <button
-          className={s.deleteBtn}
-          onClick={() => onDelete(doc.filename)}
-          disabled={!!deletingFilename}
-          aria-label={`Delete ${doc.filename}`}
-          title="Delete document"
-          id={`delete-${doc.filename.replace(/\./g, '-')}`}
-        >
-          <TrashIcon size={15} />
-        </button>
+        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-start', alignItems: 'center' }}>
+          <button
+            onClick={() => onPreview(doc.filename)}
+            style={{
+              padding: '6px',
+              backgroundColor: '#EDF2F7',
+              border: 'none',
+              borderRadius: '4px',
+              color: 'var(--color-text)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            title="Preview extracted chunks"
+          >
+            <EyeIcon size={15} />
+          </button>
+          <button
+            className={s.deleteBtn}
+            onClick={() => onDelete(doc.filename)}
+            disabled={!!deletingFilename}
+            aria-label={`Delete ${doc.filename}`}
+            title="Delete document"
+            id={`delete-${doc.filename.replace(/\./g, '-')}`}
+          >
+            <TrashIcon size={15} />
+          </button>
+        </div>
       </td>
     </tr>
   );
@@ -153,6 +173,7 @@ export default function DocumentManager() {
   const [fetchError, setFetchError]       = useState('');
   const [selectedFilenames, setSelectedFilenames] = useState([]);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [previewFilename, setPreviewFilename] = useState(null);
 
   const toggleSelect = (filename) => {
     setSelectedFilenames(prev =>
@@ -467,6 +488,7 @@ export default function DocumentManager() {
                     doc={doc}
                     onToggle={handleToggle}
                     onDelete={handleDeleteRequest}
+                    onPreview={setPreviewFilename}
                     togglingFilename={togglingFilename}
                     deletingFilename={deletingFilename}
                     isSelected={selectedFilenames.includes(doc.filename)}
@@ -487,6 +509,15 @@ export default function DocumentManager() {
           isDeleting={!!deletingFilename}
         />
       )}
+
+      {/* Extraction Preview Dialog */}
+      <PreviewModal
+        isOpen={!!previewFilename}
+        onClose={() => setPreviewFilename(null)}
+        type="manual"
+        idOrFilename={previewFilename}
+        title={previewFilename}
+      />
     </div>
   );
 }
