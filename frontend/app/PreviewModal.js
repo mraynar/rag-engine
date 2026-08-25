@@ -188,10 +188,18 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
                   fontWeight: '600',
                   fontSize: '0.8rem',
                   cursor: 'pointer',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
                 }}
               >
-                📊 {sheet}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="20" x2="18" y2="10"></line>
+                  <line x1="12" y1="20" x2="12" y2="4"></line>
+                  <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                {sheet}
               </button>
             ))}
           </div>
@@ -213,13 +221,19 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
             </div>
           ) : error ? (
             <div style={{ display: 'flex', flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px', textAlign: 'center' }}>
-              <span style={{ fontSize: '2.5rem' }}>⚠️</span>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#E53E3E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
               <h4 style={{ margin: '12px 0 6px 0', color: '#E53E3E' }}>Failed to Load Preview</h4>
               <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-muted)' }}>{error}</p>
             </div>
           ) : totalItems === 0 ? (
             <div style={{ display: 'flex', flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px', textAlign: 'center', backgroundColor: '#fff', borderRadius: '8px', border: '1px dashed var(--color-border)' }}>
-              <span style={{ fontSize: '2.5rem' }}>📂</span>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--color-navy)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
               <h4 style={{ margin: '12px 0 6px 0', color: 'var(--color-navy)' }}>No Data Found</h4>
               <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--color-muted)', maxWidth: '400px' }}>
                 This source has not been indexed or does not contain any readable records. If this is a cloud spreadsheet, please trigger a <strong>Sync</strong> first.

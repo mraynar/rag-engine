@@ -139,21 +139,42 @@ def get_source_preview(id: str, limit: int = 100, offset: int = 0, user: dict = 
     from sqlalchemy import text
     import json
     
-    # 1. Fetch category
+    # 1. Fetch category metadata to get its category name
     source = get_source(id)
     if not source:
         raise HTTPException(status_code=404, detail="Category not found.")
         
-    # 2. Query rows
+    category_name = source["category_name"]
+        
+    # 2. Query rows using the UUID resolved from database
     try:
         with get_db_conn() as conn:
-            # Count total rows
+            # Resolve the database UUID of this category from data_sources table
+            db_source = conn.execute(
+                text("SELECT id FROM data_sources WHERE category_name = :category_name"),
+                {"category_name": category_name}
+            ).fetchone()
+            
+            if not db_source:
+                # If this category hasn't been synchronized yet, return empty
+                return {
+                    "category_name": category_name,
+                    "total_rows": 0,
+                    "sheets": [],
+                    "rows": [],
+                    "limit": limit,
+                    "offset": offset
+                }
+                
+            db_source_id = db_source[0]
+            
+            # Count total rows matching the UUID
             total_rows = conn.execute(
                 text("SELECT COUNT(*) FROM data_rows WHERE source_id = :source_id"),
-                {"source_id": id}
+                {"source_id": db_source_id}
             ).scalar() or 0
             
-            # Fetch paginated rows
+            # Fetch paginated rows matching the UUID
             query = text("""
                 SELECT sheet_name, row_index, row_data 
                 FROM data_rows 
@@ -163,7 +184,7 @@ def get_source_preview(id: str, limit: int = 100, offset: int = 0, user: dict = 
             """)
             db_rows = conn.execute(
                 query,
-                {"source_id": id, "limit": limit, "offset": offset}
+                {"source_id": db_source_id, "limit": limit, "offset": offset}
             ).fetchall()
             
             rows = []
@@ -181,7 +202,7 @@ def get_source_preview(id: str, limit: int = 100, offset: int = 0, user: dict = 
                 })
                 
             return {
-                "category_name": source["category_name"],
+                "category_name": category_name,
                 "total_rows": total_rows,
                 "sheets": sorted(list(sheets)),
                 "rows": rows,
