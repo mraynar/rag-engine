@@ -720,7 +720,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
     const textarea = inputRef.current;
     if (textarea) {
       textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 240)}px`;
     }
   }, [input]);
 
@@ -941,7 +941,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                     placeholder="Ketik pertanyaan Anda…"
                     disabled={loading}
                     aria-label="Input pertanyaan"
-                    style={{ width: '100%', minHeight: '36px', maxHeight: '160px' }}
+                    style={{ width: '100%', minHeight: '36px', maxHeight: '240px' }}
                   />
 
                   {/* Controls row occupies bottom */}
