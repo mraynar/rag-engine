@@ -22,8 +22,8 @@
    SIDEBAR
    ============================================ */
 .sidebar {
-  width: 290px;
-  min-width: 290px;
+  width: 315px;
+  min-width: 315px;
   height: 100%;
   flex-shrink: 0;
   background: var(--sidebar-bg);
@@ -42,8 +42,8 @@
 }
 
 .sidebarOpen {
-  width: 290px;
-  min-width: 290px;
+  width: 315px;
+  min-width: 315px;
   opacity: 1;
 }
 
@@ -252,6 +252,7 @@
   overflow: hidden;
   min-width: 0;
   background: var(--color-surface-2);
+  position: relative;
 }
 
 /* Inner chat top bar */
@@ -319,7 +320,7 @@
 .chatMessages {
   flex: 1;
   overflow-y: auto;
-  padding: 28px 0 20px;
+  padding: 28px 0 200px;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -357,7 +358,7 @@
 }
 
 .msgRowInner {
-  max-width: 800px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 0 24px;
   display: flex;
@@ -372,7 +373,7 @@
 
 .msgRowUserInner {
   flex-direction: row-reverse;
-  max-width: 800px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 8px 24px;
   display: flex;
@@ -386,7 +387,7 @@
 }
 
 .msgRowAiInner {
-  max-width: 800px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 8px 24px;
   display: flex;
@@ -560,7 +561,7 @@
    THINKING INDICATOR
    ============================================ */
 .thinkingRow {
-  max-width: 800px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 10px 24px;
   display: flex;
@@ -641,7 +642,7 @@
    SUGGESTION CHIPS
    ============================================ */
 .suggestionsWrap {
-  max-width: 800px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 16px 24px 20px;
   width: 100%;
@@ -725,15 +726,21 @@
    INPUT BAR — Floating, professional
    ============================================ */
 .inputArea {
-  flex-shrink: 0;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
   padding: 24px 32px 28px;
-  background: var(--color-surface-4);
-  border-top: 1px solid var(--color-border-soft);
+  background: linear-gradient(to top, var(--color-surface-2) 65%, rgba(244, 247, 253, 0) 100%);
+  border-top: none;
+  pointer-events: none; /* allow scroll/clicking items behind the transparent zone, but wrapper card overrides to pointer-events: auto */
 }
 
 .inputBarWrap {
-  max-width: 800px;
+  max-width: 960px;
   margin: 0 auto;
+  pointer-events: auto; /* enable interaction for the wrapper and inner contents */
 }
 
 .inputWrapper {
@@ -762,7 +769,7 @@
   font-size: 0.9375rem;
   color: var(--color-text);
   line-height: 1.5;
-  max-height: 240px;
+  max-height: 380px;
   overflow-y: auto;
   padding: 6px 0;
   font-family: inherit;
