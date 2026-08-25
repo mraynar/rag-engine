@@ -9,20 +9,20 @@
 
 /* ---- CSS Design Tokens ---- */
 :root {
-  /* Brand Colors */
+  /* Brand Colors — Uniformly set to #2B7FD6 */
   --color-brand:        #2B7FD6;
-  --color-brand-hover:  #1c6bbf;
-  --color-brand-dark:   #1558a8;
+  --color-brand-hover:  #2B7FD6;
+  --color-brand-dark:   #2B7FD6;
   --color-brand-light:  #EBF4FF;
   --color-brand-mid:    #DBEAFE;
   --color-brand-ring:   rgba(43, 127, 214, 0.18);
 
   /* Legacy aliases for backward compatibility */
-  --color-navy:         var(--color-brand);
-  --color-navy-light:   var(--color-brand-hover);
-  --color-navy-dark:    var(--color-brand-dark);
-  --color-accent:       var(--color-brand);
-  --color-accent-hover: var(--color-brand-hover);
+  --color-navy:         #2B7FD6;
+  --color-navy-light:   #2B7FD6;
+  --color-navy-dark:    #2B7FD6;
+  --color-accent:       #2B7FD6;
+  --color-accent-hover: #2B7FD6;
   --color-accent-light: var(--color-brand-light);
   --color-muted:        var(--color-text-muted);
   --color-text-light:   var(--color-text-2);
@@ -65,6 +65,14 @@
   --r-xl:  20px;
   --r-2xl: 28px;
   --r-full: 9999px;
+
+  /* Legacy radius mappings */
+  --radius-xs:   var(--r-xs);
+  --radius-sm:   var(--r-sm);
+  --radius-md:   var(--r-md);
+  --radius-lg:   var(--r-lg);
+  --radius-xl:   var(--r-xl);
+  --radius-full: var(--r-full);
 
   /* Elevation */
   --shadow-xs:  0 1px 2px rgba(15,23,42,0.06);
