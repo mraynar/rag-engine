@@ -663,10 +663,12 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
   const [error, setError]       = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeView, setActiveView]   = useState('chat'); // 'chat' or 'config'
+  const [isListening, setIsListening] = useState(false);
 
   const loadedConvRef = useRef(null);
   const bottomRef     = useRef(null);
   const inputRef      = useRef(null);
+  const recognitionRef = useRef(null);
 
   // Bootstrap active conversation
   useEffect(() => {
@@ -721,6 +723,44 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
       textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
     }
   }, [input]);
+
+  // Speech Recognition API
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const rec = new SpeechRecognition();
+      rec.continuous = true;
+      rec.interimResults = false;
+      rec.lang = 'id-ID';
+
+      rec.onstart = () => setIsListening(true);
+      rec.onresult = (event) => {
+        const transcript = event.results[event.results.length - 1][0].transcript;
+        setInput(prev => {
+          const newText = prev ? prev.trim() + ' ' + transcript : transcript;
+          if (activeConvId) setDraft(activeConvId, newText);
+          return newText;
+        });
+      };
+      rec.onerror = () => setIsListening(false);
+      rec.onend = () => setIsListening(false);
+
+      recognitionRef.current = rec;
+    }
+  }, [activeConvId]);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      alert('Browser Anda tidak mendukung input suara (Speech Recognition).');
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+    }
+  };
 
   async function handleNewChat() {
     if (messages.length === 0) return false;
@@ -888,7 +928,8 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
             {/* Input area */}
             <div className={s.inputArea}>
               <div className={s.inputBarWrap}>
-                <div className={s.inputWrapper}>
+                <div className={s.inputWrapper} style={{ flexDirection: 'column', alignItems: 'stretch', padding: '12px 14px' }}>
+                  {/* Textarea occupies top */}
                   <textarea
                     ref={inputRef}
                     id="chat-input"
@@ -900,16 +941,87 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                     placeholder="Ketik pertanyaan Anda…"
                     disabled={loading}
                     aria-label="Input pertanyaan"
+                    style={{ width: '100%', minHeight: '36px', maxHeight: '160px' }}
                   />
-                  <button
-                    id="chat-send-btn"
-                    className={`${s.sendBtn}${loading ? ` ${s.sendBtnLoading}` : ''}`}
-                    onClick={handleSend}
-                    disabled={loading || !input.trim()}
-                    aria-label="Kirim"
-                  >
-                    {loading ? <SpinnerIcon size={16} className={s.spinIcon} /> : <SendIcon size={16} />}
-                  </button>
+
+                  {/* Controls row occupies bottom */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginTop: '8px',
+                    borderTop: '1px solid rgba(0, 0, 0, 0.05)',
+                    paddingTop: '8px',
+                  }}>
+                    {/* Left: Status text if listening */}
+                    <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', flex: 1 }}>
+                      {isListening ? (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#EF4444', fontWeight: '600' }}>
+                          <span style={{
+                            width: '8px',
+                            height: '8px',
+                            background: '#EF4444',
+                            borderRadius: '50%',
+                            display: 'inline-block',
+                            animation: 'pulse 1.2s infinite'
+                          }} />
+                          Mendengarkan suara Anda...
+                        </span>
+                      ) : ''}
+                    </div>
+
+                    {/* Right: Mic + Send buttons */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                      {/* Speech to text (Microphone) */}
+                      <button
+                        onClick={toggleListening}
+                        disabled={loading}
+                        title={isListening ? 'Hentikan mendengarkan' : 'Ketik dengan suara'}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          background: isListening ? '#EF4444' : 'rgba(0, 0, 0, 0.05)',
+                          color: isListening ? '#ffffff' : 'var(--color-text-muted)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                        }}
+                        onMouseEnter={e => { if (!isListening) e.currentTarget.style.background = 'rgba(0, 0, 0, 0.08)'; }}
+                        onMouseLeave={e => { if (!isListening) e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)'; }}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                          <line x1="12" y1="19" x2="12" y2="23" />
+                          <line x1="8" y1="23" x2="16" y2="23" />
+                        </svg>
+                      </button>
+
+                      {/* Send button */}
+                      <button
+                        id="chat-send-btn"
+                        className={`${s.sendBtn}${loading ? ` ${s.sendBtnLoading}` : ''}`}
+                        onClick={handleSend}
+                        disabled={loading || !input.trim()}
+                        aria-label="Kirim"
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: 0,
+                        }}
+                      >
+                        {loading ? <SpinnerIcon size={14} className={s.spinIcon} /> : <SendIcon size={14} />}
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <p className={s.inputHint}>Enter untuk kirim · Shift+Enter untuk baris baru</p>
               </div>
