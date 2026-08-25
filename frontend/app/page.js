@@ -50,7 +50,7 @@ export default function UnifiedPage() {
         alignItems: 'center',
         padding: '0 20px',
         borderBottom: '1px solid var(--color-border-soft)',
-        background: 'var(--color-surface)',
+        background: 'linear-gradient(to bottom, #FFFFFF 0%, #F5F8FD 100%)',
         flexShrink: 0,
         gap: '2px',
         height: '42px',

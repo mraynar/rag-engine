@@ -587,7 +587,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                 <img
                   src="/images/Logo Pelindo.png"
                   alt="TPS"
-                  style={{ width: '60%', height: '60%', objectFit: 'contain' }}
+                  style={{ width: '65%', height: '65%', objectFit: 'contain' }}
                 />
               </div>
               <p className={s.emptyTitle}>Selamat datang di Asisten TPS</p>
@@ -617,20 +617,26 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
           <div ref={bottomRef} aria-hidden="true" />
         </div>
 
-        {/* Suggestions — only shown when no messages */}
+        {/* Suggestions — full-width tinted strip, only when no messages */}
         {messages.length === 0 && !loading && (
-          <div className={s.suggestionsWrap}>
-            <p className={s.suggestionsLabel}>Pertanyaan umum</p>
-            <div className={s.suggestions}>
-              {SUGGESTIONS.map(q => (
-                <button
-                  key={q}
-                  className={s.suggestionChip}
-                  onClick={() => { setInput(q); inputRef.current?.focus(); }}
-                >
-                  {q}
-                </button>
-              ))}
+          <div style={{
+            flexShrink: 0,
+            background: 'var(--color-surface-3)',
+            borderTop: '1px solid var(--color-border-soft)',
+          }}>
+            <div className={s.suggestionsWrap} style={{ maxWidth: '800px', margin: '0 auto' }}>
+              <p className={s.suggestionsLabel}>Pertanyaan umum</p>
+              <div className={s.suggestions}>
+                {SUGGESTIONS.map(q => (
+                  <button
+                    key={q}
+                    className={s.suggestionChip}
+                    onClick={() => { setInput(q); inputRef.current?.focus(); }}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
