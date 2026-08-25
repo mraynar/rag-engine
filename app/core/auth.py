@@ -8,10 +8,20 @@ SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 
 def get_current_user(authorization: Optional[str] = Header(None)) -> Optional[dict]:
     """Retrieves and validates the Supabase authenticated user using the Bearer JWT token."""
+    require_auth = os.getenv("REQUIRE_AUTH", "true").lower() == "true"
+    
     if not authorization:
         # User is not logged in (Guest)
         return None
     
+    if not require_auth:
+        # For testing, bypass token verification and treat any session as a dummy testing user
+        return {
+            "id": "00000000-0000-0000-0000-000000000000",
+            "email": "testing_guest@example.com",
+            "display_name": "Testing Guest"
+        }
+        
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid authorization header format. Must be Bearer <token>.")
     
@@ -42,7 +52,7 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> Optional[di
         }
     except requests.exceptions.RequestException as e:
         print(f"[Auth] Supabase verification request failed: {e}")
-        raise HTTPException(status_code=503, detail="Unable to verify session with Supabase Auth service.")
+        raise HTTPException(status_code=533, detail="Unable to verify session with Supabase Auth service.")
     except Exception as e:
         print(f"[Auth] Unexpected error: {e}")
         raise HTTPException(status_code=401, detail=str(e))
@@ -50,6 +60,15 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> Optional[di
 
 def require_user(user: Optional[dict] = Depends(get_current_user)) -> dict:
     """Dependency that requires a user to be logged in (prevents guest access)."""
+    require_auth = os.getenv("REQUIRE_AUTH", "true").lower() == "true"
+    if not require_auth:
+        # Return either active logged-in user or a dummy user fallback
+        return user or {
+            "id": "00000000-0000-0000-0000-000000000000",
+            "email": "testing_guest@example.com",
+            "display_name": "Testing Guest"
+        }
+
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required for this operation.")
     return user
