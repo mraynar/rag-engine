@@ -696,6 +696,15 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
     }
   }, [messages, loading, activeView]);
 
+  // Auto-resize textarea height as content changes
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
+    }
+  }, [input]);
+
   async function handleNewChat() {
     if (messages.length === 0) return false;
     const data = await createConversation();
@@ -732,11 +741,6 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
     setInput(v);
     if (activeConvId) setDraft(activeConvId, v);
   }
-
-  const SUGGESTIONS = [
-    'Bagaimana cara mengecek status kontainer?',
-    'Berapa biaya layanan penanganan kontainer?',
-  ];
 
   return (
     <div className={s.chatShell}>
@@ -863,30 +867,6 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
 
               <div ref={bottomRef} aria-hidden="true" />
             </div>
-
-            {/* Suggestions */}
-            {messages.length === 0 && !loading && (
-              <div style={{
-                flexShrink: 0,
-                background: 'var(--color-surface-3)',
-                borderTop: '1px solid var(--color-border-soft)',
-              }}>
-                <div className={s.suggestionsWrap} style={{ maxWidth: '800px', margin: '0 auto' }}>
-                  <p className={s.suggestionsLabel}>Pertanyaan umum</p>
-                  <div className={s.suggestions}>
-                    {SUGGESTIONS.map(q => (
-                      <button
-                        key={q}
-                        className={s.suggestionChip}
-                        onClick={() => { setInput(q); inputRef.current?.focus(); }}
-                      >
-                        {q}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Input area */}
             <div className={s.inputArea}>
