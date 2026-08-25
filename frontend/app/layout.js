@@ -1,15 +1,12 @@
-// frontend/app/layout.js
-// Root layout — wraps every page with the topnav and global design system.
+// frontend/app/layout.js — Root layout, full-width professional topnav
 
 import Image from 'next/image';
 import './globals.css';
 
 export const metadata = {
-  title: 'TPS RAG Engine',
-  description: 'Sistem tanya-jawab berbasis dokumen untuk PT Terminal Petikemas Surabaya',
-  icons: {
-    icon: '/images/Logo Pelindo.png',
-  },
+  title: 'TPS RAG Engine — Asisten Cerdas Terminal Petikemas Surabaya',
+  description: 'Sistem tanya-jawab berbasis dokumen untuk PT Terminal Petikemas Surabaya, powered by Gemini AI.',
+  icons: { icon: '/images/Logo Pelindo.png' },
 };
 
 import AppProviders from './AppProviders';
@@ -24,57 +21,69 @@ export default function RootLayout({ children }) {
       <body>
         <AppProviders>
           <div className="page-shell">
-            {/* ---- Top navigation bar (Unified Light theme matching reference) ---- */}
-            <header className="topnav" role="banner" style={{ position: 'relative', zIndex: 99 }}>
-              <div className="topnav-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 
-                {/* Left: Colored Pelindo Brand Logo */}
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <Image
-                    src="/images/Logo_TPS.png"
-                    alt="Logo PT Terminal Petikemas Surabaya"
-                    width={120}
-                    height={36}
-                    priority
-                    style={{ objectFit: 'contain' }}
-                  />
+            {/* ── Top navigation bar ── */}
+            <header className="topnav" role="banner">
+              <div className="topnav-inner">
+
+                {/* Left: Logo + app name */}
+                <div className="topnav-brand">
+                  <div className="topnav-logo-wrap">
+                    <Image
+                      src="/images/Logo_TPS.png"
+                      alt="Logo PT Terminal Petikemas Surabaya"
+                      width={110}
+                      height={32}
+                      priority
+                      style={{ objectFit: 'contain' }}
+                    />
+                  </div>
                 </div>
 
+                {/* Right: Powered-by badge + category selector + auth */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
 
-                {/* Right: Powered by Gemini badge + Dropdown Selector */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  
-                  {/* Powered by Gemini Badge */}
+                  {/* Powered by Gemini */}
                   <div style={{
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    color: '#2B6CB0',
-                    backgroundColor: '#EBF8FF',
+                    display: 'flex', alignItems: 'center', gap: '5px',
+                    fontSize: '0.72rem', fontWeight: '600',
+                    color: '#1c6bbf',
+                    background: 'var(--color-brand-light)',
+                    border: '1px solid rgba(43,127,214,0.2)',
                     padding: '4px 10px',
-                    borderRadius: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
+                    borderRadius: 'var(--r-full)',
+                    whiteSpace: 'nowrap',
                   }}>
-                    <span style={{ display: 'inline-block', width: '6px', height: '6px', backgroundColor: '#3182CE', borderRadius: '50%' }} />
+                    <span style={{
+                      width: '6px', height: '6px',
+                      background: 'var(--color-brand)',
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                    }} />
                     Powered by Gemini
                   </div>
 
-                  {/* Dropdown Category Selector */}
+                  {/* Category dropdown */}
                   <CategorySelector />
 
-                  {/* Auth Navigation */}
+                  {/* Vertical divider */}
+                  <div className="topnav-divider" />
+
+                  {/* Auth */}
                   <AuthNav />
                 </div>
 
               </div>
             </header>
 
-            {/* ---- Page content ---- */}
+            {/* ── Page content ── */}
             <main className="main-content" id="main-content">
               {children}
             </main>
+
           </div>
+
+          {/* Global modals */}
           <DataManagementModal />
           <AuthModal />
         </AppProviders>

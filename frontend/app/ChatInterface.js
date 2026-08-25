@@ -11,7 +11,7 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-// ─── Inline SVG icons used only inside this file ────────────────────────────
+// ─── Icons ───────────────────────────────────────────────────────────────────
 
 function PlusIcon({ size = 14 }) {
   return (
@@ -60,29 +60,18 @@ function TrashIcon({ size = 13 }) {
   );
 }
 
-function CheckIcon({ size = 13 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-      strokeLinejoin="round" aria-hidden="true">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
-}
-
-function InfoIcon({ size = 15 }) {
+function SidebarToggleIcon({ size = 18 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
       stroke="currentColor" strokeWidth="2" strokeLinecap="round"
       strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="16" x2="12" y2="12" />
-      <line x1="12" y1="8" x2="12.01" y2="8" />
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <line x1="9" y1="3" x2="9" y2="21" />
     </svg>
   );
 }
 
-// ─── Draft text helpers (sessionStorage keyed by conv_id) ───────────────────
+// ─── Draft helpers ────────────────────────────────────────────────────────────
 
 function getDraft(convId) {
   try { return sessionStorage.getItem(`draft_${convId}`) || ''; } catch { return ''; }
@@ -94,7 +83,7 @@ function setDraft(convId, text) {
   } catch {}
 }
 
-// ─── Helper: relative time ───────────────────────────────────────────────────
+// ─── Relative time ────────────────────────────────────────────────────────────
 
 function relativeTime(isoStr) {
   if (!isoStr) return '';
@@ -110,12 +99,19 @@ function relativeTime(isoStr) {
   return new Date(isoStr + 'Z').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 }
 
-// ─── Subcomponents ───────────────────────────────────────────────────────────
+// ─── Thinking indicator ───────────────────────────────────────────────────────
 
 function ThinkingIndicator() {
   return (
-    <div className={`${s.bubbleRow} ${s.bubbleRowAi}`} aria-label="AI sedang memproses">
-      <div className={`${s.bubble} ${s.bubbleAi} ${s.bubbleThinking}`}>
+    <div className={s.thinkingRow} aria-label="AI sedang memproses">
+      <div className={`${s.avatar} ${s.avatarAi}`}>
+        <img
+          src="/images/Logo Pelindo.png"
+          alt="TPS"
+          style={{ width: '82%', height: '82%', objectFit: 'contain' }}
+        />
+      </div>
+      <div className={s.thinkingDots}>
         <span className={s.dot} />
         <span className={s.dot} />
         <span className={s.dot} />
@@ -124,16 +120,14 @@ function ThinkingIndicator() {
   );
 }
 
-function SourceTag({ label }) {
-  return <span className={s.sourceTag}>{label}</span>;
-}
+// ─── Message bubble ───────────────────────────────────────────────────────────
 
 function MessageBubble({ role, content, sources }) {
   const isUser = role === 'user';
-  
+
+  // Split debug info from main content
   let mainContent = content;
   let debugContent = '';
-
   if (!isUser && content && content.includes('\n---\n### Debug Information')) {
     const parts = content.split('\n---\n### Debug Information');
     mainContent = parts[0];
@@ -144,95 +138,91 @@ function MessageBubble({ role, content, sources }) {
       if (parts[idx].includes('Debug Information')) {
         mainContent = parts.slice(0, idx).join('---');
         debugContent = parts.slice(idx).join('---');
-        if (!debugContent.startsWith('###') && debugContent.includes('Debug Information')) {
-          debugContent = '### ' + debugContent.trim();
-        }
+        if (!debugContent.startsWith('###')) debugContent = '### ' + debugContent.trim();
         break;
       }
     }
   }
 
+  if (isUser) {
+    return (
+      <div className={s.msgRow}>
+        <div className={s.msgRowUserInner}>
+          <div className={`${s.avatar} ${s.avatarUser}`} aria-hidden="true">
+            U
+          </div>
+          <div className={s.userBubble}>{mainContent}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // AI message — Claude/ChatGPT style: no bubble, direct text
   return (
-    <div className={`${s.bubbleRow} ${isUser ? s.bubbleRowUser : s.bubbleRowAi}`}>
-      {!isUser && (
-        <div className={s.bubbleAvatar} aria-hidden="true" style={{
-          backgroundColor: '#fff',
-          border: '1px solid var(--color-border)',
-          borderRadius: '4px',
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
+    <div className={s.msgRow}>
+      <div className={s.msgRowAiInner}>
+        <div className={`${s.avatar} ${s.avatarAi}`} aria-hidden="true">
           <img
             src="/images/Logo Pelindo.png"
-            alt="Pelindo"
-            style={{ width: '85%', height: '85%', objectFit: 'contain' }}
+            alt="TPS"
+            style={{ width: '82%', height: '82%', objectFit: 'contain' }}
           />
         </div>
-      )}
-      <div className={s.bubbleContent}>
-        <div className={`${s.bubble} ${isUser ? s.bubbleUser : s.bubbleAi}`}>
-          {isUser
-            ? mainContent
-            : (
+        <div className={s.aiContent}>
+          <div className={s.aiSender}>Asisten TPS</div>
+          <div className={s.markdownContent}>
+            <ReactMarkdown>{mainContent}</ReactMarkdown>
+          </div>
+
+          {debugContent && (
+            <div style={{
+              marginTop: '12px',
+              padding: '12px 14px',
+              background: 'var(--color-bg)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--r-md)',
+              fontSize: '0.8rem',
+              color: 'var(--color-text-muted)',
+              overflowX: 'auto',
+            }}>
               <div className={s.markdownContent}>
-                <ReactMarkdown>{mainContent}</ReactMarkdown>
+                <ReactMarkdown>{debugContent}</ReactMarkdown>
               </div>
-            )
-          }
-        </div>
-        {!isUser && debugContent && (
-          <div style={{
-            marginTop: '12px',
-            padding: '12px',
-            backgroundColor: '#f8fafc',
-            border: '1px solid var(--color-border)',
-            borderRadius: '6px',
-            fontSize: '0.8rem',
-            color: 'var(--color-text-light)',
-            width: '100%',
-            maxWidth: '100%',
-            overflowX: 'auto',
-          }}>
-            <div className={s.markdownContent}>
-              <ReactMarkdown>{debugContent}</ReactMarkdown>
             </div>
-          </div>
-        )}
-        {!isUser && sources && sources.length > 0 && (
-          <div className={s.sourcesRow} aria-label="Sumber dokumen">
-            <span className={s.sourcesLabel}>Sumber:</span>
-            {Array.from(new Set(sources)).map((src, i) => <SourceTag key={i} label={src} />)}
-          </div>
-        )}
+          )}
+
+          {sources && sources.length > 0 && (
+            <div className={s.sourcesRow} aria-label="Sumber dokumen">
+              <span className={s.sourcesLabel}>Sumber:</span>
+              {Array.from(new Set(sources)).map((src, i) => (
+                <span key={i} className={s.sourceTag}>{src}</span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Sidebar single item ─────────────────────────────────────────────────────
+// ─── Sidebar conv item ────────────────────────────────────────────────────────
 
 function ConvItem({ conv, isActive, onSelect, onRename, onPin, onDelete }) {
   const [hovered, setHovered]   = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraftTitle]  = useState(conv.title);
-  const [contextMenu, setContextMenu] = useState(null); // { x, y }
+  const [contextMenu, setContextMenu] = useState(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
     if (renaming) { inputRef.current?.focus(); inputRef.current?.select(); }
   }, [renaming]);
 
-  // Click outside to close context menu
   useEffect(() => {
-    const closeMenu = () => setContextMenu(null);
-    window.addEventListener('click', closeMenu);
-    window.addEventListener('contextmenu', closeMenu);
-    return () => {
-      window.removeEventListener('click', closeMenu);
-      window.removeEventListener('contextmenu', closeMenu);
-    };
+    const close = () => setContextMenu(null);
+    window.addEventListener('click', close);
+    window.addEventListener('contextmenu', close);
+    return () => { window.removeEventListener('click', close); window.removeEventListener('contextmenu', close); };
   }, []);
 
   function commitRename() {
@@ -287,20 +277,16 @@ function ConvItem({ conv, isActive, onSelect, onRename, onPin, onDelete }) {
 
       <span className={s.convTime}>{relativeTime(conv.updated_at)}</span>
 
-      {/* Action buttons — show on hover or active */}
       {(hovered || isActive) && !renaming && (
         <div className={s.convActions} onClick={e => e.stopPropagation()}>
-          {/* Rename */}
           <button
             className={s.convActionBtn}
             title="Ganti Nama"
             onClick={() => { setDraftTitle(conv.title); setRenaming(true); }}
-            aria-label="Ganti nama percakapan"
+            aria-label="Ganti nama"
           >
             <PencilIcon size={12} />
           </button>
-
-          {/* Pin / Unpin */}
           <button
             className={s.convActionBtn}
             title={conv.pinned ? 'Lepas sematan' : 'Sematkan'}
@@ -309,8 +295,6 @@ function ConvItem({ conv, isActive, onSelect, onRename, onPin, onDelete }) {
           >
             <PinIcon size={12} filled={conv.pinned} />
           </button>
-
-          {/* Delete */}
           <button
             className={`${s.convActionBtn} ${s.convActionDanger}`}
             title="Hapus"
@@ -322,93 +306,70 @@ function ConvItem({ conv, isActive, onSelect, onRename, onPin, onDelete }) {
         </div>
       )}
 
-      {/* Right-click custom context menu */}
       {contextMenu && (
         <div
           style={{
             position: 'fixed',
             left: `${contextMenu.x}px`,
             top: `${contextMenu.y}px`,
-            backgroundColor: '#ffffff',
+            background: '#fff',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
-            boxShadow: 'var(--shadow-md)',
+            borderRadius: 'var(--r-md)',
+            boxShadow: 'var(--shadow-lg)',
             padding: '4px',
             zIndex: 9999,
             display: 'flex',
             flexDirection: 'column',
-            minWidth: '140px',
+            minWidth: '148px',
           }}
           onClick={e => e.stopPropagation()}
           onContextMenu={e => e.preventDefault()}
         >
-          <button
-            onClick={() => {
-              onPin(conv.id, !conv.pinned);
-              setContextMenu(null);
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 12px',
-              fontSize: '0.8rem',
-              color: 'var(--color-text)',
-              textAlign: 'left',
-              width: '100%',
-              borderRadius: '4px',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: '550',
-              transition: 'background 0.15s ease',
-            }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--color-bg)'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            <PinIcon size={12} filled={conv.pinned} style={{ color: 'var(--color-accent)' }} />
-            {conv.pinned ? 'Lepas Sematan' : 'Sematkan'}
-          </button>
-          <button
-            onClick={() => {
-              onDelete(conv.id);
-              setContextMenu(null);
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 12px',
-              fontSize: '0.8rem',
-              color: 'var(--color-error)',
-              textAlign: 'left',
-              width: '100%',
-              borderRadius: '4px',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: '550',
-              transition: 'background 0.15s ease',
-            }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            <TrashIcon size={12} style={{ color: 'var(--color-error)' }} />
-            Hapus
-          </button>
+          {[
+            {
+              label: conv.pinned ? 'Lepas Sematan' : 'Sematkan',
+              icon: <PinIcon size={12} filled={conv.pinned} />,
+              onClick: () => { onPin(conv.id, !conv.pinned); setContextMenu(null); },
+              danger: false,
+            },
+            {
+              label: 'Hapus',
+              icon: <TrashIcon size={12} />,
+              onClick: () => { onDelete(conv.id); setContextMenu(null); },
+              danger: true,
+            },
+          ].map(item => (
+            <button
+              key={item.label}
+              onClick={item.onClick}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '8px 12px', fontSize: '0.8125rem',
+                color: item.danger ? 'var(--color-error)' : 'var(--color-text)',
+                textAlign: 'left', width: '100%',
+                borderRadius: 'var(--r-sm)', background: 'none',
+                border: 'none', cursor: 'pointer', fontWeight: '500',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = item.danger ? 'rgba(239,68,68,0.08)' : 'var(--color-bg)'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              {item.icon}{item.label}
+            </button>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-// ─── Sidebar ─────────────────────────────────────────────────────────────────
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 function Sidebar({ onNewChat }) {
   const {
     activeConvId, setActiveConvId,
-    conversations, loadConversations,
-    renameConversation, togglePin, deleteConversation
+    conversations,
+    renameConversation, togglePin, deleteConversation,
   } = useConversation();
 
   const [shake, setShake] = useState(false);
@@ -416,57 +377,36 @@ function Sidebar({ onNewChat }) {
   const pinned   = conversations.filter(c => c.pinned);
   const unpinned = conversations.filter(c => !c.pinned);
 
-  async function handleSelect(id) {
-    setActiveConvId(id);
-  }
-
-  async function handleRename(id, newTitle) {
-    await renameConversation(id, newTitle);
-  }
-
-  async function handlePin(id, pinned) {
-    await togglePin(id, pinned);
-  }
-
   async function handleDelete(id) {
     if (!window.confirm('Hapus percakapan ini?')) return;
     await deleteConversation(id);
   }
 
   return (
-    <div className={s.sidebar} role="navigation" aria-label="Riwayat percakapan">
-      {/* Header */}
+    <nav className={s.sidebar} aria-label="Riwayat percakapan">
       <div className={s.sidebarHeader}>
         <span className={s.sidebarTitle}>Riwayat</span>
         <button
           className={`${s.newConvBtn} ${shake ? s.newConvBtnShake : ''}`}
           onClick={async () => {
-            const success = await onNewChat();
-            if (!success) {
-              setShake(true);
-              setTimeout(() => setShake(false), 550);
-            }
+            const ok = await onNewChat();
+            if (!ok) { setShake(true); setTimeout(() => setShake(false), 600); }
           }}
-          aria-label="Mulai percakapan baru"
-          title="Percakapan Baru"
+          aria-label="Percakapan baru"
         >
-          <PlusIcon size={12} /> Baru
+          <PlusIcon size={11} /> Baru
         </button>
       </div>
 
-      {/* List */}
       <div className={s.convList} role="list">
         {pinned.length > 0 && (
           <>
             <div className={s.convGroupLabel} aria-hidden="true">Disematkan</div>
             {pinned.map(conv => (
-              <ConvItem
-                key={conv.id}
-                conv={conv}
-                isActive={conv.id === activeConvId}
-                onSelect={handleSelect}
-                onRename={handleRename}
-                onPin={handlePin}
+              <ConvItem key={conv.id} conv={conv} isActive={conv.id === activeConvId}
+                onSelect={setActiveConvId}
+                onRename={renameConversation}
+                onPin={togglePin}
                 onDelete={handleDelete}
               />
             ))}
@@ -475,17 +415,12 @@ function Sidebar({ onNewChat }) {
 
         {unpinned.length > 0 && (
           <>
-            {pinned.length > 0 && (
-              <div className={s.convGroupLabel} aria-hidden="true">Terbaru</div>
-            )}
+            {pinned.length > 0 && <div className={s.convGroupLabel} aria-hidden="true">Terbaru</div>}
             {unpinned.map(conv => (
-              <ConvItem
-                key={conv.id}
-                conv={conv}
-                isActive={conv.id === activeConvId}
-                onSelect={handleSelect}
-                onRename={handleRename}
-                onPin={handlePin}
+              <ConvItem key={conv.id} conv={conv} isActive={conv.id === activeConvId}
+                onSelect={setActiveConvId}
+                onRename={renameConversation}
+                onPin={togglePin}
                 onDelete={handleDelete}
               />
             ))}
@@ -493,116 +428,93 @@ function Sidebar({ onNewChat }) {
         )}
 
         {conversations.length === 0 && (
-          <div className={s.convEmpty}>Belum ada percakapan</div>
+          <div className={s.convEmpty}>Mulai percakapan baru untuk melihat riwayat di sini.</div>
         )}
       </div>
-    </div>
+    </nav>
   );
 }
 
-// ─── Main Chat Interface (inner) ─────────────────────────────────────────────
+// ─── Main Chat ────────────────────────────────────────────────────────────────
 
 function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
   const { selectedCategory } = useCategory();
   const {
     activeConvId, setActiveConvId,
     conversations, loadingConvs,
-    loadConversations,
-    createConversation, getConversation, postChatMessage
+    createConversation, getConversation, postChatMessage,
+    renameConversation, togglePin,
   } = useConversation();
 
   const [messages, setMessages] = useState([]);
   const [input, setInput]       = useState('');
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Track which convId's messages are currently loaded to avoid redundant fetches
   const loadedConvRef = useRef(null);
+  const bottomRef     = useRef(null);
+  const inputRef      = useRef(null);
 
-  const bottomRef = useRef(null);
-  const inputRef  = useRef(null);
-
-  // ── Bootstrap: ensure there is always an active conversation ──────────────
+  // Bootstrap: ensure active conversation
   useEffect(() => {
-    if (loadingConvs) return;
-
-    // Already have an active conv — nothing to do
-    if (activeConvId) return;
-
-    // No active conv in localStorage → pick one or create
+    if (loadingConvs || activeConvId) return;
     if (conversations.length > 0) {
-      // Prefer an empty conv (avoids polluting history); else use the latest
       const empty = conversations.find(c => c.message_count === 0);
       setActiveConvId(empty ? empty.id : conversations[0].id);
     } else {
-      // No conversations at all → create one silently
-      createConversation().then(data => {
-        if (data) {
-          setActiveConvId(data.id);
-        }
-      });
+      createConversation().then(data => { if (data) setActiveConvId(data.id); });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadingConvs, activeConvId]);
 
-  // ── Load messages when activeConvId changes ───────────────────────────────
+  // Load messages when conv changes
   useEffect(() => {
     if (!activeConvId) return;
-    if (loadedConvRef.current === activeConvId) return; // already loaded
-
-    // Restore draft for this conversation
+    if (loadedConvRef.current === activeConvId) return;
     setInput(getDraft(activeConvId));
-
     getConversation(activeConvId)
       .then(data => {
         if (!data) return;
         loadedConvRef.current = activeConvId;
         setMessages(data.messages.map(m => ({
-          role:    m.role === 'assistant' ? 'ai' : 'user',
+          role: m.role === 'assistant' ? 'ai' : 'user',
           content: m.content,
           sources: m.sources || [],
         })));
-      })
-      .catch(() => {});
+      }).catch(() => {});
   }, [activeConvId]);
 
-  // Reset loadedConvRef when switching conversation so messages re-fetch
   const prevConvRef = useRef(null);
   useEffect(() => {
     if (prevConvRef.current !== activeConvId) {
       loadedConvRef.current = null;
-      prevConvRef.current   = activeConvId;
+      prevConvRef.current = activeConvId;
       setMessages([]);
     }
   }, [activeConvId]);
 
-  // ── Auto-scroll ───────────────────────────────────────────────────────────
+  // Auto-scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  // ── New chat ──────────────────────────────────────────────────────────────
   async function handleNewChat() {
-    if (messages.length === 0) {
-      return false;
-    }
+    if (messages.length === 0) return false;
     const data = await createConversation();
     if (!data) return false;
     setActiveConvId(data.id);
     return true;
   }
 
-  // ── Send message ──────────────────────────────────────────────────────────
   async function handleSend() {
     const text = input.trim();
     if (!text || loading || !activeConvId) return;
-
     setMessages(prev => [...prev, { role: 'user', content: text }]);
     setInput('');
     setDraft(activeConvId, '');
     setLoading(true);
     setError(null);
-
     try {
       const data = await postChatMessage(activeConvId, text, selectedCategory);
       setMessages(prev => [...prev, { role: 'ai', content: data.answer, sources: data.sources || [] }]);
@@ -624,240 +536,139 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
     if (activeConvId) setDraft(activeConvId, v);
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
-  return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      backgroundColor: 'var(--color-bg)',
-      fontFamily: "'Inter', sans-serif",
-      overflow: 'hidden',
-    }}>
+  const SUGGESTIONS = [
+    'Bagaimana cara mengecek status kontainer?',
+    'Berapa biaya layanan penanganan kontainer?',
+  ];
 
-      {/* Optional header (shown on standalone page, hidden when embedded in page.js) */}
-      {!hideHeader && (
-        <div style={{
-          maxWidth: showSidebar ? '100%' : '1000px',
-          width: '100%',
-          margin: '0 auto',
-          padding: '24px 24px 10px 24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          flexShrink: 0,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: '700', color: 'var(--color-navy)', margin: 0 }}>
-              Chatbot TPS
-            </h2>
-            <button style={{
-              background: 'none', border: 'none',
-              color: 'var(--color-muted)', cursor: 'pointer',
-              padding: '4px', display: 'flex', alignItems: 'center',
-            }} title="Informasi Sistem">
-              <InfoIcon size={16} />
-            </button>
-          </div>
-          <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--color-muted)', paddingBottom: '4px' }}>
-            Kategori Aktif: <strong style={{ color: 'var(--color-navy)' }}>{selectedCategory}</strong>
-          </p>
+  return (
+    <div className={s.chatShell}>
+      {/* ── Sidebar ── */}
+      {showSidebar && (
+        <div className={`${s.sidebar} ${sidebarOpen ? s.sidebarOpen : s.sidebarClosed}`}>
+          <Sidebar onNewChat={handleNewChat} />
         </div>
       )}
 
-      {/* Shell: sidebar (optional) + chat main — centered as a unit */}
-      <div style={{ flex: '1', display: 'flex', overflow: 'hidden', minHeight: 0 }}>
-        {/* Centered wrapper — padding here gives equal spacing on all 4 sides */}
-        <div style={{
-          display: 'flex',
-          flex: '1',
-          maxWidth: showSidebar ? '1120px' : '900px',
-          width: '100%',
-          margin: '0 auto',
-          padding: '4px 20px 16px 20px',
-          overflow: 'hidden',
-          minHeight: 0,
-          boxSizing: 'border-box',
-        }}>
-          {/* ── Unified card: sidebar + chat in one rounded container ── */}
-          <div style={{
-            display: 'flex',
-            flex: '1',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            border: '1px solid var(--color-border)',
-            boxShadow: 'var(--shadow-sm)',
-            minHeight: 0,
-          }}>
+      {/* ── Chat main ── */}
+      <div className={s.chatMain}>
 
-            {/* ── Sidebar ── */}
-            {showSidebar && <Sidebar onNewChat={handleNewChat} />}
-
-            {/* ── Chat Main ── */}
-            <div className={s.chatMain}>
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                flex: '1',
-                overflow: 'hidden',
-                minHeight: 0,
-                backgroundColor: '#fff',
-              }}>
-
-              {/* Top bar — merges visually with sidebar corporate navy */}
-              <div style={{
-                backgroundColor: 'var(--color-navy)',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
-                color: '#fff',
-                padding: '12.5px 20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexShrink: 0,
-              }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontWeight: '700', fontSize: '0.95rem', letterSpacing: '-0.01em' }}>Asisten TPS</span>
-                  <span style={{ fontSize: '0.75rem', opacity: '0.85' }}>
-                    Kategori: {selectedCategory} | Siap membantu Anda
-                  </span>
-                </div>
-              </div>
-
-              {/* Message log */}
-              <div
-                className={s.chatMessages}
-                style={{ padding: '20px', background: '#F8FAFC', flex: '1', overflowY: 'auto' }}
-                role="log" aria-live="polite" aria-label="Percakapan"
+        {/* Inner top bar */}
+        <div className={s.chatInnerHeader}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {showSidebar && (
+              <button
+                className={s.sidebarToggleBtn}
+                onClick={() => setSidebarOpen(o => !o)}
+                aria-label={sidebarOpen ? 'Sembunyikan sidebar' : 'Tampilkan sidebar'}
+                title={sidebarOpen ? 'Sembunyikan riwayat' : 'Tampilkan riwayat'}
               >
-                {messages.length === 0 && (
-                  <div className={`${s.bubbleRow} ${s.bubbleRowAi}`}>
-                    <div className={s.bubbleAvatar} aria-hidden="true" style={{
-                      backgroundColor: '#fff',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: '4px',
-                      overflow: 'hidden',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                      <img
-                        src="/images/Logo Pelindo.png"
-                        alt="Pelindo"
-                        style={{ width: '85%', height: '85%', objectFit: 'contain' }}
-                      />
-                    </div>
-                    <div className={s.bubbleContent}>
-                      <div className={`${s.bubble} ${s.bubbleAi}`}>
-                        Selamat datang di Chatbot Terminal Petikemas Surabaya. Bagaimana saya bisa membantu Anda hari ini?
-                      </div>
-                      <span style={{ fontSize: '0.65rem', color: 'var(--color-muted)', marginLeft: '12px', marginTop: '4px', display: 'inline-block' }}>
-                        {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {messages.map((msg, i) => (
-                  <MessageBubble key={i} role={msg.role} content={msg.content} sources={msg.sources} />
-                ))}
-
-                {loading && <ThinkingIndicator />}
-
-                {error && (
-                  <div className={s.errorBanner} role="alert">
-                    <AlertCircleIcon size={16} />
-                    <span>{error}</span>
-                    <button className={s.errorClose} onClick={() => setError(null)} aria-label="Tutup pesan error">
-                      <XIcon size={14} />
-                    </button>
-                  </div>
-                )}
-
-                <div ref={bottomRef} aria-hidden="true" />
-              </div>
-
-              {/* Suggestion chips */}
-              <div style={{
-                padding: '8px 20px',
-                borderTop: '1px solid var(--color-border)',
-                background: '#fff',
-                flexShrink: 0,
-              }}>
-                <p style={{ margin: '0 0 6px 0', fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-text-light)' }}>
-                  Pertanyaan yang sering diajukan:
-                </p>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {[
-                    'Bagaimana cara mengecek status kontainer?',
-                    'Berapa biaya layanan penanganan kontainer?',
-                  ].map((q) => (
-                    <button
-                      key={q}
-                      onClick={() => { setInput(q); inputRef.current?.focus(); }}
-                      style={{
-                        background: 'var(--color-bg)',
-                        border: '1px solid var(--color-border)',
-                        padding: '6px 12px',
-                        borderRadius: '20px',
-                        fontSize: '0.75rem',
-                        fontWeight: '500',
-                        color: 'var(--color-text-light)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Input area */}
-              <div style={{
-                padding: '10px 20px',
-                borderTop: '1px solid var(--color-border)',
-                background: '#fff',
-                flexShrink: 0,
-              }}>
-                <div className={s.inputWrapper}>
-                  <textarea
-                    ref={inputRef}
-                    id="chat-input"
-                    className={s.textarea}
-                    rows={1}
-                    value={input}
-                    onChange={handleInputChange}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Ketik pertanyaan Anda…"
-                    disabled={loading}
-                    aria-label="Input pertanyaan"
-                    aria-disabled={loading}
-                  />
-                  <button
-                    id="chat-send-btn"
-                    className={`${s.sendBtn}${loading ? ` ${s.sendBtnLoading}` : ''}`}
-                    onClick={handleSend}
-                    disabled={loading || !input.trim()}
-                    aria-label="Kirim pertanyaan"
-                  >
-                    {loading ? <SpinnerIcon size={18} className={s.spinIcon} /> : <SendIcon size={18} />}
-                  </button>
-                </div>
-                <p className={s.inputHint}>Enter untuk kirim&nbsp;·&nbsp;Shift+Enter untuk baris baru</p>
-              </div>
-
-              </div>
-            </div>
-            {/* end unified card */}
+                <SidebarToggleIcon size={17} />
+              </button>
+            )}
+            <span className={s.chatInnerTitle}>Asisten TPS</span>
           </div>
+          <div className={s.chatInnerSub}>
+            Kategori:&nbsp;
+            <span className={s.chatInnerSubBadge}>{selectedCategory}</span>
+          </div>
+        </div>
 
-        </div>{/* end centered maxWidth wrapper */}
+        {/* Message list */}
+        <div
+          className={s.chatMessages}
+          role="log"
+          aria-live="polite"
+          aria-label="Percakapan"
+        >
+          {messages.length === 0 && !loading && (
+            <div className={s.emptyState}>
+              <div className={s.emptyIcon}>
+                <img
+                  src="/images/Logo Pelindo.png"
+                  alt="TPS"
+                  style={{ width: '60%', height: '60%', objectFit: 'contain' }}
+                />
+              </div>
+              <p className={s.emptyTitle}>Selamat datang di Asisten TPS</p>
+              <p className={s.emptyDesc}>
+                Tanyakan informasi seputar layanan Terminal Petikemas Surabaya.
+                Saya siap membantu Anda.
+              </p>
+            </div>
+          )}
+
+          {messages.map((msg, i) => (
+            <MessageBubble key={i} role={msg.role} content={msg.content} sources={msg.sources} />
+          ))}
+
+          {loading && <ThinkingIndicator />}
+
+          {error && (
+            <div className={s.errorBanner} role="alert">
+              <AlertCircleIcon size={16} />
+              <span>{error}</span>
+              <button className={s.errorClose} onClick={() => setError(null)} aria-label="Tutup">
+                <XIcon size={14} />
+              </button>
+            </div>
+          )}
+
+          <div ref={bottomRef} aria-hidden="true" />
+        </div>
+
+        {/* Suggestions — only shown when no messages */}
+        {messages.length === 0 && !loading && (
+          <div className={s.suggestionsWrap}>
+            <p className={s.suggestionsLabel}>Pertanyaan umum</p>
+            <div className={s.suggestions}>
+              {SUGGESTIONS.map(q => (
+                <button
+                  key={q}
+                  className={s.suggestionChip}
+                  onClick={() => { setInput(q); inputRef.current?.focus(); }}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Input area */}
+        <div className={s.inputArea}>
+          <div className={s.inputBarWrap}>
+            <div className={s.inputWrapper}>
+              <textarea
+                ref={inputRef}
+                id="chat-input"
+                className={s.textarea}
+                rows={1}
+                value={input}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder="Ketik pertanyaan Anda…"
+                disabled={loading}
+                aria-label="Input pertanyaan"
+              />
+              <button
+                id="chat-send-btn"
+                className={`${s.sendBtn}${loading ? ` ${s.sendBtnLoading}` : ''}`}
+                onClick={handleSend}
+                disabled={loading || !input.trim()}
+                aria-label="Kirim"
+              >
+                {loading ? <SpinnerIcon size={16} className={s.spinIcon} /> : <SendIcon size={16} />}
+              </button>
+            </div>
+            <p className={s.inputHint}>Enter untuk kirim · Shift+Enter untuk baris baru</p>
+          </div>
+        </div>
+
       </div>
     </div>
   );
 }
-
-// ─── Public export ────────────────────────────────────────────────────────────
 
 export default function ChatInterface({ hideHeader = false, showSidebar = true }) {
   return (
