@@ -928,7 +928,15 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
             {/* Input area */}
             <div className={s.inputArea}>
               <div className={s.inputBarWrap}>
-                <div className={s.inputWrapper} style={{ flexDirection: 'column', alignItems: 'stretch', padding: '12px 14px' }}>
+                <div className={s.inputWrapper} style={{
+                  flexDirection: 'column',
+                  alignItems: 'stretch',
+                  padding: '16px 20px 12px 20px',
+                  borderRadius: '24px',
+                  border: '1.5px solid var(--color-border)',
+                  boxShadow: 'var(--shadow-md)',
+                  background: 'var(--color-surface)',
+                }}>
                   {/* Textarea occupies top */}
                   <textarea
                     ref={inputRef}
@@ -941,7 +949,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                     placeholder="Ketik pertanyaan Anda…"
                     disabled={loading}
                     aria-label="Input pertanyaan"
-                    style={{ width: '100%', minHeight: '36px', maxHeight: '240px' }}
+                    style={{ width: '100%', minHeight: '64px', maxHeight: '240px' }}
                   />
 
                   {/* Controls row occupies bottom */}
@@ -949,9 +957,9 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    marginTop: '8px',
+                    marginTop: '12px',
                     borderTop: '1px solid rgba(0, 0, 0, 0.05)',
-                    paddingTop: '8px',
+                    paddingTop: '12px',
                   }}>
                     {/* Left: Status text if listening */}
                     <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', flex: 1 }}>
@@ -971,15 +979,15 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                     </div>
 
                     {/* Right: Mic + Send buttons */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
                       {/* Speech to text (Microphone) */}
                       <button
                         onClick={toggleListening}
                         disabled={loading}
                         title={isListening ? 'Hentikan mendengarkan' : 'Ketik dengan suara'}
                         style={{
-                          width: '32px',
-                          height: '32px',
+                          width: '42px',
+                          height: '42px',
                           borderRadius: '50%',
                           border: 'none',
                           background: isListening ? '#EF4444' : 'rgba(0, 0, 0, 0.05)',
@@ -993,7 +1001,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                         onMouseEnter={e => { if (!isListening) e.currentTarget.style.background = 'rgba(0, 0, 0, 0.08)'; }}
                         onMouseLeave={e => { if (!isListening) e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)'; }}
                       >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
                           <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
                           <line x1="12" y1="19" x2="12" y2="23" />
@@ -1009,21 +1017,26 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                         disabled={loading || !input.trim()}
                         aria-label="Kirim"
                         style={{
-                          width: '32px',
-                          height: '32px',
+                          width: '42px',
+                          height: '42px',
                           borderRadius: '50%',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           padding: 0,
+                          backgroundColor: loading || !input.trim() ? 'rgba(0, 0, 0, 0.04)' : 'var(--color-brand)',
+                          color: loading || !input.trim() ? 'var(--color-text-faint)' : '#ffffff',
+                          border: 'none',
+                          cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s ease',
                         }}
                       >
-                        {loading ? <SpinnerIcon size={14} className={s.spinIcon} /> : <SendIcon size={14} />}
+                        {loading ? <SpinnerIcon size={18} className={s.spinIcon} /> : <SendIcon size={18} />}
                       </button>
                     </div>
                   </div>
                 </div>
-                <p className={s.inputHint}>Enter untuk kirim · Shift+Enter untuk baris baru</p>
+                <p className={s.inputHint}>Asisten TPS dapat menampilkan informasi yang kurang akurat. Asisten AI PT Terminal Petikemas Surabaya.</p>
               </div>
             </div>
           </>
