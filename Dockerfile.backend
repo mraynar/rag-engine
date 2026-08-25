@@ -3,20 +3,13 @@ FROM python:3.14-slim
 
 WORKDIR /app
 
-# Install dependency dulu (layer terpisah supaya cache Docker efektif -
-# kalau cuma kode yang berubah, tidak perlu install ulang semua package)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Salin kode backend + data (dokumen & vector store ikut, sesuai keinginan
-# supaya konsisten dengan yang dipakai untuk develop). data/config_store.json
-# SENGAJA tidak disalin (berisi API key asli, sama seperti tidak di-push ke
-# git) - nanti otomatis dibuat dari .example saat container pertama start,
-# atau diisi lewat volume mount di docker-compose.yml
 COPY app/ app/
 COPY data/config_store.json.example data/config_store.json.example
 RUN mkdir -p data/documents data/vector_store
 
-EXPOSE 8000
+EXPOSE 8001
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]

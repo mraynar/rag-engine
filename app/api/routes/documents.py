@@ -1,7 +1,8 @@
 import chromadb
-from fastapi import APIRouter, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Form, HTTPException, UploadFile, Depends
 
 from app.core.config import VECTOR_STORE_DIR
+from app.core.auth import require_user
 from app.schemas.document import DocumentToggleRequest
 from app.services.document_store import (
     delete_document,
@@ -27,6 +28,7 @@ def _get_documents_dir():
 async def upload_document(
     file: UploadFile,
     label: str = Form(default=""),
+    user: dict = Depends(require_user),
 ) -> dict:
     """Three-phase upload: save → ingest → register. Each phase rolls back the previous on failure."""
     from pathlib import Path
@@ -97,11 +99,12 @@ async def upload_document(
 
 @router.get("")
 def get_documents() -> list:
+    """Public: guest users can also see the document list."""
     return list_documents()
 
 
 @router.patch("/{filename}")
-def toggle_document_active(filename: str, request: DocumentToggleRequest) -> dict:
+def toggle_document_active(filename: str, request: DocumentToggleRequest, user: dict = Depends(require_user)) -> dict:
     try:
         entry = toggle_active(filename, request.is_active)
     except KeyError as e:
@@ -111,7 +114,7 @@ def toggle_document_active(filename: str, request: DocumentToggleRequest) -> dic
 
 
 @router.delete("/{filename}")
-def delete_document_entry(filename: str) -> dict:
+def delete_document_entry(filename: str, user: dict = Depends(require_user)) -> dict:
     documents_dir = _get_documents_dir()
     file_path = documents_dir / filename
 

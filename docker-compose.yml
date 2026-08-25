@@ -4,12 +4,9 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     ports:
-      - "8000:8000"
+      - "8001:8001"
     volumes:
-      # Mount seluruh folder data supaya config_store.json (dan perubahan
-      # lewat interface config) tersimpan permanen, tidak hilang tiap
-      # container di-restart/rebuild. Vector store & dokumen dari host
-      # (hasil git pull) juga dipakai langsung lewat sini.
+
       - ./data:/app/data
     env_file:
       - .env
@@ -23,4 +20,9 @@ services:
       - "3000:3000"
     depends_on:
       - backend
+    env_file:
+      - .env
+    environment:
+     
+      - BACKEND_INTERNAL_URL=http://backend:8001
     restart: unless-stopped

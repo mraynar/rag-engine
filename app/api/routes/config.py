@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 
 from app.schemas.config import ConfigCreateRequest, ConfigUpdateRequest
+from app.core.auth import require_user
 from app.services.config_store import (
     create_config,
     delete_config,
@@ -15,11 +16,12 @@ router = APIRouter()
 
 @router.get("/config")
 def get_all_config() -> list:
+    """Public: returns masked config list (API keys are hidden with ••••••••)."""
     return list_config()
 
 
 @router.post("/config", status_code=201)
-def create_config_entry(request: ConfigCreateRequest) -> dict:
+def create_config_entry(request: ConfigCreateRequest, user: dict = Depends(require_user)) -> dict:
     new_entry = create_config(
         group=request.group,
         description=request.description,
@@ -31,7 +33,7 @@ def create_config_entry(request: ConfigCreateRequest) -> dict:
 
 
 @router.put("/config/{key}")
-def update_config_entry(key: str, request: ConfigUpdateRequest) -> dict:
+def update_config_entry(key: str, request: ConfigUpdateRequest, user: dict = Depends(require_user)) -> dict:
     if request.description is None and request.value is None:
         raise HTTPException(
             status_code=422,
@@ -46,7 +48,7 @@ def update_config_entry(key: str, request: ConfigUpdateRequest) -> dict:
 
 
 @router.patch("/config/{key}/activate")
-def activate_config_entry(key: str) -> dict:
+def activate_config_entry(key: str, user: dict = Depends(require_user)) -> dict:
     try:
         set_active(key)
     except KeyError as e:
@@ -56,7 +58,7 @@ def activate_config_entry(key: str) -> dict:
 
 
 @router.delete("/config/{key}")
-def delete_config_entry(key: str) -> dict:
+def delete_config_entry(key: str, user: dict = Depends(require_user)) -> dict:
     try:
         result = delete_config(key)
     except KeyError as e:
@@ -76,7 +78,8 @@ def delete_config_entry(key: str) -> dict:
 
 
 @router.get("/config/{key}/reveal")
-def get_revealed_config(key: str) -> dict:
+def get_revealed_config(key: str, user: dict = Depends(require_user)) -> dict:
+    """Requires authentication to reveal the real (unmasked) API key value."""
     try:
         val = reveal_config(key)
     except KeyError as e:
@@ -87,7 +90,7 @@ def get_revealed_config(key: str) -> dict:
 from app.services.reset_service import reset_all_data
 
 @router.post("/config/reset")
-def reset_system_data() -> dict:
+def reset_system_data(user: dict = Depends(require_user)) -> dict:
     try:
         reset_all_data()
         return {"message": "System data reset successfully. All categories, documents, chat histories, and ChromaDB vector indices have been cleared."}

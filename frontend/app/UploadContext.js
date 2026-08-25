@@ -7,7 +7,7 @@ import { createContext, useCallback, useContext, useRef, useState } from 'react'
 
 const UploadContext = createContext(null);
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
 let _nextId = 0;
 

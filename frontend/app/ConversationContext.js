@@ -8,7 +8,7 @@ import { useAuth } from './AuthContext';
 
 const ConversationContext = createContext(null);
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 const GUEST_CONVS_KEY = 'rag_guest_conversations';
 
 export function ConversationProvider({ children }) {

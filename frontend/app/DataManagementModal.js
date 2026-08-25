@@ -6,7 +6,7 @@ import OneDriveManager from './OneDriveManager';
 import DocumentManager from './DocumentManager';
 import { XIcon, TrashIcon } from './icons';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
 export default function DataManagementModal() {
   const { isDataModalOpen, setIsDataModalOpen } = useCategory();

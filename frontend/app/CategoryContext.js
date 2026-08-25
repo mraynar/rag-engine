@@ -5,7 +5,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 
 const CategoryContext = createContext(null);
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 const LS_KEY = 'rag_selected_category';
 
 export function CategoryProvider({ children }) {

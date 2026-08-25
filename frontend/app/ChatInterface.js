@@ -9,7 +9,7 @@ import {
   AlertCircleIcon, XIcon, SendIcon, SpinnerIcon,
 } from './icons';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // ─── Inline SVG icons used only inside this file ────────────────────────────
 

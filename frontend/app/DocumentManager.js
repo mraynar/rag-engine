@@ -5,7 +5,7 @@ import { AlertCircleIcon, CheckCircleIcon, SpinnerIcon, TrashIcon } from './icon
 import { useUpload } from './UploadContext';
 import s from './documents/documents.module.css';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
 const SUPPORTED_ACCEPT = '.txt,.csv,.xlsx,.xls,.docx,.pdf,.pptx,.jpg,.jpeg,.png,.webp';
 const SUPPORTED_LABEL  = '.txt, .csv, .xlsx, .xls, .docx, .pdf, .pptx, .jpg, .jpeg, .png, .webp';

@@ -8,7 +8,7 @@ import {
   XIcon, SpinnerIcon, RefreshIcon, SendIcon, ChatIcon, SunIcon
 } from './icons';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 let _toastId = 0;
 

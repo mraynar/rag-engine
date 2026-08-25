@@ -1,12 +1,13 @@
 import tempfile
 from pathlib import Path
 from threading import Lock
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 
 _syncing_sources = set()
 _sync_lock = Lock()
 
 from app.schemas.source import SourceCreateRequest, SourceUpdateRequest
+from app.core.auth import require_user
 from app.services.sources_store import (
     list_sources,
     get_source,
@@ -23,14 +24,13 @@ from app.services.ingestion import ingest_document
 router = APIRouter(prefix="/sources", tags=["sources"])
 
 
-
 @router.get("")
-def get_all_sources() -> list:
+def get_all_sources(user: dict = Depends(require_user)) -> list:
     return list_sources()
 
 
 @router.post("", status_code=201)
-def create_new_source(request: SourceCreateRequest) -> dict:
+def create_new_source(request: SourceCreateRequest, user: dict = Depends(require_user)) -> dict:
     try:
         new_entry = create_source(
             category_name=request.category_name,
@@ -42,7 +42,7 @@ def create_new_source(request: SourceCreateRequest) -> dict:
 
 
 @router.put("/{id}")
-def update_existing_source(id: str, request: SourceUpdateRequest) -> dict:
+def update_existing_source(id: str, request: SourceUpdateRequest, user: dict = Depends(require_user)) -> dict:
     try:
         updated = update_source(
             id=id,
@@ -57,7 +57,7 @@ def update_existing_source(id: str, request: SourceUpdateRequest) -> dict:
 
 
 @router.delete("/{id}")
-def delete_existing_source(id: str) -> dict:
+def delete_existing_source(id: str, user: dict = Depends(require_user)) -> dict:
     try:
         source = get_source(id)
         if source:
@@ -85,7 +85,7 @@ def delete_existing_source(id: str) -> dict:
 
 
 @router.post("/{id}/sync")
-def sync_source(id: str) -> dict:
+def sync_source(id: str, user: dict = Depends(require_user)) -> dict:
     with _sync_lock:
         if id in _syncing_sources:
             raise HTTPException(
