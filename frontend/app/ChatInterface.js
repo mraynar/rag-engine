@@ -715,11 +715,11 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
     }
   }, [messages, loading, activeView]);
 
-  // Auto-resize textarea height as content changes (max ~35% of viewport)
+  // Auto-resize textarea height as content changes (max ~40% of viewport)
   useEffect(() => {
     const textarea = inputRef.current;
     if (!textarea) return;
-    const maxH = Math.floor(window.innerHeight * 0.35);
+    const maxH = Math.floor(window.innerHeight * 0.40);
     if (!input) {
       // Empty: reset to single-line default
       textarea.style.height = '';
@@ -936,7 +936,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                 <div className={s.inputWrapper} style={{
                   flexDirection: 'column',
                   alignItems: 'stretch',
-                  padding: '16px 20px 12px 20px',
+                  padding: '10px 16px 8px 16px',
                   borderRadius: '24px',
                   border: '1.5px solid var(--color-border)',
                   boxShadow: 'var(--shadow-md)',
@@ -962,9 +962,8 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    marginTop: '12px',
-                    borderTop: '1px solid rgba(0, 0, 0, 0.05)',
-                    paddingTop: '12px',
+                    marginTop: '4px',
+                    paddingTop: '0px',
                   }}>
                     {/* Left: Status text if listening */}
                     <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', flex: 1 }}>
