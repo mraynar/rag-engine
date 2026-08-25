@@ -358,7 +358,7 @@
 }
 
 .msgRowInner {
-  max-width: 960px;
+  max-width: 800px;
   margin: 0 auto;
   padding: 0 24px;
   display: flex;
@@ -373,7 +373,7 @@
 
 .msgRowUserInner {
   flex-direction: row-reverse;
-  max-width: 960px;
+  max-width: 800px;
   margin: 0 auto;
   padding: 8px 24px;
   display: flex;
@@ -387,7 +387,7 @@
 }
 
 .msgRowAiInner {
-  max-width: 960px;
+  max-width: 800px;
   margin: 0 auto;
   padding: 8px 24px;
   display: flex;
@@ -561,7 +561,7 @@
    THINKING INDICATOR
    ============================================ */
 .thinkingRow {
-  max-width: 960px;
+  max-width: 800px;
   margin: 0 auto;
   padding: 10px 24px;
   display: flex;
@@ -642,7 +642,7 @@
    SUGGESTION CHIPS
    ============================================ */
 .suggestionsWrap {
-  max-width: 960px;
+  max-width: 800px;
   margin: 0 auto;
   padding: 16px 24px 20px;
   width: 100%;
@@ -738,7 +738,7 @@
 }
 
 .inputBarWrap {
-  max-width: 960px;
+  max-width: 800px;
   margin: 0 auto;
   pointer-events: auto; /* enable interaction for the wrapper and inner contents */
 }
@@ -769,7 +769,7 @@
   font-size: 0.9375rem;
   color: var(--color-text);
   line-height: 1.5;
-  max-height: 380px;
+  max-height: 600px;
   overflow-y: auto;
   padding: 6px 0;
   font-family: inherit;
