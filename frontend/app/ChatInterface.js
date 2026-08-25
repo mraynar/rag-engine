@@ -529,12 +529,13 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
             color: '#fff',
             fontSize: '0.85rem',
             fontWeight: activeView === 'config' ? '600' : '500',
-            background: activeView === 'config' ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+            background: activeView === 'config' ? 'rgba(255, 255, 255, 0.22)' : 'transparent',
+            border: activeView === 'config' ? '1px solid rgba(255, 255, 255, 0.35)' : '1px solid transparent',
             cursor: 'pointer',
             textAlign: 'left',
-            transition: 'background-color 0.2s',
+            transition: 'all 0.2s ease',
           }}
-          onMouseEnter={e => { if (activeView !== 'config') e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'; }}
+          onMouseEnter={e => { if (activeView !== 'config') e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.12)'; }}
           onMouseLeave={e => { if (activeView !== 'config') e.currentTarget.style.backgroundColor = 'transparent'; }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -555,6 +556,7 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
             padding: '8px 10px',
             borderRadius: 'var(--r-sm)',
             background: 'rgba(255, 255, 255, 0.08)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
             gap: '8px',
             width: '100%',
           }}>
@@ -568,10 +570,10 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
                 {(user.user_metadata?.display_name || user.email)[0].toUpperCase()}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <span style={{ fontSize: '0.8rem', color: '#fff', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }}>
+                <span style={{ fontSize: '0.8rem', color: '#fff', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '130px' }}>
                   {user.user_metadata?.display_name || user.email.split('@')[0]}
                 </span>
-                <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }}>
+                <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '130px' }}>
                   {user.email}
                 </span>
               </div>
@@ -581,12 +583,18 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
               title="Keluar dari akun"
               style={{
                 padding: '6px', borderRadius: 'var(--r-sm)',
-                color: 'rgba(255, 255, 255, 0.8)', cursor: 'pointer',
+                color: 'rgba(255, 255, 255, 0.85)', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'background-color 0.2s',
+                transition: 'all 0.2s ease',
               }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.3)';
+                e.currentTarget.style.color = '#fff';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.85)';
+              }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -606,16 +614,25 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
               width: '100%',
               padding: '10px',
               borderRadius: 'var(--r-sm)',
-              background: '#fff',
+              background: '#ffffff',
               color: 'var(--color-brand)',
               fontWeight: '600',
               fontSize: '0.8rem',
               cursor: 'pointer',
-              transition: 'transform 0.2s',
-              boxShadow: 'var(--shadow-sm)'
+              transition: 'all 0.2s ease',
+              boxShadow: 'var(--shadow-sm)',
+              border: '1px solid transparent'
             }}
-            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+            onMouseEnter={e => {
+              e.currentTarget.style.backgroundColor = '#EBF4FF';
+              e.currentTarget.style.color = 'var(--color-brand-dark)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.backgroundColor = '#ffffff';
+              e.currentTarget.style.color = 'var(--color-brand)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />

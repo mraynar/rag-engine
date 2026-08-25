@@ -17,6 +17,16 @@
   --color-brand-mid:    #DBEAFE;
   --color-brand-ring:   rgba(43, 127, 214, 0.18);
 
+  /* Legacy aliases for backward compatibility */
+  --color-navy:         var(--color-brand);
+  --color-navy-light:   var(--color-brand-hover);
+  --color-navy-dark:    var(--color-brand-dark);
+  --color-accent:       var(--color-brand);
+  --color-accent-hover: var(--color-brand-hover);
+  --color-accent-light: var(--color-brand-light);
+  --color-muted:        var(--color-text-muted);
+  --color-text-light:   var(--color-text-2);
+
   /* Sidebar — keep TPS blue */
   --sidebar-bg:         #2B7FD6;
   --sidebar-active:     rgba(255,255,255,0.18);
