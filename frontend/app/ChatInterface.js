@@ -107,18 +107,20 @@ function relativeTime(isoStr) {
 
 function ThinkingIndicator() {
   return (
-    <div className={s.thinkingRow} aria-label="AI is processing...">
-      <div className={`${s.avatar} ${s.avatarAi}`}>
-        <img
-          src="/images/Logo Pelindo.png"
-          alt="TPS"
-          style={{ width: '82%', height: '82%', objectFit: 'contain' }}
-        />
-      </div>
-      <div className={s.thinkingDots}>
-        <span className={s.dot} />
-        <span className={s.dot} />
-        <span className={s.dot} />
+    <div className={s.msgRow}>
+      <div className={s.thinkingRow} aria-label="AI is processing...">
+        <div className={`${s.avatar} ${s.avatarAi}`}>
+          <img
+            src="/images/Logo Pelindo.png"
+            alt="TPS"
+            style={{ width: '82%', height: '82%', objectFit: 'contain' }}
+          />
+        </div>
+        <div className={s.thinkingDots}>
+          <span className={s.dot} />
+          <span className={s.dot} />
+          <span className={s.dot} />
+        </div>
       </div>
     </div>
   );
