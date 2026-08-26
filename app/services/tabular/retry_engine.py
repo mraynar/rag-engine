@@ -219,7 +219,12 @@ def execute_with_retry(
         tried_plans.add(sig)
         retry_count += 1
 
-        new_result = execute_query(source_id, new_plan, db_schema, df_cache=df_cache)
+        try:
+            new_result = execute_query(source_id, new_plan, db_schema, df_cache=df_cache)
+        except Exception as e:
+            print(f"[retry_engine] Strategy {strategy.__class__.__name__} failed with error: {e}")
+            continue
+
         strategy_enum_val = get_strategy_enum(strategy)
         
         new_result.retry_count = retry_count

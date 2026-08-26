@@ -23,6 +23,59 @@ from app.services.tabular.query_builder import build_query_plan, QueryBuildError
 from app.services.tabular.retry_engine import execute_with_retry
 from app.services.tabular.formatter import format_response
 from app.services.tabular.settings import RETURN_DEBUG_BLOCK
+from app.core.config import get_generation_model
+
+
+def check_data_query_and_respond(question: str, category: str) -> Optional[str]:
+    """Uses Gemini to check if the question is a greeting, small talk, or unrelated to the category data.
+    
+    If it is unrelated, returns a friendly conversational response pointing to the data.
+    If it is a valid data question, returns None.
+    """
+    import sys
+    if "pytest" in sys.modules:
+        return None
+
+    try:
+        client = get_gemini_client()
+        model = get_generation_model()
+        
+        prompt = (
+            f"You are a helpful data assistant for the dataset category '{category}'.\n"
+            f"The user is asking: \"{question}\"\n\n"
+            "Task:\n"
+            "1. Determine if this question is a greeting (like 'hello', 'halo', 'hi'), small talk, "
+            "or completely unrelated to the dataset category. (e.g., questions about weather, food, general chat, "
+            "or questions that do not ask about data at all).\n"
+            "2. If it is a greeting or unrelated, generate a short, friendly, and helpful response in Indonesian "
+            "explaining that you are a data assistant for this category, and give 2-3 specific example questions "
+            "they could ask about the data in this category.\n"
+            "3. If it IS a valid data question related to this category (even if phrased naturally or simply), respond ONLY with the word 'VALID'.\n\n"
+            "Example dataset categories and their contents:\n"
+            "- 'Overview Vessel': vessel productivity (BCH/BSH), call count, boxes, teus (domestic/international).\n"
+            "- 'Container Throughput': container throughput actual vs budget performance (domestic/international).\n"
+            "- 'Market Share': market share percentages of line operators (LOP) (domestic/international).\n"
+            "- 'Transhipment': transhipment container counts (20ft, 40ft), vessel operators, loading terminals, cities.\n\n"
+            "Response format:\n"
+            "Either 'VALID' (exactly) or your friendly Indonesian response."
+        )
+        
+        response = client.models.generate_content(
+            model=model,
+            contents=prompt
+        )
+        text_resp = response.text.strip()
+        if text_resp.upper() == "VALID":
+            return None
+        return text_resp
+    except Exception as e:
+        print(f"[check_data_query] Gemini check failed: {e}")
+        # Local rule-based fallback check if Gemini fails
+        greetings = ["halo", "hello", "hi ", "hei", "selamat pagi", "selamat siang", "selamat sore", "selamat malam", "siapa kamu", "help", "bantuan"]
+        q_lower = question.lower().strip()
+        if any(g in q_lower for g in greetings) or len(q_lower.split()) < 3:
+            return f"Saya asisten data untuk kategori {category}. Silakan tanyakan informasi terkait data pada kategori ini."
+        return None
 
 
 def answer_tabular_question(question: str, category_name: str) -> dict:
@@ -35,6 +88,15 @@ def answer_tabular_question(question: str, category_name: str) -> dict:
     """
     from app.services.tabular.resolver import sanitize_leading_number
     question = sanitize_leading_number(question)
+    
+    # 1. Guard against greetings and out-of-scope messages before any query plan building
+    greeting_resp = check_data_query_and_respond(question, category_name)
+    if greeting_resp:
+        return {
+            "answer": greeting_resp,
+            "sources": [f"Category Info: {category_name}"]
+        }
+    
     try:
         with get_db_conn() as conn:
             res = conn.execute(

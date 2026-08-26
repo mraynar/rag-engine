@@ -91,7 +91,11 @@ function setDraft(convId, text) {
 
 function relativeTime(isoStr) {
   if (!isoStr) return '';
-  const diff = Date.now() - new Date(isoStr + 'Z').getTime();
+  const hasTimezone = isoStr.endsWith('Z') || isoStr.includes('+') || /[-+]\d{2}:\d{2}$/.test(isoStr);
+  const dateStr = hasTimezone ? isoStr : isoStr + 'Z';
+  const parsedDate = new Date(dateStr);
+  if (isNaN(parsedDate.getTime())) return '';
+  const diff = Date.now() - parsedDate.getTime();
   const m = Math.floor(diff / 60000);
   if (m < 1)   return 'Just now';
   if (m < 60)  return `${m}m ago`;
@@ -100,7 +104,7 @@ function relativeTime(isoStr) {
   const d = Math.floor(h / 24);
   if (d === 1) return 'Yesterday';
   if (d < 7)   return `${d}d ago`;
-  return new Date(isoStr + 'Z').toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  return parsedDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 }
 
 // ─── Thinking indicator ───────────────────────────────────────────────────────
@@ -659,9 +663,11 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
 
 function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
   const { selectedCategory, setSelectedCategory } = useCategory();
+  const { user } = useAuth();
   const {
     activeConvId, setActiveConvId,
     conversations, loadingConvs,
+    loadConversations,
     createConversation, getConversation, postChatMessage,
   } = useConversation();
 
@@ -690,9 +696,36 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
       if (queryCategoryName) {
         setSelectedCategory(queryCategoryName);
       }
+      
+      // If guest mode, bootstrap the conversation in localStorage if not exists
+      if (!user) {
+        try {
+          const stored = localStorage.getItem('rag_guest_conversations');
+          const guestConvs = stored ? JSON.parse(stored) : [];
+          const exists = guestConvs.some(c => c.id === queryConvId);
+          if (!exists) {
+            const newConv = {
+              id: queryConvId,
+              title: queryCategoryName || 'New conversation',
+              title_source: 'auto',
+              pinned: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              category_name: queryCategoryName,
+              messages: []
+            };
+            guestConvs.push(newConv);
+            localStorage.setItem('rag_guest_conversations', JSON.stringify(guestConvs));
+            loadConversations();
+          }
+        } catch (e) {
+          console.error('Error bootstrapping guest conversation:', e);
+        }
+      }
+      
       window.history.replaceState(null, '', '/');
     }
-  }, [loadingConvs, queryConvId, queryCategoryName, setActiveConvId, setSelectedCategory]);
+  }, [loadingConvs, queryConvId, queryCategoryName, setActiveConvId, setSelectedCategory, user, loadConversations]);
 
   const loadedConvRef = useRef(null);
   const bottomRef     = useRef(null);

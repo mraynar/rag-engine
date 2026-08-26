@@ -19,6 +19,11 @@ from app.services.tabular.domain_models import (
 )
 
 
+def get_metric_label(col: str) -> str:
+    """Resolve physical column name to readable metric name."""
+    return "market share" if col == "%" else col
+
+
 def format_number(val: Any) -> str:
     """
     Format numeric values to Indonesian standard representation (dot for thousands, comma for decimals).
@@ -86,7 +91,8 @@ def format_response(
             return "Berdasarkan data yang ditemukan, nilainya adalah 0."
 
     # 2. Extract common context elements
-    metric = resolved.metrics[0].upper() if resolved.metrics else "NILAI"
+    raw_metric = resolved.metrics[0] if resolved.metrics else "nilai"
+    metric_label = get_metric_label(raw_metric).lower()
     operator = resolved.operators[0] if resolved.operators else None
     year = resolved.month.year if resolved.month else None
 
@@ -105,7 +111,7 @@ def format_response(
                     formatted_diff = format_number(diff)
                     if is_percentage:
                         formatted_diff = f"{formatted_diff}%"
-                    return f"Selisih {metric.lower()} adalah {formatted_diff}."
+                    return f"Selisih {metric_label} adalah {formatted_diff}."
         
         # Check if percentage contribution requested
         if any(w in question.lower() for w in ["persentase", "kontribusi", "percentage", "contribution"]):
@@ -117,7 +123,7 @@ def format_response(
                         pct = (val1 / val2) * 100
                         formatted_pct = format_number(pct)
                         sheet_word = "internasional" if any(w in question.lower() for w in ["internasional", "international"]) else "domestik"
-                        return f"Persentase kontribusi {metric.lower()} {sheet_word} adalah {formatted_pct}%."
+                        return f"Persentase kontribusi {metric_label} {sheet_word} adalah {formatted_pct}%."
         
         # Fallback for multi-hop: present step results sequentially
         output_parts = []
@@ -161,7 +167,7 @@ def format_response(
                     formatted_val = f"{formatted_val}%"
                 op_str = f" {operator}" if operator else ""
                 period_str = f" pada tahun {year}" if year else ""
-                metric_name = resolved.metrics[0] if resolved.metrics else "nilai"
+                metric_name = get_metric_label(resolved.metrics[0]) if resolved.metrics else "nilai"
                 return f"{metric_name}{op_str}{period_str} adalah {formatted_val}."
 
         # Trend analysis formatting
@@ -203,7 +209,7 @@ def format_response(
             else:
                 formatted_group = format_number(group_val)
                 
-            return f"Berdasarkan data, {formatted_group} memiliki {metric.lower()} {rank_word} yaitu {formatted_val}."
+            return f"Berdasarkan data, {formatted_group} memiliki {metric_label} {rank_word} yaitu {formatted_val}."
 
         if ast.query_type == QueryType.COMPARISON or ast.intent == UserIntent.COMPARISON or (ast.query_type == QueryType.MULTI_HOP and len(results) == 1):
             group_cols = [c for c in data.columns if c.upper() in ["LOP", "OPERATOR", "VESSEL OPERATOR", "MONTH", "YEAR", "BULAN", "_SHEET"]]
@@ -221,8 +227,20 @@ def format_response(
                 lines.append(f"{formatted_group}: {format_number(row[val_col])}")
             return "\n".join(lines)
 
-        # General DataFrame fallback
-        return data.to_string(index=False)
+        # General DataFrame fallback - format as markdown table instead of raw string to prevent raw data dump
+        if data.empty:
+            return "Data tidak ditemukan."
+        
+        headers = list(data.columns)
+        lines = ["| " + " | ".join(str(h) for h in headers) + " |"]
+        lines.append("| " + " | ".join("---" for _ in headers) + " |")
+        for _, row in data.head(15).iterrows():
+            lines.append("| " + " | ".join(str(row[h]) for h in headers) + " |")
+            
+        rows_str = "\n".join(lines)
+        more_rows = len(data) - 15
+        suffix = f"\n\n*(dan {more_rows} baris data lainnya)*" if more_rows > 0 else ""
+        return f"Berikut adalah data yang relevan:\n\n{rows_str}{suffix}"
 
     # Scalar formatting (single lookup or aggregation)
     formatted_val = format_number(data)
@@ -244,11 +262,11 @@ def format_response(
         
         op_str = f" untuk {operator}" if operator else ""
         period_str = f" pada tahun {year}" if year else ""
-        metric_name = resolved.metrics[0] if resolved.metrics else "nilai"
+        metric_name = get_metric_label(resolved.metrics[0]) if resolved.metrics else "nilai"
         return f"{agg_word.capitalize()} {metric_name}{op_str}{period_str} adalah {formatted_val}."
 
     # Simple lookup default
     op_str = f" {operator}" if operator else ""
     period_str = f" pada tahun {year}" if year else ""
-    metric_name = resolved.metrics[0] if resolved.metrics else "nilai"
+    metric_name = get_metric_label(resolved.metrics[0]) if resolved.metrics else "nilai"
     return f"{metric_name}{op_str}{period_str} adalah {formatted_val}."

@@ -15,7 +15,7 @@ SCHEMA_REGISTRY = {
     },
     "Market Share": {
         "sheets": ["V.OPR DOM", "V.OPR INT"],
-        "columns": ["YEAR", "MONTH", "OPERATOR", "%"]
+        "columns": ["YEAR", "MONTH", "LOP", "%"]
     },
     "Transhipment": {
         "sheets": ["Transhipment"],

@@ -436,8 +436,8 @@ class TestFilterConstruction(unittest.TestCase):
             dataset="Market Share"
         )
         
-        # Should use OPERATOR column for Market Share dataset
-        operator_filters = [f for f in ast.filters if f.column == "OPERATOR"]
+        # Should use LOP column for Market Share dataset
+        operator_filters = [f for f in ast.filters if f.column == "LOP"]
         self.assertEqual(len(operator_filters), 1)
         self.assertEqual(operator_filters[0].value, "TIL")
 

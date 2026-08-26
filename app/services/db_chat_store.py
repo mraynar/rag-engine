@@ -347,9 +347,9 @@ def create_user_conversation_with_category(user_id: Optional[str], category_name
             conn.execute(
                 text("""
                     INSERT INTO public.conversations (id, user_id, title, title_source, pinned, category_name)
-                    VALUES (:id, :user_id, 'New conversation', 'auto', false, :category_name)
+                    VALUES (:id, :user_id, :title, 'auto', false, :category_name)
                 """),
-                {"id": conv_id, "user_id": user_id, "category_name": category_name}
+                {"id": conv_id, "user_id": user_id, "title": category_name, "category_name": category_name}
             )
             
             conv = conn.execute(

@@ -371,7 +371,7 @@ def _resolve_operator_column(dataset: str, schema: Dict) -> str:
     
     Different datasets use different operator columns:
     - Overview Vessel: LOP
-    - Market Share: OPERATOR
+    - Market Share: LOP
     - Transhipment: VESSEL OPERATOR
     
     Args:
@@ -384,13 +384,20 @@ def _resolve_operator_column(dataset: str, schema: Dict) -> str:
     resolved_schema = get_schema(dataset, db_schema=schema)
     columns = resolved_schema.get("columns", [])
     
-    # Smart operator column search
-    for target in ["vessel operator", "lop", "operator", "v.opr"]:
+    # Smart operator column search with dataset-specific priority
+    if dataset == "Transhipment":
+        targets = ["vessel operator", "operator", "lop", "v.opr"]
+    elif dataset in ["Market Share", "Overview Vessel"]:
+        targets = ["lop", "operator", "vessel operator", "v.opr"]
+    else:
+        targets = ["lop", "vessel operator", "operator", "v.opr"]
+
+    for target in targets:
         for col in columns:
             if col.lower() == target:
                 return col
                 
-    for target in ["vessel operator", "operator", "lop", "v.opr"]:
+    for target in targets:
         for col in columns:
             if target in col.lower():
                 return col

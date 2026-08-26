@@ -156,10 +156,15 @@ def apply_aggregation(
 
     # Resolve aggregation column case-insensitively if specified
     agg_col = agg.column
-    if agg_col and agg_col not in df.columns:
+    if agg_col:
         matched_col = next((c for c in df.columns if c.strip().lower() == agg_col.strip().lower()), None)
         if matched_col:
             agg_col = matched_col
+        else:
+            # Column not found in this DataFrame
+            if clean_group_by:
+                return pd.DataFrame()
+            return None
 
     if clean_group_by:
         # Grouped Aggregation

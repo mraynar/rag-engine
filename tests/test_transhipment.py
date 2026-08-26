@@ -57,9 +57,9 @@ class TestTranshipmentQueries(unittest.TestCase):
         col_vessel = _get_operator_column("Overview Vessel")
         self.assertEqual(col_vessel, "LOP")
 
-        # Market Share resolves to OPERATOR
+        # Market Share resolves to LOP
         col_ms = _get_operator_column("Market Share")
-        self.assertEqual(col_ms, "OPERATOR")
+        self.assertEqual(col_ms, "LOP")
 
     @patch("app.services.tabular_query.get_db_conn")
     @patch("app.services.tabular.executor.load_dataframe")

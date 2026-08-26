@@ -182,8 +182,8 @@ class TestDatasetAwareColumnResolution(unittest.TestCase):
             dataset="Market Share"
         )
         
-        # Should have operator filter using OPERATOR column
-        op_filters = [f for f in plan.filters if f.column == "OPERATOR"]
+        # Should have operator filter using LOP column
+        op_filters = [f for f in plan.filters if f.column == "LOP"]
         self.assertEqual(len(op_filters), 1)
         self.assertEqual(op_filters[0].value, "TIL")
 

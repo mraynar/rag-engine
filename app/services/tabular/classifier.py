@@ -326,7 +326,7 @@ def _get_operator_column(dataset: Optional[str]) -> str:
     
     Different datasets use different column names:
     - Overview Vessel: LOP
-    - Market Share: OPERATOR
+    - Market Share: LOP
     - Transhipment: VESSEL OPERATOR
     - Container Throughput: No operator column (return LOP as default)
     
@@ -343,13 +343,20 @@ def _get_operator_column(dataset: Optional[str]) -> str:
     schema = get_schema(dataset, db_schema=None)
     columns = schema.get("columns", [])
     
-    # Smart operator column search
-    for target in ["vessel operator", "lop", "operator", "v.opr"]:
+    # Smart operator column search with dataset-specific priority
+    if dataset == "Transhipment":
+        targets = ["vessel operator", "operator", "lop", "v.opr"]
+    elif dataset in ["Market Share", "Overview Vessel"]:
+        targets = ["lop", "operator", "vessel operator", "v.opr"]
+    else:
+        targets = ["lop", "vessel operator", "operator", "v.opr"]
+
+    for target in targets:
         for col in columns:
             if col.lower() == target:
                 return col
                 
-    for target in ["vessel operator", "operator", "lop", "v.opr"]:
+    for target in targets:
         for col in columns:
             if target in col.lower():
                 return col
