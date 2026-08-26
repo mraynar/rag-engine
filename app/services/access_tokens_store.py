@@ -6,28 +6,29 @@ from app.services.db import get_db_conn
 def create_token(category_name: str, label: Optional[str] = None) -> dict:
     """Validate that category_name exists in data_sources, generate a secure token, and store it."""
     with get_db_conn() as conn:
-        source = conn.execute(
-            text("SELECT id FROM public.data_sources WHERE category_name = :category_name"),
-            {"category_name": category_name}
-        ).fetchone()
-        
-        if not source:
-            raise ValueError("Kategori ini belum di-sync sebagai data tabular, token deep-link cuma bisa dibuat untuk kategori tabular")
+        with conn.begin():
+            source = conn.execute(
+                text("SELECT id FROM public.data_sources WHERE category_name = :category_name"),
+                {"category_name": category_name}
+            ).fetchone()
+            
+            if not source:
+                raise ValueError("Kategori ini belum di-sync sebagai data tabular, token deep-link cuma bisa dibuat untuk kategori tabular")
 
-        token_str = secrets.token_urlsafe(16)
-        
-        conn.execute(
-            text("""
-                INSERT INTO public.access_tokens (token, category_name, label)
-                VALUES (:token, :category_name, :label)
-            """),
-            {"token": token_str, "category_name": category_name, "label": label}
-        )
-        
-        row = conn.execute(
-            text("SELECT id, token, category_name, label, created_at, revoked_at FROM public.access_tokens WHERE token = :token"),
-            {"token": token_str}
-        ).fetchone()
+            token_str = secrets.token_urlsafe(16)
+            
+            conn.execute(
+                text("""
+                    INSERT INTO public.access_tokens (token, category_name, label)
+                    VALUES (:token, :category_name, :label)
+                """),
+                {"token": token_str, "category_name": category_name, "label": label}
+            )
+            
+            row = conn.execute(
+                text("SELECT id, token, category_name, label, created_at, revoked_at FROM public.access_tokens WHERE token = :token"),
+                {"token": token_str}
+            ).fetchone()
         
     return {
         "id": str(row[0]),
