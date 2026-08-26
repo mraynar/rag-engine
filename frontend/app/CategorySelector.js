@@ -331,6 +331,17 @@ export default function CategorySelector() {
           background-color: var(--color-navy);
           color: #fff;
         }
+
+        @media (max-width: 640px) {
+          .category-selector-label {
+            display: none;
+          }
+          .category-selector-btn {
+            font-size: 0.72rem;
+            padding: 6px 8px;
+            gap: 4px;
+          }
+        }
       `}</style>
     </div>
   );

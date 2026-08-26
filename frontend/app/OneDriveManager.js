@@ -301,7 +301,7 @@ export default function OneDriveManager() {
         </form>
       )}
 
-      <div style={{ background: '#fff', border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden', maxHeight: '260px', overflowY: 'auto' }}>
+      <div style={{ background: '#fff', border: '1px solid var(--color-border)', borderRadius: '8px', maxHeight: '260px', overflow: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
           <thead>
             <tr style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}>

@@ -432,6 +432,9 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
             setActiveView('chat');
             const ok = await onNewChat();
             if (!ok) { setShake(true); setTimeout(() => setShake(false), 600); }
+            if (typeof window !== 'undefined' && window.innerWidth <= 640) {
+              setSidebarOpen(false);
+            }
           }}
           style={{
             width: '100%',
@@ -463,7 +466,13 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
             <div className={s.convGroupLabel} aria-hidden="true">Pinned</div>
             {pinned.map(conv => (
               <ConvItem key={conv.id} conv={conv} isActive={conv.id === activeConvId && activeView === 'chat'}
-                onSelect={(id) => { setActiveView('chat'); setActiveConvId(id); }}
+                onSelect={(id) => {
+                  setActiveView('chat');
+                  setActiveConvId(id);
+                  if (typeof window !== 'undefined' && window.innerWidth <= 640) {
+                    setSidebarOpen(false);
+                  }
+                }}
                 onRename={renameConversation}
                 onPin={togglePin}
                 onDelete={handleDelete}
@@ -477,7 +486,13 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
             {pinned.length > 0 && <div className={s.convGroupLabel} aria-hidden="true">Recent</div>}
             {unpinned.map(conv => (
               <ConvItem key={conv.id} conv={conv} isActive={conv.id === activeConvId && activeView === 'chat'}
-                onSelect={(id) => { setActiveView('chat'); setActiveConvId(id); }}
+                onSelect={(id) => {
+                  setActiveView('chat');
+                  setActiveConvId(id);
+                  if (typeof window !== 'undefined' && window.innerWidth <= 640) {
+                    setSidebarOpen(false);
+                  }
+                }}
                 onRename={renameConversation}
                 onPin={togglePin}
                 onDelete={handleDelete}
@@ -503,7 +518,12 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
       }}>
         {/* Configuration Button */}
         <button
-          onClick={() => setActiveView('config')}
+          onClick={() => {
+            setActiveView('config');
+            if (typeof window !== 'undefined' && window.innerWidth <= 640) {
+              setSidebarOpen(false);
+            }
+          }}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -650,6 +670,12 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
   const [activeView, setActiveView]   = useState('chat'); // 'chat' or 'config'
   const [isListening, setIsListening] = useState(false);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 640) {
+      setSidebarOpen(false);
+    }
+  }, []);
+
   const loadedConvRef = useRef(null);
   const bottomRef     = useRef(null);
   const inputRef      = useRef(null);
@@ -791,6 +817,14 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
 
   return (
     <div className={s.chatShell}>
+      {/* ── Mobile Sidebar Backdrop Overlay ── */}
+      {showSidebar && sidebarOpen && (
+        <div
+          className={s.mobileSidebarBackdrop}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ── Sidebar ── */}
       {showSidebar && (
         <div className={`${s.sidebar} ${sidebarOpen ? s.sidebarOpen : s.sidebarClosed}`}>
@@ -832,23 +866,14 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
               </div>
             )}
 
-            <span className={s.chatInnerTitle} style={{ fontSize: '0.9rem', fontWeight: '700' }}>
+            <span className={s.chatInnerTitle}>
               TPS Assistant
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {/* Powered by Gemini Badge */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '5px',
-              fontSize: '0.72rem', fontWeight: '600',
-              color: '#1c6bbf',
-              background: 'var(--color-brand-light)',
-              border: '1px solid rgba(43,127,214,0.2)',
-              padding: '4px 10px',
-              borderRadius: 'var(--r-full)',
-              whiteSpace: 'nowrap',
-            }}>
+            <div className={s.geminiBadge}>
               <span style={{
                 width: '6px', height: '6px',
                 background: 'var(--color-brand)',

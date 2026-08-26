@@ -256,10 +256,11 @@
 }
 
 .chatInnerTitle {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 700;
   color: var(--color-text);
   letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
 .chatInnerSub {
@@ -808,11 +809,61 @@
   letter-spacing: 0.01em;
 }
 
+.geminiBadge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #1c6bbf;
+  background: var(--color-brand-light);
+  border: 1px solid rgba(43,127,214,0.2);
+  padding: 4px 10px;
+  border-radius: var(--r-full);
+  white-space: nowrap;
+}
+
+.mobileSidebarBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(11, 47, 92, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+}
+
 /* ============================================
    RESPONSIVE
    ============================================ */
 @media (max-width: 640px) {
-  .sidebar { display: none !important; }
+  .sidebar {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    z-index: 1001 !important;
+    width: 280px !important;
+    box-shadow: 4px 0 15px rgba(0,0,0,0.15) !important;
+    transition: transform 0.2s ease-in-out !important;
+  }
+  .sidebarClosed {
+    transform: translateX(-150%) !important;
+    width: 280px !important;
+    border-right: none !important;
+  }
+  .sidebarOpen {
+    transform: translateX(0) !important;
+    width: 280px !important;
+  }
+  .geminiBadge {
+    display: none !important;
+  }
+  .chatInnerTitle {
+    font-size: 0.78rem !important;
+  }
   .msgRowAiInner,
   .msgRowUserInner,
   .thinkingRow,
