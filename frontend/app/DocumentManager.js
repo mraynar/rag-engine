@@ -510,7 +510,7 @@ export default function DocumentManager() {
         />
       )}
 
-      {/* Extraction Preview Dialog */}
+      {/* Preview Modal */}
       <PreviewModal
         isOpen={!!previewFilename}
         onClose={() => setPreviewFilename(null)}

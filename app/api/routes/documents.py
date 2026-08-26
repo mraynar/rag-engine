@@ -143,7 +143,7 @@ def get_document_preview(filename: str, limit: int = 100, offset: int = 0, user:
         chroma_client = chromadb.PersistentClient(path=str(VECTOR_STORE_DIR))
         collection = chroma_client.get_or_create_collection(name="tps_docs")
         
-        # Get chunks matching filename
+        # Query matching chunks
         results = collection.get(
             where={"source": filename},
             limit=limit,
@@ -163,7 +163,7 @@ def get_document_preview(filename: str, limit: int = 100, offset: int = 0, user:
                 "metadata": metadatas[i] if i < len(metadatas) else {}
             })
             
-        # Get total chunk count by querying only ids
+        # Count total matching chunks
         all_results = collection.get(where={"source": filename}, include=[])
         total_chunks = len(all_results.get("ids", []))
         

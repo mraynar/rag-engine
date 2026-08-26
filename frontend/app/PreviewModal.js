@@ -5,7 +5,6 @@ import { SpinnerIcon, XIcon, EyeIcon } from './icons';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
-// Inline SVG Chevron Icons for pagination
 function ChevronLeftIcon({ size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -28,8 +27,6 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [data, setData] = useState(null);
-  
-  // Pagination & Filters
   const [page, setPage] = useState(1);
   const [activeSheet, setActiveSheet] = useState('');
   const limit = 50;
@@ -39,7 +36,6 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
     fetchData();
   }, [isOpen, idOrFilename, page]);
 
-  // Reset page when modal opens or target changes
   useEffect(() => {
     setPage(1);
     setData(null);
@@ -47,7 +43,6 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
     setActiveSheet('');
   }, [idOrFilename, isOpen]);
 
-  // Set default sheet once data loads
   useEffect(() => {
     if (data?.sheets && data.sheets.length > 0 && !activeSheet) {
       setActiveSheet(data.sheets[0]);
@@ -80,16 +75,13 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
 
   if (!isOpen) return null;
 
-  // Compute pagination bounds
   const totalItems = type === 'cloud' ? (data?.total_rows || 0) : (data?.total_chunks || 0);
   const totalPages = Math.max(1, Math.ceil(totalItems / limit));
 
-  // For cloud tabbed preview: filter rows by active sheet
   const activeSheetRows = type === 'cloud' && data?.rows
     ? data.rows.filter(r => r.sheet_name === activeSheet)
     : [];
 
-  // Gather all unique keys from active sheet rows to display as table headers
   const tableHeaders = activeSheetRows.length > 0
     ? Object.keys(activeSheetRows[0].row_data)
     : [];
@@ -122,7 +114,7 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
         overflow: 'hidden'
       }}>
         
-        {/* Modal Header */}
+        {/* Header */}
         <div style={{
           padding: '18px 24px',
           borderBottom: '1px solid var(--color-border)',
@@ -164,7 +156,7 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
           </button>
         </div>
 
-        {/* Tab Selector (only for sheets in spreadsheet view) */}
+        {/* Sheet Tabs */}
         {type === 'cloud' && data?.sheets && data.sheets.length > 0 && (
           <div style={{
             padding: '8px 24px 0',
@@ -205,7 +197,7 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
           </div>
         )}
 
-        {/* Main Content Area */}
+        {/* Body content */}
         <div style={{
           flex: 1,
           overflowY: 'auto',
@@ -241,10 +233,8 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
             </div>
           ) : (
             <>
-              {/* Data Display */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 {type === 'cloud' ? (
-                  /* Excel Structured Table */
                   <div style={{
                     backgroundColor: '#fff',
                     border: '1px solid var(--color-border)',
@@ -280,7 +270,6 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
                     </table>
                   </div>
                 ) : (
-                  /* ChromaDB Text Chunks List */
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1 }}>
                     {data?.chunks?.map((chunk, idx) => (
                       <div key={chunk.id} style={{
@@ -328,7 +317,7 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
                 )}
               </div>
 
-              {/* Pagination Controls */}
+              {/* Pagination */}
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',

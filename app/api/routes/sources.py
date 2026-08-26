@@ -139,24 +139,23 @@ def get_source_preview(id: str, limit: int = 100, offset: int = 0, user: dict = 
     from sqlalchemy import text
     import json
     
-    # 1. Fetch category metadata to get its category name
+    # Get category metadata
     source = get_source(id)
     if not source:
         raise HTTPException(status_code=404, detail="Category not found.")
         
     category_name = source["category_name"]
         
-    # 2. Query rows using the UUID resolved from database
+    # Query rows using resolved database UUID
     try:
         with get_db_conn() as conn:
-            # Resolve the database UUID of this category from data_sources table
+            # Resolve true UUID from data_sources
             db_source = conn.execute(
                 text("SELECT id FROM data_sources WHERE category_name = :category_name"),
                 {"category_name": category_name}
             ).fetchone()
             
             if not db_source:
-                # If this category hasn't been synchronized yet, return empty
                 return {
                     "category_name": category_name,
                     "total_rows": 0,
@@ -168,13 +167,13 @@ def get_source_preview(id: str, limit: int = 100, offset: int = 0, user: dict = 
                 
             db_source_id = db_source[0]
             
-            # Count total rows matching the UUID
+            # Count matching rows
             total_rows = conn.execute(
                 text("SELECT COUNT(*) FROM data_rows WHERE source_id = :source_id"),
                 {"source_id": db_source_id}
             ).scalar() or 0
             
-            # Fetch paginated rows matching the UUID
+            # Fetch matching page rows
             query = text("""
                 SELECT sheet_name, row_index, row_data 
                 FROM data_rows 

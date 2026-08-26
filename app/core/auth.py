@@ -11,11 +11,11 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> Optional[di
     require_auth = os.getenv("REQUIRE_AUTH", "true").lower() == "true"
     
     if not authorization:
-        # User is not logged in (Guest)
+        # Guest user
         return None
     
     if not require_auth:
-        # For testing, bypass token verification and treat any session as a dummy testing user
+        # Bypass token check for local testing
         return {
             "id": "00000000-0000-0000-0000-000000000000",
             "email": "testing_guest@example.com",
@@ -34,7 +34,7 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> Optional[di
         )
     
     try:
-        # Call Supabase Auth endpoint to verify token and retrieve user details
+        # Verify token using Supabase Auth endpoint
         url = f"{SUPABASE_URL.rstrip('/')}/auth/v1/user"
         headers = {
             "Authorization": f"Bearer {token}",
@@ -62,7 +62,7 @@ def require_user(user: Optional[dict] = Depends(get_current_user)) -> dict:
     """Dependency that requires a user to be logged in (prevents guest access)."""
     require_auth = os.getenv("REQUIRE_AUTH", "true").lower() == "true"
     if not require_auth:
-        # Return either active logged-in user or a dummy user fallback
+        # Return active user or fallback dummy guest
         return user or {
             "id": "00000000-0000-0000-0000-000000000000",
             "email": "testing_guest@example.com",

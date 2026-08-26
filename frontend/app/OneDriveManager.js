@@ -587,7 +587,7 @@ export default function OneDriveManager() {
         </table>
       </div>
       
-      {/* Extraction Preview Dialog */}
+      {/* Preview Modal */}
       <PreviewModal
         isOpen={!!previewTarget}
         onClose={() => setPreviewTarget(null)}

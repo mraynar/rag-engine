@@ -817,7 +817,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
 
   return (
     <div className={s.chatShell}>
-      {/* ── Mobile Sidebar Backdrop Overlay ── */}
+      {/* Mobile backdrop */}
       {showSidebar && sidebarOpen && (
         <div
           className={s.mobileSidebarBackdrop}
@@ -825,7 +825,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
         />
       )}
 
-      {/* ── Sidebar ── */}
+      {/* Sidebar */}
       {showSidebar && (
         <div className={`${s.sidebar} ${sidebarOpen ? s.sidebarOpen : s.sidebarClosed}`}>
           <Sidebar
