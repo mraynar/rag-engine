@@ -48,7 +48,7 @@ def resolve_access_token(token: str, user: Optional[dict] = Depends(get_current_
         raise HTTPException(status_code=404, detail="Link tidak valid atau sudah dicabut.")
 
     category_name = resolved["category_name"]
-    user_id = user["id"] if user else "00000000-0000-0000-0000-000000000000"
+    user_id = user["id"] if user else None
 
     existing = find_conversation_by_category(user_id, category_name)
     if existing:

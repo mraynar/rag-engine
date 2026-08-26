@@ -292,19 +292,36 @@ def delete_user_conversation(conv_id: str, user_id: str) -> None:
                 {"conv_id": conv_id}
             )
 
-def find_conversation_by_category(user_id: str, category_name: str) -> Optional[dict]:
-    """Finds the most recent conversation associated with a specific user and category."""
+def find_conversation_by_category(user_id: Optional[str], category_name: str) -> Optional[dict]:
+    """Finds the most recent conversation associated with a specific user and category.
+    
+    When user_id is None (unauthenticated / deep-link guest access), matches conversations
+    where user_id IS NULL using an explicit SQL branch, because WHERE user_id = NULL
+    never matches any rows in SQL.
+    """
     with get_db_conn() as conn:
-        row = conn.execute(
-            text("""
-                SELECT id, title, pinned, created_at, updated_at, title_source, category_name
-                FROM public.conversations
-                WHERE user_id = :user_id AND category_name = :category_name
-                ORDER BY updated_at DESC
-                LIMIT 1
-            """),
-            {"user_id": user_id, "category_name": category_name}
-        ).fetchone()
+        if user_id is None:
+            row = conn.execute(
+                text("""
+                    SELECT id, title, pinned, created_at, updated_at, title_source, category_name
+                    FROM public.conversations
+                    WHERE user_id IS NULL AND category_name = :category_name
+                    ORDER BY updated_at DESC
+                    LIMIT 1
+                """),
+                {"category_name": category_name}
+            ).fetchone()
+        else:
+            row = conn.execute(
+                text("""
+                    SELECT id, title, pinned, created_at, updated_at, title_source, category_name
+                    FROM public.conversations
+                    WHERE user_id = :user_id AND category_name = :category_name
+                    ORDER BY updated_at DESC
+                    LIMIT 1
+                """),
+                {"user_id": user_id, "category_name": category_name}
+            ).fetchone()
         
     if not row:
         return None
@@ -318,8 +335,12 @@ def find_conversation_by_category(user_id: str, category_name: str) -> Optional[
         "category_name": row[6]
     }
 
-def create_user_conversation_with_category(user_id: str, category_name: str) -> dict:
-    """Creates a new empty conversation for a user scoped to a category."""
+def create_user_conversation_with_category(user_id: Optional[str], category_name: str) -> dict:
+    """Creates a new empty conversation for a user scoped to a category.
+    
+    Accepts None for user_id to support unauthenticated / deep-link guest access;
+    conversations.user_id is nullable in the DB schema.
+    """
     conv_id = str(uuid.uuid4())
     with get_db_conn() as conn:
         with conn.begin():
