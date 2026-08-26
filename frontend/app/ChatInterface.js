@@ -644,7 +644,7 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
               <polyline points="10 17 15 12 10 7" />
               <line x1="15" y1="12" x2="3" y2="12" />
             </svg>
-            <span>Sign In / Sign Up</span>
+            {/* <span>Sign In / Sign Up</span> */}
           </button>
         )}
       </div>
