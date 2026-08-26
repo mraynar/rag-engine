@@ -85,48 +85,67 @@ def sync_tabular_source(category_name: str, source_url: str, source_type: str) -
                 if df_csv is None:
                     raise ValueError("Failed to parse CSV file with standard encodings.")
                 print(f"[sync_tabular_source] Parsing complete. Sheets found: {list(xls.keys())}")
-            # Clear old rows in database and prepare batch insert
-            column_schema = {}
+            # ── Sanitize each sheet then combine into one wide DataFrame ─────────
+            sanitized_dfs = []
+            for sheet_name, df in xls.items():
+                before = df.shape[0]
+                # 1. Normalize column names: strip whitespace + UPPERCASE
+                df.columns = [str(col).strip().upper() for col in df.columns]
+                # 2. Drop rows where ALL columns are NaN/empty
+                df = df.dropna(how='all')
+                # 3. Drop fully duplicate rows
+                df = df.drop_duplicates()
+                after = df.shape[0]
+                print(f"[sync_tabular_source] Sheet '{sheet_name}': {before} → {after} rows after sanitize.")
+                # 4. Tag each row with its origin sheet (preserved as _sheet column)
+                df = df.copy()
+                df.insert(0, '_sheet', sheet_name)
+                sanitized_dfs.append(df)
+
+            # Concatenate all sheets into one wide flat DataFrame
+            if not sanitized_dfs:
+                raise ValueError("No data found in any sheet after sanitization.")
+            combined_df = pd.concat(sanitized_dfs, axis=0, ignore_index=True)
+            print(f"[sync_tabular_source] Combined wide DataFrame: {combined_df.shape[0]} rows × {combined_df.shape[1]} cols.")
+
+            # Build union column schema (all columns across all sheets)
+            all_cols = [c for c in combined_df.columns if c != '_sheet']
+            column_schema = {"_all_sheets": all_cols}
+            # Also preserve per-sheet schema for reference
+            for df_sheet in sanitized_dfs:
+                sname = df_sheet['_sheet'].iloc[0] if not df_sheet.empty else 'unknown'
+                column_schema[sname] = [c for c in df_sheet.columns if c != '_sheet']
+
+            # Serialize combined DataFrame to insert records
             total_rows = 0
             all_row_inserts = []
+            for idx, row in combined_df.iterrows():
+                clean_record = {}
+                for k, v in row.items():
+                    try:
+                        is_null = pd.isnull(v)
+                    except (TypeError, ValueError):
+                        is_null = False
+                    if is_null:
+                        v_clean = None
+                    elif hasattr(v, 'isoformat'):
+                        v_clean = v.isoformat()
+                    elif hasattr(v, 'item'):
+                        try:
+                            v_clean = v.item()
+                        except Exception:
+                            v_clean = str(v)
+                    else:
+                        v_clean = v
+                    clean_record[str(k)] = v_clean
 
-            for sheet_name, df in xls.items():
-                print(f"[sync_tabular_source] Sheet '{sheet_name}': shape={df.shape}. Processing records...")
-                # Clean up NaN / NaT values to None so they serialize to JSON properly
-                df = df.where(df.notnull(), None)
-
-                # Strip leading/trailing whitespaces from column names
-                df.columns = [str(col).strip() for col in df.columns]
-
-                # Populate column schema (dict of sheet_name -> list of columns)
-                column_schema[sheet_name] = list(df.columns)
-
-                # Convert records to list of dicts
-                records = df.to_dict("records")
-                for idx, record in enumerate(records):
-                    # Clean column names to strings and convert non-serializable values (Timestamps, NaT)
-                    clean_record = {}
-                    for k, v in record.items():
-                        if pd.isnull(v):
-                            v_clean = None
-                        elif hasattr(v, "isoformat"):
-                            v_clean = v.isoformat()
-                        elif hasattr(v, "item"):
-                            try:
-                                v_clean = v.item()
-                            except Exception:
-                                v_clean = str(v)
-                        else:
-                            v_clean = v
-                        clean_record[str(k)] = v_clean
-
-                    all_row_inserts.append({
-                        "source_id": str(source_id),
-                        "sheet_name": sheet_name,
-                        "row_index": idx,
-                        "row_data": json.dumps(clean_record)
-                    })
-                    total_rows += 1
+                all_row_inserts.append({
+                    "source_id": str(source_id),
+                    "sheet_name": clean_record.get('_sheet', 'combined'),
+                    "row_index": total_rows,
+                    "row_data": json.dumps(clean_record)
+                })
+                total_rows += 1
 
             # Perform DB transaction
             with get_db_conn() as conn:

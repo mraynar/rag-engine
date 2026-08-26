@@ -61,9 +61,11 @@ def load_dataframe(source_id: str, sheet: Optional[str] = None) -> pd.DataFrame:
         r_data = r[1]
         if isinstance(r_data, str):
             r_data = json.loads(r_data)
-        # Deep copy or construct dict with '_sheet' injected
         row_dict = dict(r_data)
-        row_dict["_sheet"] = r[0]
+        # _sheet is now stored inside row_data by the ingestion pipeline.
+        # Fall back to the DB sheet_name column for legacy rows.
+        if "_sheet" not in row_dict:
+            row_dict["_sheet"] = r[0]
         records.append(row_dict)
 
     return pd.DataFrame(records)

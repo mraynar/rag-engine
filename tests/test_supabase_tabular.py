@@ -56,8 +56,12 @@ class TestSupabaseTabular(unittest.TestCase):
         schema = result["column_schema"]
         if isinstance(schema, str):
             schema = json.loads(schema)
+        # Columns are normalized to UPPERCASE during sanitization
         self.assertIn("Sheet1", schema)
-        self.assertEqual(schema["Sheet1"], ["Date", "LOP", "TEUS"])
+        self.assertEqual(schema["Sheet1"], ["DATE", "LOP", "TEUS"])
+        # Wide-table union schema key must exist
+        self.assertIn("_all_sheets", schema)
+        self.assertIn("DATE", schema["_all_sheets"])
 
     @patch("app.services.tabular_query.get_gemini_client")
     def test_answer_tabular_question_with_pandas_filtering(self, mock_get_client):

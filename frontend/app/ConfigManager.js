@@ -54,7 +54,7 @@ function AddCandidateForm({ group, onSaved, onCancel }) {
   // Standard fields
   const [description, setDescription] = useState('');
   const [value, setValue] = useState('');
-  const [isSecret, setIsSecret] = useState(group === 'gemini_api_key');
+  const [isSecret, setIsSecret] = useState(group === 'gemini_api_key' || group === 'groq_api_key');
   
   // Azure fields
   const [azureTenant, setAzureTenant] = useState('');
@@ -576,7 +576,9 @@ function GroupSection({ groupName, entries, onRefresh, toast }) {
     gemini_api_key: "Gemini API Key",
     embedding_model: "Embedding Model",
     generation_model: "Generation Model (LLM)",
-    azure_graph: "Azure / Microsoft Graph API Credentials"
+    azure_graph: "Azure / Microsoft Graph API Credentials",
+    groq_api_key: "Groq API Key (Narrative Generation)",
+    groq_model: "Groq Model"
   };
 
   const displayName = friendlyNames[groupName] || groupName;
@@ -722,8 +724,8 @@ export default function ConfigManager() {
       }, {})
     : {};
 
-  // Force groups order: Gemini key, embedding model, generation model, azure graph
-  const orderedGroups = ['gemini_api_key', 'embedding_model', 'generation_model', 'azure_graph'];
+  // Force groups order: Gemini key, embedding model, generation model, Groq key, Groq model, azure graph
+  const orderedGroups = ['gemini_api_key', 'embedding_model', 'generation_model', 'groq_api_key', 'groq_model', 'azure_graph'];
   const groupNames = Object.keys(groupedEntries);
   const displayGroups = orderedGroups.filter(name => groupNames.includes(name))
     .concat(groupNames.filter(name => !orderedGroups.includes(name)));

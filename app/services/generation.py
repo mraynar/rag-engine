@@ -49,9 +49,25 @@ Jawaban:"""
 
 
 def generate_answer(prompt: str) -> str:
-    """Generate final answer from Gemini using the currently active generation model."""
-    client = get_gemini_client()
-    response = client.models.generate_content(
-        model=get_generation_model(), contents=prompt
-    )
-    return response.text
+    """Generate final answer using Groq (primary) with Gemini fallback.
+    
+    - Manual document path: always uses Groq for narrative generation.
+    - Falls back to Gemini if groq_api_key is not yet configured in config_store.
+    """
+    try:
+        from app.services.groq_client import groq_generate
+        return groq_generate(
+            prompt=prompt,
+            system="Kamu adalah asisten AI PT Terminal Petikemas Surabaya (TPS). Jawab dalam Bahasa Indonesia yang jelas dan profesional."
+        )
+    except Exception as groq_err:
+        # Fallback to Gemini if Groq is not configured or fails
+        import logging
+        logging.getLogger(__name__).warning(
+            f"[generation] Groq failed ({groq_err}), falling back to Gemini."
+        )
+        client = get_gemini_client()
+        response = client.models.generate_content(
+            model=get_generation_model(), contents=prompt
+        )
+        return response.text
