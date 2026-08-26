@@ -313,11 +313,12 @@ export default function OneDriveManager() {
                   style={{ cursor: 'pointer' }}
                 />
               </th>
-              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600' }}>Category</th>
-              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600' }}>Link / Share URL</th>
-              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600' }}>Sync Status</th>
-              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600', textAlign: 'center' }}>Chunk</th>
-              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600', textAlign: 'right' }}>Actions</th>
+              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600', width: '15%' }}>Category</th>
+              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600', width: '25%' }}>Link / Share URL</th>
+              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600', width: '16%' }}>Sync Mode</th>
+              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600', width: '18%' }}>Sync Status</th>
+              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600', textAlign: 'center', width: '10%' }}>Chunk</th>
+              <th style={{ padding: '12px', color: 'var(--color-navy)', fontWeight: '600', textAlign: 'right', width: '14%' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -371,7 +372,7 @@ export default function OneDriveManager() {
                   </td>
                   
                   {/* OneDrive Link */}
-                  <td style={{ padding: '12px', color: 'var(--color-text-light)', maxWidth: '300px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '12px', color: 'var(--color-text-light)', maxWidth: '200px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                     {isEditing ? (
                       <input
                         type="url"
@@ -392,69 +393,76 @@ export default function OneDriveManager() {
                     )}
                   </td>
 
-                  {/* Status */}
+                  {/* Sync Mode */}
+                  <td style={{ padding: '12px' }}>
+                    {(() => {
+                      if (!cat.fetch_method || cat.sync_status === 'never_synced') {
+                        return <span style={{ color: 'var(--color-muted)', fontSize: '0.8rem' }}>-</span>;
+                      }
+
+                      let label = 'Graph API';
+                      let color = '#2B6CB0';
+                      let bgColor = '#EBF8FF';
+
+                      if (cat.fetch_method === 'fallback_download') {
+                        label = 'Fallback';
+                        color = '#B7791F';
+                        bgColor = '#FEFCBF';
+                      } else if (cat.fetch_method === 'google_drive') {
+                        label = 'Google Drive';
+                        color = '#805AD5';
+                        bgColor = '#FAF5FF';
+                      } else if (cat.fetch_method === 'google_sheets') {
+                        label = 'Google Sheets';
+                        color = '#319795';
+                        bgColor = '#E6FFFA';
+                      }
+
+                      return (
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontSize: '0.7rem',
+                          fontWeight: '600',
+                          color: color,
+                          backgroundColor: bgColor,
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {label}
+                        </span>
+                      );
+                    })()}
+                  </td>
+
+                  {/* Sync Status */}
                   <td style={{ padding: '12px' }}>
                     {isSyncing ? (
                       <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--color-muted)' }}>
                         <SpinnerIcon size={12} className="spin" /> Syncing...
                       </span>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
-                          <span style={{
-                            display: 'inline-block',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            fontSize: '0.7rem',
-                            fontWeight: '600',
-                            color: statusColor,
-                            backgroundColor: statusBg
-                          }}>
-                            {statusLabel}
-                          </span>
-                          {cat.sync_status === 'success' && cat.fetch_method && (() => {
-                            let label = 'Mode: Graph API';
-                            let color = '#2B6CB0';
-                            let bgColor = '#EBF8FF';
-
-                            if (cat.fetch_method === 'fallback_download') {
-                              label = 'Mode: Fallback';
-                              color = '#B7791F';
-                              bgColor = '#FEFCBF';
-                            } else if (cat.fetch_method === 'google_drive') {
-                              label = 'Mode: Google Drive';
-                              color = '#805AD5';
-                              bgColor = '#FAF5FF';
-                            } else if (cat.fetch_method === 'google_sheets') {
-                              label = 'Mode: Google Sheets';
-                              color = '#319795';
-                              bgColor = '#E6FFFA';
-                            }
-
-                            return (
-                              <span style={{
-                                display: 'inline-block',
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                fontSize: '0.7rem',
-                                fontWeight: '600',
-                                color: color,
-                                backgroundColor: bgColor
-                              }}>
-                                {label}
-                              </span>
-                            );
-                          })()}
-                        </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontSize: '0.7rem',
+                          fontWeight: '600',
+                          color: statusColor,
+                          backgroundColor: statusBg
+                        }}>
+                          {statusLabel}
+                        </span>
                         {cat.last_synced_at && (
-                          <span style={{ fontSize: '0.7rem', color: 'var(--color-muted)' }}>
-                            Sync: {new Date(cat.last_synced_at + 'Z').toLocaleDateString('en-US', {
+                          <span style={{ fontSize: '0.7rem', color: 'var(--color-muted)', marginTop: '2px' }}>
+                            {new Date(cat.last_synced_at + 'Z').toLocaleDateString('en-US', {
                               day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
                             })}
                           </span>
                         )}
                         {cat.sync_status === 'failed' && cat.last_error && (
-                          <span style={{ fontSize: '0.7rem', color: '#E53E3E', wordBreak: 'break-all' }} title={cat.last_error}>
+                          <span style={{ fontSize: '0.7rem', color: '#E53E3E', wordBreak: 'break-all', marginTop: '2px' }} title={cat.last_error}>
                             Error: {cat.last_error.substring(0, 50)}...
                           </span>
                         )}
