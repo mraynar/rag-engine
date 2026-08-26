@@ -636,37 +636,39 @@ function GroupSection({ groupName, entries, onRefresh, toast }) {
           </button>
         </div>
 
-        <table className={s.table} aria-label={`Configuration group ${groupName}`}>
-          <thead>
-            <tr style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}>
-              <th className={s.th} style={{ width: '22%' }}>Key</th>
-              <th className={s.th} style={{ width: '28%' }}>Description</th>
-              <th className={s.th} style={{ width: '28%' }}>Value / Credentials</th>
-              <th className={`${s.th} ${s.thCenter}`} style={{ width: '12%' }}>Status</th>
-              <th className={`${s.th} ${s.thRight}`}  style={{ width: '10%' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map(entry => (
-              <EntryRow
-                key={entry.key}
-                entry={entry}
-                isOnlyInGroup={entries.length === 1}
-                onActivate={handleEntryActivate}
-                onUpdate={handleEntryUpdate}
-                onDelete={(e) => setDeleteTarget(e)}
-                toast={toast}
-              />
-            ))}
-            {showAddForm && (
-              <AddCandidateForm
-                group={groupName}
-                onSaved={handleAddSaved}
-                onCancel={() => setShowAddForm(false)}
-              />
-            )}
-          </tbody>
-        </table>
+        <div className={s.tableWrapper}>
+          <table className={s.table} aria-label={`Configuration group ${groupName}`}>
+            <thead>
+              <tr style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}>
+                <th className={s.th} style={{ width: '22%' }}>Key</th>
+                <th className={s.th} style={{ width: '28%' }}>Description</th>
+                <th className={s.th} style={{ width: '28%' }}>Value / Credentials</th>
+                <th className={`${s.th} ${s.thCenter}`} style={{ width: '12%' }}>Status</th>
+                <th className={`${s.th} ${s.thRight}`}  style={{ width: '10%' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map(entry => (
+                <EntryRow
+                  key={entry.key}
+                  entry={entry}
+                  isOnlyInGroup={entries.length === 1}
+                  onActivate={handleEntryActivate}
+                  onUpdate={handleEntryUpdate}
+                  onDelete={(e) => setDeleteTarget(e)}
+                  toast={toast}
+                />
+              ))}
+              {showAddForm && (
+                <AddCandidateForm
+                  group={groupName}
+                  onSaved={handleAddSaved}
+                  onCancel={() => setShowAddForm(false)}
+                />
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {deleteTarget && (

@@ -177,7 +177,11 @@
 .addBtn:hover { background: rgba(255,255,255,0.22); transform: translateY(-1px); }
 
 /* ---- Table ---- */
-.table { width: 100%; border-collapse: collapse; }
+.tableWrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+.table { width: 100%; border-collapse: collapse; min-width: 700px; }
 
 .th {
   text-align: left;
