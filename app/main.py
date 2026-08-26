@@ -10,6 +10,7 @@ from app.api.routes.conversations import router as conversations_router
 from app.api.routes.documents import router as documents_router
 from app.api.routes.health import router as health_router
 from app.api.routes.sources import router as sources_router
+from app.api.routes.access_tokens import router as access_tokens_router
 
 
 
@@ -67,8 +68,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="RAG Engine", lifespan=lifespan)
 
-# Read allowed origins from CORS_ORIGINS env var (comma-separated).
-# Default: localhost:3000 only. For production, set CORS_ORIGINS in .env.
+# Read allowed origins dynamically from CORS_ORIGINS env var (comma-separated).
+# Default: localhost:3000 only. Supported for local network and external domain access.
 _raw_cors = os.getenv("CORS_ORIGINS", "http://localhost:3000")
 _cors_origins = [o.strip() for o in _raw_cors.split(",") if o.strip()]
 
@@ -86,3 +87,4 @@ app.include_router(documents_router)
 app.include_router(conversations_router)
 app.include_router(sources_router)
 app.include_router(health_router)
+app.include_router(access_tokens_router)

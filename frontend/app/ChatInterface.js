@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import { useCategory } from './CategoryContext';
 import { useConversation } from './ConversationContext';
@@ -655,12 +656,16 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
 // ─── Main Chat Interface Inner ───────────────────────────────────────────────
 
 function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
-  const { selectedCategory } = useCategory();
+  const { selectedCategory, setSelectedCategory } = useCategory();
   const {
     activeConvId, setActiveConvId,
     conversations, loadingConvs,
     createConversation, getConversation, postChatMessage,
   } = useConversation();
+
+  const searchParams = useSearchParams();
+  const queryConvId = searchParams.get('conversation_id');
+  const queryCategoryName = searchParams.get('category_name');
 
   const [messages, setMessages] = useState([]);
   const [input, setInput]       = useState('');
@@ -675,6 +680,17 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
       setSidebarOpen(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (loadingConvs) return;
+    if (queryConvId) {
+      setActiveConvId(queryConvId);
+      if (queryCategoryName) {
+        setSelectedCategory(queryCategoryName);
+      }
+      window.history.replaceState(null, '', '/');
+    }
+  }, [loadingConvs, queryConvId, queryCategoryName, setActiveConvId, setSelectedCategory]);
 
   const loadedConvRef = useRef(null);
   const bottomRef     = useRef(null);

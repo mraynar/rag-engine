@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useCategory } from './CategoryContext';
 import OneDriveManager from './OneDriveManager';
 import DocumentManager from './DocumentManager';
+import AccessTokenManager from './AccessTokenManager';
 import { XIcon, TrashIcon } from './icons';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
@@ -74,15 +75,20 @@ export default function DataManagementModal() {
           >
             Manual Documents
           </button>
+
+          <button
+            onClick={() => setActiveSubTab('tokens')}
+            className={`modal-tab-btn ${activeSubTab === 'tokens' ? 'active' : ''}`}
+          >
+            Access Tokens
+          </button>
         </div>
 
         {/* Modal Body */}
         <div className="modal-body">
-          {activeSubTab === 'onedrive' ? (
-            <OneDriveManager />
-          ) : (
-            <DocumentManager />
-          )}
+          {activeSubTab === 'onedrive' && <OneDriveManager />}
+          {activeSubTab === 'manual' && <DocumentManager />}
+          {activeSubTab === 'tokens' && <AccessTokenManager />}
 
           {/* Danger Zone */}
           <div className="danger-zone">

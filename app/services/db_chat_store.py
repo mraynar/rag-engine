@@ -13,7 +13,7 @@ def list_user_conversations(user_id: str) -> list[dict]:
     with get_db_conn() as conn:
         rows = conn.execute(
             text("""
-                SELECT id, title, title_source, pinned, created_at, updated_at
+                SELECT id, title, title_source, pinned, created_at, updated_at, category_name
                 FROM public.conversations
                 WHERE user_id = :user_id
                 ORDER BY pinned DESC, updated_at DESC
@@ -28,7 +28,8 @@ def list_user_conversations(user_id: str) -> list[dict]:
             "title_source": r[2],
             "pinned": r[3],
             "created_at": r[4].isoformat() if r[4] else None,
-            "updated_at": r[5].isoformat() if r[5] else None
+            "updated_at": r[5].isoformat() if r[5] else None,
+            "category_name": r[6]
         }
         for r in rows
     ]
@@ -38,7 +39,7 @@ def get_user_conversation(conv_id: str, user_id: str) -> dict:
     with get_db_conn() as conn:
         conv = conn.execute(
             text("""
-                SELECT id, title, pinned, created_at, updated_at, title_source
+                SELECT id, title, pinned, created_at, updated_at, title_source, category_name
                 FROM public.conversations
                 WHERE id = :conv_id AND user_id = :user_id
             """),
@@ -77,6 +78,7 @@ def get_user_conversation(conv_id: str, user_id: str) -> dict:
         "created_at": conv[3].isoformat() if conv[3] else None,
         "updated_at": conv[4].isoformat() if conv[4] else None,
         "title_source": conv[5],
+        "category_name": conv[6],
         "messages": messages
     }
 
@@ -95,7 +97,7 @@ def create_user_conversation(user_id: str) -> dict:
             
             # Fetch the newly created row
             conv = conn.execute(
-                text("SELECT id, title, pinned, created_at, updated_at, title_source FROM public.conversations WHERE id = :id"),
+                text("SELECT id, title, pinned, created_at, updated_at, title_source, category_name FROM public.conversations WHERE id = :id"),
                 {"id": conv_id}
             ).fetchone()
             
@@ -106,6 +108,7 @@ def create_user_conversation(user_id: str) -> dict:
         "created_at": conv[3].isoformat(),
         "updated_at": conv[4].isoformat(),
         "title_source": conv[5],
+        "category_name": conv[6],
         "messages": []
     }
 
@@ -223,7 +226,7 @@ def rename_user_conversation(conv_id: str, user_id: str, new_title: str) -> dict
             
             # Fetch updated row
             updated = conn.execute(
-                text("SELECT id, title, pinned, created_at, updated_at, title_source FROM public.conversations WHERE id = :conv_id"),
+                text("SELECT id, title, pinned, created_at, updated_at, title_source, category_name FROM public.conversations WHERE id = :conv_id"),
                 {"conv_id": conv_id}
             ).fetchone()
 
@@ -233,7 +236,8 @@ def rename_user_conversation(conv_id: str, user_id: str, new_title: str) -> dict
         "pinned": updated[2],
         "created_at": updated[3].isoformat(),
         "updated_at": updated[4].isoformat(),
-        "title_source": updated[5]
+        "title_source": updated[5],
+        "category_name": updated[6]
     }
 
 def toggle_user_pin(conv_id: str, user_id: str, pinned: bool) -> dict:
@@ -256,7 +260,7 @@ def toggle_user_pin(conv_id: str, user_id: str, pinned: bool) -> dict:
             
             # Fetch updated row
             updated = conn.execute(
-                text("SELECT id, title, pinned, created_at, updated_at, title_source FROM public.conversations WHERE id = :conv_id"),
+                text("SELECT id, title, pinned, created_at, updated_at, title_source, category_name FROM public.conversations WHERE id = :conv_id"),
                 {"conv_id": conv_id}
             ).fetchone()
 
@@ -266,7 +270,8 @@ def toggle_user_pin(conv_id: str, user_id: str, pinned: bool) -> dict:
         "pinned": updated[2],
         "created_at": updated[3].isoformat(),
         "updated_at": updated[4].isoformat(),
-        "title_source": updated[5]
+        "title_source": updated[5],
+        "category_name": updated[6]
     }
 
 def delete_user_conversation(conv_id: str, user_id: str) -> None:
@@ -286,3 +291,58 @@ def delete_user_conversation(conv_id: str, user_id: str) -> None:
                 text("DELETE FROM public.conversations WHERE id = :conv_id"),
                 {"conv_id": conv_id}
             )
+
+def find_conversation_by_category(user_id: str, category_name: str) -> Optional[dict]:
+    """Finds the most recent conversation associated with a specific user and category."""
+    with get_db_conn() as conn:
+        row = conn.execute(
+            text("""
+                SELECT id, title, pinned, created_at, updated_at, title_source, category_name
+                FROM public.conversations
+                WHERE user_id = :user_id AND category_name = :category_name
+                ORDER BY updated_at DESC
+                LIMIT 1
+            """),
+            {"user_id": user_id, "category_name": category_name}
+        ).fetchone()
+        
+    if not row:
+        return None
+    return {
+        "id": str(row[0]),
+        "title": row[1],
+        "pinned": row[2],
+        "created_at": row[3].isoformat() if row[3] else None,
+        "updated_at": row[4].isoformat() if row[4] else None,
+        "title_source": row[5],
+        "category_name": row[6]
+    }
+
+def create_user_conversation_with_category(user_id: str, category_name: str) -> dict:
+    """Creates a new empty conversation for a user scoped to a category."""
+    conv_id = str(uuid.uuid4())
+    with get_db_conn() as conn:
+        with conn.begin():
+            conn.execute(
+                text("""
+                    INSERT INTO public.conversations (id, user_id, title, title_source, pinned, category_name)
+                    VALUES (:id, :user_id, 'New conversation', 'auto', false, :category_name)
+                """),
+                {"id": conv_id, "user_id": user_id, "category_name": category_name}
+            )
+            
+            conv = conn.execute(
+                text("SELECT id, title, pinned, created_at, updated_at, title_source, category_name FROM public.conversations WHERE id = :id"),
+                {"id": conv_id}
+            ).fetchone()
+            
+    return {
+        "id": str(conv[0]),
+        "title": conv[1],
+        "pinned": conv[2],
+        "created_at": conv[3].isoformat(),
+        "updated_at": conv[4].isoformat(),
+        "title_source": conv[5],
+        "category_name": conv[6],
+        "messages": []
+    }

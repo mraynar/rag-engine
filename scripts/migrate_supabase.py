@@ -57,19 +57,51 @@ def run_migration():
                 for stmt in BASE_DDL:
                     conn.execute(text(stmt))
 
-            # 2. Run folder-based migrations in alphabetical order
+            # 2. Setup migrations tracking table
+            with conn.begin():
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS public.schema_migrations (
+                        version TEXT PRIMARY KEY,
+                        applied_at TIMESTAMPTZ DEFAULT now() NOT NULL
+                    );
+                """))
+                
+                # Check if public.profiles exists to seed legacy migrations
+                profiles_exist = conn.execute(text(
+                    "SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'profiles')"
+                )).scalar()
+                
+                if profiles_exist:
+                    conn.execute(text("""
+                        INSERT INTO public.schema_migrations (version)
+                        VALUES ('20260817000000_create_chat_schema.sql')
+                        ON CONFLICT (version) DO NOTHING;
+                    """))
+
+            # 3. Run folder-based migrations in alphabetical order
             migrations_dir = Path(__file__).resolve().parent.parent / "supabase" / "migrations"
             if migrations_dir.exists():
                 sql_files = sorted(migrations_dir.glob("*.sql"))
                 print(f"Found {len(sql_files)} SQL migration file(s) in {migrations_dir}.")
-                for sql_file in sql_files:
-                    print(f"Executing migration: {sql_file.name}...")
-                    with open(sql_file, "r", encoding="utf-8") as f:
-                        sql_content = f.read()
+                
+                with conn.begin():
+                    applied_rows = conn.execute(text("SELECT version FROM public.schema_migrations")).fetchall()
+                    applied = {r[0] for r in applied_rows}
                     
-                    # Execute migration block in a transaction
-                    with conn.begin():
+                    for sql_file in sql_files:
+                        if sql_file.name in applied:
+                            print(f"Migration {sql_file.name} is already applied. Skipping.")
+                            continue
+                            
+                        print(f"Executing migration: {sql_file.name}...")
+                        with open(sql_file, "r", encoding="utf-8") as f:
+                            sql_content = f.read()
+                        
                         conn.execute(text(sql_content))
+                        conn.execute(
+                            text("INSERT INTO public.schema_migrations (version) VALUES (:version)"),
+                            {"version": sql_file.name}
+                        )
             else:
                 print("No migrations folder found. Skipping folder-based migrations.")
                 
