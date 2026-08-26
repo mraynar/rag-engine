@@ -30,7 +30,7 @@ export default function AccessTokenManager() {
 
   const fetchTokens = async () => {
     try {
-      const res = await fetch(`${API_BASE}/access-tokens`);
+      const res = await fetch(`${API_BASE}/access-tokens`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setTokens(data);
@@ -67,8 +67,9 @@ export default function AccessTokenManager() {
         body: JSON.stringify({ category_name: categoryName, label })
       });
       if (res.ok) {
+        const newToken = await res.json();
+        setTokens(prev => [newToken, ...prev]);
         setLabel('');
-        await fetchTokens();
       } else {
         const errData = await res.json().catch(() => ({}));
         setErrorMsg(errData.detail || 'Failed to create token');
@@ -87,7 +88,9 @@ export default function AccessTokenManager() {
         method: 'DELETE'
       });
       if (res.ok) {
-        await fetchTokens();
+        setTokens(prev =>
+          prev.map(t => t.id === id ? { ...t, revoked_at: new Date().toISOString() } : t)
+        );
       } else {
         alert('Failed to revoke token');
       }
