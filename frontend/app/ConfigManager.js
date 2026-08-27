@@ -239,8 +239,12 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
   const [editDesc, setEditDesc] = useState(entry.description);
   const [editValue, setEditValue] = useState('');
   const [showSecret, setShowSecret] = useState(false);
+  const [showTenant, setShowTenant] = useState(false);
+  const [showClient, setShowClient] = useState(false);
+  const [showSecretKey, setShowSecretKey] = useState(false);
   const [revealedValue, setRevealedValue] = useState(null);
   const [revealing, setRevealing] = useState(false);
+  const [revealingField, setRevealingField] = useState(null);
   const [saving, setSaving] = useState(false);
   const [activating, setActivating] = useState(false);
   const editDescRef = useRef(null);
@@ -256,6 +260,9 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
     setEditDesc(entry.description);
     setEditValue('');
     setShowSecret(false);
+    setShowTenant(false);
+    setShowClient(false);
+    setShowSecretKey(false);
     setRevealedValue(null);
   }, [entry]);
 
@@ -354,6 +361,52 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
     } finally {
       setRevealing(false);
     }
+  }
+
+  async function handleToggleField(field) {
+    let currentShow = false;
+    if (field === 'tenant') currentShow = showTenant;
+    else if (field === 'client') currentShow = showClient;
+    else if (field === 'secret') currentShow = showSecretKey;
+
+    if (currentShow) {
+      if (field === 'tenant') setShowTenant(false);
+      else if (field === 'client') setShowClient(false);
+      else if (field === 'secret') setShowSecretKey(false);
+      return;
+    }
+
+    if (revealedValue !== null) {
+      if (field === 'tenant') setShowTenant(true);
+      else if (field === 'client') setShowClient(true);
+      else if (field === 'secret') setShowSecretKey(true);
+      return;
+    }
+
+    setRevealingField(field);
+    try {
+      const res = await fetch(`${API_URL}/config/${entry.key}/reveal`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Failed to load value (${res.status})`);
+      }
+      const data = await res.json();
+      setRevealedValue(data.value);
+      if (field === 'tenant') setShowTenant(true);
+      else if (field === 'client') setShowClient(true);
+      else if (field === 'secret') setShowSecretKey(true);
+    } catch (err) {
+      toast.push(err.message || 'Failed to reveal secret value.', 'error');
+    } finally {
+      setRevealingField(null);
+    }
+  }
+
+  function formatSecretValue(val, show) {
+    if (!show) return '••••••••••••••••';
+    if (!val) return '—';
+    if (val.length <= 12) return val;
+    return `${val.substring(0, 8)}...`;
   }
 
   // Display text formatter
@@ -486,30 +539,64 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
       {isAzure ? (
         <>
           <td className={s.td}>
-            <code style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--color-text)' }}>
-              {showSecret ? creds.tenant_id : '••••••••••••••••'}
-            </code>
-          </td>
-          <td className={s.td}>
-            <code style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--color-text)' }}>
-              {showSecret ? creds.client_id : '••••••••••••••••'}
-            </code>
-          </td>
-          <td className={s.td}>
             <div className={s.valueCell}>
-              <code style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--color-text)' }}>
-                {showSecret ? creds.client_secret : '••••••••••••••••'}
+              <code style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--color-text)' }} title={showTenant ? creds.tenant_id : undefined}>
+                {formatSecretValue(creds.tenant_id, showTenant)}
               </code>
               <button
                 className={s.eyeBtn}
-                onClick={handleToggleSecret}
-                disabled={revealing}
-                title={showSecret ? 'Hide' : 'Show'}
-                aria-label={showSecret ? 'Hide value' : 'Show value'}
+                onClick={() => handleToggleField('tenant')}
+                disabled={revealingField !== null}
+                title={showTenant ? 'Hide' : 'Show'}
+                aria-label={showTenant ? 'Hide tenant id' : 'Show tenant id'}
               >
-                {revealing ? (
+                {revealingField === 'tenant' ? (
                   <SpinnerIcon size={14} className={s.spinIcon} />
-                ) : showSecret ? (
+                ) : showTenant ? (
+                  <EyeOffIcon size={14} />
+                ) : (
+                  <EyeIcon size={14} />
+                )}
+              </button>
+            </div>
+          </td>
+          <td className={s.td}>
+            <div className={s.valueCell}>
+              <code style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--color-text)' }} title={showClient ? creds.client_id : undefined}>
+                {formatSecretValue(creds.client_id, showClient)}
+              </code>
+              <button
+                className={s.eyeBtn}
+                onClick={() => handleToggleField('client')}
+                disabled={revealingField !== null}
+                title={showClient ? 'Hide' : 'Show'}
+                aria-label={showClient ? 'Hide client id' : 'Show client id'}
+              >
+                {revealingField === 'client' ? (
+                  <SpinnerIcon size={14} className={s.spinIcon} />
+                ) : showClient ? (
+                  <EyeOffIcon size={14} />
+                ) : (
+                  <EyeIcon size={14} />
+                )}
+              </button>
+            </div>
+          </td>
+          <td className={s.td}>
+            <div className={s.valueCell}>
+              <code style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--color-text)' }} title={showSecretKey ? creds.client_secret : undefined}>
+                {formatSecretValue(creds.client_secret, showSecretKey)}
+              </code>
+              <button
+                className={s.eyeBtn}
+                onClick={() => handleToggleField('secret')}
+                disabled={revealingField !== null}
+                title={showSecretKey ? 'Hide' : 'Show'}
+                aria-label={showSecretKey ? 'Hide secret key' : 'Show secret key'}
+              >
+                {revealingField === 'secret' ? (
+                  <SpinnerIcon size={14} className={s.spinIcon} />
+                ) : showSecretKey ? (
                   <EyeOffIcon size={14} />
                 ) : (
                   <EyeIcon size={14} />
