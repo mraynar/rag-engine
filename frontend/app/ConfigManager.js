@@ -111,7 +111,7 @@ function AddCandidateForm({ group, onSaved, onCancel }) {
 
   return (
     <tr className={s.addFormRow}>
-      <td colSpan={5} className={s.addFormCell}>
+      <td colSpan={isAzure ? 7 : 5} className={s.addFormCell}>
         <form className={s.addForm} onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', width: '100%' }}>
             <div style={{ gridColumn: 'span 2' }}>
@@ -357,34 +357,16 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
   }
 
   // Display text formatter
-  let displayValue;
+  const displayValue = showSecret ? (revealedValue ?? entry.value) : '••••••••';
+
+  let creds = { tenant_id: '', client_id: '', client_secret: '' };
   if (isAzure) {
-    let creds = { tenant_id: '', client_id: '', client_secret: '' };
     try {
       const rawVal = revealedValue ?? entry.value;
       if (rawVal) {
         creds = JSON.parse(rawVal);
       }
     } catch (e) {}
-
-    displayValue = (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left', fontSize: '0.75rem', fontFamily: 'monospace' }}>
-        <div>
-          <span style={{ fontWeight: '600', color: 'var(--color-navy)', display: 'inline-block', width: '55px' }}>Tenant:</span>
-          <span style={{ color: 'var(--color-text)' }}>{showSecret ? creds.tenant_id : '••••••••••••••••'}</span>
-        </div>
-        <div>
-          <span style={{ fontWeight: '600', color: 'var(--color-navy)', display: 'inline-block', width: '55px' }}>Client:</span>
-          <span style={{ color: 'var(--color-text)' }}>{showSecret ? creds.client_id : '••••••••••••••••'}</span>
-        </div>
-        <div>
-          <span style={{ fontWeight: '600', color: 'var(--color-navy)', display: 'inline-block', width: '55px' }}>Secret:</span>
-          <span style={{ color: 'var(--color-text)' }}>{showSecret ? creds.client_secret : '••••••••••••••••'}</span>
-        </div>
-      </div>
-    );
-  } else {
-    displayValue = showSecret ? (revealedValue ?? entry.value) : '••••••••';
   }
 
   const trClass = `${s.tr} ${entry.is_active ? s.trActive : ''} ${isEditing ? s.trEditing : ''}`;
@@ -407,33 +389,42 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
             aria-label="Edit description"
           />
         </td>
-        <td className={s.editCell}>
-          {isAzure ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {isAzure ? (
+          <>
+            <td className={s.editCell}>
               <input
                 className={s.editInput}
                 placeholder="Tenant ID (leave blank = unchanged)"
                 value={azureTenant}
                 onChange={e => setAzureTenant(e.target.value)}
-                style={{ fontSize: '0.75rem' }}
+                onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }}
+                style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}
               />
+            </td>
+            <td className={s.editCell}>
               <input
                 className={s.editInput}
                 placeholder="Client ID (leave blank = unchanged)"
                 value={azureClient}
                 onChange={e => setAzureClient(e.target.value)}
-                style={{ fontSize: '0.75rem' }}
+                onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }}
+                style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}
               />
+            </td>
+            <td className={s.editCell}>
               <input
                 className={s.editInput}
                 placeholder="Client Secret (leave blank = unchanged)"
                 value={azureSecret}
                 onChange={e => setAzureSecret(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }}
                 type="password"
-                style={{ fontSize: '0.75rem' }}
+                style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}
               />
-            </div>
-          ) : (
+            </td>
+          </>
+        ) : (
+          <td className={s.editCell}>
             <input
               className={s.editInput}
               value={editValue}
@@ -443,8 +434,8 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
               placeholder="Leave blank = unchanged"
               aria-label="Edit value"
             />
-          )}
-        </td>
+          </td>
+        )}
         <td className={`${s.td} ${s.tdCenter}`}>
           {entry.is_active
             ? <span className={s.activePill}><CheckIcon size={10} /> Active</span>
@@ -492,32 +483,65 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
       <td className={s.td} style={{ color: 'var(--color-text-light)' }}>
         {entry.description}
       </td>
-      <td className={s.td}>
-        <div className={s.valueCell}>
-          {isAzure ? (
-            displayValue
-          ) : (
+      {isAzure ? (
+        <>
+          <td className={s.td}>
+            <code style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--color-text)' }}>
+              {showSecret ? creds.tenant_id : '••••••••••••••••'}
+            </code>
+          </td>
+          <td className={s.td}>
+            <code style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--color-text)' }}>
+              {showSecret ? creds.client_id : '••••••••••••••••'}
+            </code>
+          </td>
+          <td className={s.td}>
+            <div className={s.valueCell}>
+              <code style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--color-text)' }}>
+                {showSecret ? creds.client_secret : '••••••••••••••••'}
+              </code>
+              <button
+                className={s.eyeBtn}
+                onClick={handleToggleSecret}
+                disabled={revealing}
+                title={showSecret ? 'Hide' : 'Show'}
+                aria-label={showSecret ? 'Hide value' : 'Show value'}
+              >
+                {revealing ? (
+                  <SpinnerIcon size={14} className={s.spinIcon} />
+                ) : showSecret ? (
+                  <EyeOffIcon size={14} />
+                ) : (
+                  <EyeIcon size={14} />
+                )}
+              </button>
+            </div>
+          </td>
+        </>
+      ) : (
+        <td className={s.td}>
+          <div className={s.valueCell}>
             <span className={`${s.valueText} ${!showSecret ? s.valueTextSecret : ''}`}>
               {displayValue}
             </span>
-          )}
-          <button
-            className={s.eyeBtn}
-            onClick={handleToggleSecret}
-            disabled={revealing}
-            title={showSecret ? 'Hide' : 'Show'}
-            aria-label={showSecret ? 'Hide value' : 'Show value'}
-          >
-            {revealing ? (
-              <SpinnerIcon size={14} className={s.spinIcon} />
-            ) : showSecret ? (
-              <EyeOffIcon size={14} />
-            ) : (
-              <EyeIcon size={14} />
-            )}
-          </button>
-        </div>
-      </td>
+            <button
+              className={s.eyeBtn}
+              onClick={handleToggleSecret}
+              disabled={revealing}
+              title={showSecret ? 'Hide' : 'Show'}
+              aria-label={showSecret ? 'Hide value' : 'Show value'}
+            >
+              {revealing ? (
+                <SpinnerIcon size={14} className={s.spinIcon} />
+              ) : showSecret ? (
+                <EyeOffIcon size={14} />
+              ) : (
+                <EyeIcon size={14} />
+              )}
+            </button>
+          </div>
+        </td>
+      )}
       <td className={`${s.td} ${s.tdCenter}`}>
         {entry.is_active
           ? (
@@ -642,11 +666,25 @@ function GroupSection({ groupName, entries, onRefresh, toast }) {
           <table className={s.table} aria-label={`Configuration group ${groupName}`}>
             <thead>
               <tr style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}>
-                <th className={s.th} style={{ width: '22%' }}>Key</th>
-                <th className={s.th} style={{ width: '28%' }}>Description</th>
-                <th className={s.th} style={{ width: '28%' }}>Value / Credentials</th>
-                <th className={`${s.th} ${s.thCenter}`} style={{ width: '12%' }}>Status</th>
-                <th className={`${s.th} ${s.thRight}`}  style={{ width: '10%' }}>Actions</th>
+                {groupName === 'azure_graph' ? (
+                  <>
+                    <th className={s.th} style={{ width: '15%' }}>Key</th>
+                    <th className={s.th} style={{ width: '15%' }}>Description</th>
+                    <th className={s.th} style={{ width: '20%' }}>Tenant ID</th>
+                    <th className={s.th} style={{ width: '20%' }}>Client ID</th>
+                    <th className={s.th} style={{ width: '15%' }}>Secret Key</th>
+                    <th className={`${s.th} ${s.thCenter}`} style={{ width: '8%' }}>Status</th>
+                    <th className={`${s.th} ${s.thRight}`}  style={{ width: '7%' }}>Actions</th>
+                  </>
+                ) : (
+                  <>
+                    <th className={s.th} style={{ width: '22%' }}>Key</th>
+                    <th className={s.th} style={{ width: '28%' }}>Description</th>
+                    <th className={s.th} style={{ width: '28%' }}>Value / Credentials</th>
+                    <th className={`${s.th} ${s.thCenter}`} style={{ width: '12%' }}>Status</th>
+                    <th className={`${s.th} ${s.thRight}`}  style={{ width: '10%' }}>Actions</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
