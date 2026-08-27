@@ -214,6 +214,29 @@ def answer_tabular_question(question: str, category_name: str) -> dict:
     except Exception as e:
         answer = f"Gagal merumuskan kalimat jawaban: {str(e)}."
 
+    # ── Groq narrative polishing ──────────────────────────────────────────────
+    # Groq's ONLY role here: rephrase the deterministic formatter output into a
+    # natural Indonesian sentence. It never touches data, filters, or numbers.
+    # If Groq is not configured or fails → silently fall back to formatter text.
+    raw_formatter_answer = answer
+    try:
+        from app.services.groq_client import groq_generate
+        narrative_prompt = (
+            f"Berikut adalah hasil faktual dari query data:\n"
+            f"{raw_formatter_answer}\n\n"
+            "Ubah kalimat di atas menjadi satu kalimat yang natural, ringkas, dan profesional dalam Bahasa Indonesia. "
+            "Gunakan nada yang ramah namun tetap formal. "
+            "JANGAN menambah informasi apapun yang tidak ada di kalimat aslinya. "
+            "JANGAN mengubah angka atau fakta apapun. "
+            "Jika kalimat aslinya sudah berupa tabel atau daftar, biarkan format tersebut tetap ada dan hanya perbaiki kalimat pengantarnya."
+        )
+        answer = groq_generate(prompt=narrative_prompt)
+        print(f"[tabular_query] Groq narrative: raw='{raw_formatter_answer}' → polished='{answer[:120]}...'")
+    except Exception as groq_err:
+        print(f"[tabular_query] Groq narrative skipped ({groq_err}), using formatter output.")
+        answer = raw_formatter_answer
+    # ─────────────────────────────────────────────────────────────────────────
+
     if RETURN_DEBUG_BLOCK:
         debug_lines = [
             "\n",
@@ -324,7 +347,8 @@ def answer_tabular_question(question: str, category_name: str) -> dict:
         debug_lines.extend([
             "**Formatter**",
             f"- Result Steps: `{list(results.keys())}`",
-            f"- Final Answer: `{answer}`"
+            f"- Raw Formatter Output: `{raw_formatter_answer}`",
+            f"- Groq Narrative (final): `{answer}`"
         ])
         
         answer += "\n".join(debug_lines)
