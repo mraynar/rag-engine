@@ -3,8 +3,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'TPS RAG Engine — Asisten Cerdas Terminal Petikemas Surabaya',
-  description: 'Sistem tanya-jawab berbasis dokumen untuk PT Terminal Petikemas Surabaya, powered by Gemini AI.',
+  title: 'TPS RAG Engine — Intelligent Assistant',
+  description: 'Document-based Q&A and analysis portal for PT Terminal Petikemas Surabaya, powered by Gemini AI.',
   icons: { icon: '/images/Logo Pelindo.png' },
 };
 
@@ -14,7 +14,7 @@ import AuthModal from './AuthModal';
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="id">
+    <html lang="en">
       <body>
         <AppProviders>
           <div className="page-shell">

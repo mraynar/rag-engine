@@ -44,10 +44,10 @@ def check_data_query_and_respond(question: str, category: str) -> Optional[str]:
             f"You are a helpful data assistant for the dataset category '{category}'.\n"
             f"The user is asking: \"{question}\"\n\n"
             "Task:\n"
-            "1. Determine if this question is a greeting (like 'hello', 'halo', 'hi'), small talk, "
+            "1. Determine if this question is a greeting (like 'hello', 'hi', 'hey'), small talk, "
             "or completely unrelated to the dataset category. (e.g., questions about weather, food, general chat, "
             "or questions that do not ask about data at all).\n"
-            "2. If it is a greeting or unrelated, generate a short, friendly, and helpful response in Indonesian "
+            "2. If it is a greeting or unrelated, generate a short, friendly, and helpful response in English "
             "explaining that you are a data assistant for this category, and give 2-3 specific example questions "
             "they could ask about the data in this category.\n"
             "3. If it IS a valid data question related to this category (even if phrased naturally or simply), respond ONLY with the word 'VALID'.\n\n"
@@ -57,7 +57,7 @@ def check_data_query_and_respond(question: str, category: str) -> Optional[str]:
             "- 'Market Share': market share percentages of line operators (LOP) (domestic/international).\n"
             "- 'Transhipment': transhipment container counts (20ft, 40ft), vessel operators, loading terminals, cities.\n\n"
             "Response format:\n"
-            "Either 'VALID' (exactly) or your friendly Indonesian response."
+            "Either 'VALID' (exactly) or your friendly English response."
         )
         
         response = client.models.generate_content(
@@ -71,10 +71,10 @@ def check_data_query_and_respond(question: str, category: str) -> Optional[str]:
     except Exception as e:
         print(f"[check_data_query] Gemini check failed: {e}")
         # Local rule-based fallback check if Gemini fails
-        greetings = ["halo", "hello", "hi ", "hei", "selamat pagi", "selamat siang", "selamat sore", "selamat malam", "siapa kamu", "help", "bantuan"]
+        greetings = ["halo", "hello", "hi ", "hei", "hey", "good morning", "good afternoon", "good evening", "who are you", "help", "support"]
         q_lower = question.lower().strip()
         if any(g in q_lower for g in greetings) or len(q_lower.split()) < 3:
-            return f"Saya asisten data untuk kategori {category}. Silakan tanyakan informasi terkait data pada kategori ini."
+            return f"I am the data assistant for the '{category}' category. Please ask any questions related to the data in this category."
         return None
 
 

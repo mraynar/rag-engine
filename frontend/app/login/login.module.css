@@ -17,7 +17,7 @@
   display: flex;
   width: 100%;
   max-width: 850px;
-  min-height: 550px;
+  height: 580px; /* Fixed height for consistent size in both Sign In and Register tabs */
   background: #ffffff;
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.04);
@@ -54,32 +54,16 @@
   pointer-events: none;
 }
 
-.logoBox {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 16px 24px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 28px;
-  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
-  transform: translateY(0);
-  transition: transform 0.3s ease;
-}
-
-.logoBox:hover {
-  transform: translateY(-2px);
-}
-
 .logo {
-  height: 48px;
-  width: auto;
+  max-width: 90%;
+  height: auto;
   object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
 }
 
 .leftDesc {
-  font-size: 0.92rem;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.85);
   line-height: 1.6;
   margin: 0;
   font-weight: 500;

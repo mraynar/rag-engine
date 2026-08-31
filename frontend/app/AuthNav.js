@@ -38,9 +38,12 @@ function UserIcon({ size = 14 }) {
   );
 }
 
+import { useRouter } from 'next/navigation';
+
 export default function AuthNav() {
   const { user, loading, logout } = useAuth();
   const { setIsAuthModalOpen } = useCategory();
+  const router = useRouter();
 
   if (loading) {
     return (
@@ -104,7 +107,7 @@ export default function AuthNav() {
   // Guest State
   return (
     <button
-      onClick={() => setIsAuthModalOpen(true)}
+      onClick={() => router.push('/login')}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -119,10 +122,10 @@ export default function AuthNav() {
         transition: 'all 0.15s ease',
         boxShadow: 'var(--shadow-sm)'
       }}
-      title="Sign In or Sign Up"
+      title="Sign In"
     >
       <LogInIcon size={12} />
-      <span>Sign In / Sign Up</span>
+      <span>Sign In</span>
     </button>
   );
 }
