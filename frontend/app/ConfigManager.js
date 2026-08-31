@@ -750,7 +750,7 @@ function GroupSection({ groupName, entries, onRefresh, toast }) {
         </div>
 
         <div className={s.tableWrapper}>
-          <table className={s.table} aria-label={`Configuration group ${groupName}`}>
+          <table className={`${s.table} ${groupName === 'azure_graph' ? s.tableAzure : ''}`} aria-label={`Configuration group ${groupName}`}>
             <thead>
               <tr style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}>
                 {groupName === 'azure_graph' ? (

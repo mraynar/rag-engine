@@ -245,7 +245,9 @@
 .valueCell {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.375rem;
+  width: 100%;
 }
 .valueText {
   font-family: 'SFMono-Regular', Consolas, monospace;
@@ -553,4 +555,8 @@
   .pageHeader { flex-direction: column; gap: 0.75rem; }
   .addForm { grid-template-columns: 1fr; }
   .th, .td, .editCell, .addFormCell { padding-left: 0.875rem; padding-right: 0.875rem; }
+}
+
+.tableAzure {
+  min-width: 900px !important;
 }
