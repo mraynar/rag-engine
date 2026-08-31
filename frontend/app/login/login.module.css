@@ -1,6 +1,6 @@
 /* =============================================
-   RAG Engine Frontend — Login/Register styling
-   Brand: Pelindo Corporate Theme
+   RAG Engine Frontend — Split Login/Register Layout
+   Brand: Pelindo Corporate Theme (Corporate Blue)
    ============================================= */
 
 .container {
@@ -8,123 +8,121 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #0a192f 0%, #173d73 50%, #0a192f 100%);
-  position: relative;
-  overflow: hidden;
+  background-color: #EEF2F7; /* Matches chatbot bg --color-bg */
   font-family: 'Inter', sans-serif;
   padding: 20px;
 }
 
-/* Background animated decorative circles for rich aesthetics */
-.container::before,
-.container::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  z-index: 1;
-  opacity: 0.15;
-}
-
-.container::before {
-  width: 400px;
-  height: 400px;
-  background: var(--color-brand, #2B7FD6);
-  top: -100px;
-  left: -100px;
-  animation: float 20s ease-in-out infinite alternate;
-}
-
-.container::after {
-  width: 500px;
-  height: 500px;
-  background: var(--color-brand, #2B7FD6);
-  bottom: -150px;
-  right: -100px;
-  animation: float 25s ease-in-out infinite alternate-reverse;
-}
-
-@keyframes float {
-  0% { transform: translateY(0) scale(1); }
-  100% { transform: translateY(50px) scale(1.1); }
-}
-
 .card {
-  position: relative;
-  z-index: 10;
-  width: 100%;
-  max-width: 450px;
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 40px 32px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.card:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 30px 60px -10px rgba(0, 0, 0, 0.6);
-}
-
-.logoContainer {
   display: flex;
+  width: 100%;
+  max-width: 850px;
+  min-height: 550px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.04);
+  border: 1px solid #D8E2EF;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+/* Left Pane — Brand Blue Section */
+.leftPane {
+  width: 42%;
+  background: linear-gradient(135deg, #155090 0%, #2B7FD6 100%);
+  display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 20px;
-  margin-bottom: 24px;
+  padding: 48px 32px;
+  color: #ffffff;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle wave pattern in left pane for premium design */
+.leftPane::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 40%),
+                    radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.logoBox {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 28px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
+  transform: translateY(0);
+  transition: transform 0.3s ease;
+}
+
+.logoBox:hover {
+  transform: translateY(-2px);
 }
 
 .logo {
-  height: 45px;
+  height: 48px;
   width: auto;
   object-fit: contain;
 }
 
-.logoDivider {
-  width: 1px;
-  height: 30px;
-  background-color: rgba(255, 255, 255, 0.15);
+.leftDesc {
+  font-size: 0.92rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.6;
+  margin: 0;
+  font-weight: 500;
+  max-width: 280px;
+}
+
+/* Right Pane — Form Section */
+.rightPane {
+  width: 58%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px;
+  background-color: #ffffff;
 }
 
 .header {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.title {
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #ffffff;
-  margin: 0 0 6px 0;
-  letter-spacing: -0.02em;
+  margin-bottom: 24px;
 }
 
 .subtitle {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.82rem;
+  color: #5A6E8A;
   margin: 0;
   line-height: 1.4;
 }
 
 .tabGroup {
   display: flex;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #F4F7FB;
+  border: 1px solid #D8E2EF;
   padding: 4px;
   border-radius: 8px;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
 .tab {
   flex: 1;
-  padding: 10px;
+  padding: 9px;
   background: none;
   border: none;
   border-radius: 6px;
-  color: rgba(255, 255, 255, 0.6);
+  color: #5A6E8A;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -132,15 +130,16 @@
 }
 
 .tabActive {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  color: #2B7FD6;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+  border: 1px solid #D8E2EF;
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .formGroup {
@@ -152,7 +151,7 @@
 .label {
   font-size: 0.78rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
+  color: #0F172A;
 }
 
 .inputWrapper {
@@ -164,26 +163,32 @@
 .inputIcon {
   position: absolute;
   left: 12px;
-  color: rgba(255, 255, 255, 0.4);
+  color: #5A6E8A;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .input {
   width: 100%;
-  padding: 11px 16px 11px 40px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 16px 10px 38px;
+  background: #ffffff;
+  border: 1px solid #D8E2EF;
   border-radius: 8px;
-  color: #ffffff;
+  color: #0F172A;
   font-size: 0.88rem;
   font-family: inherit;
   transition: all 0.2s ease;
 }
 
+.input::placeholder {
+  color: #94a3b8;
+}
+
 .input:focus {
   outline: none;
-  border-color: var(--color-brand, #2B7FD6);
-  background: rgba(255, 255, 255, 0.06);
+  border-color: #2B7FD6;
   box-shadow: 0 0 0 3px rgba(43, 127, 214, 0.15);
 }
 
@@ -192,7 +197,7 @@
   right: 12px;
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.4);
+  color: #5A6E8A;
   cursor: pointer;
   padding: 4px;
   display: flex;
@@ -203,30 +208,30 @@
 }
 
 .eyeButton:hover {
-  color: #ffffff;
+  color: #2B7FD6;
 }
 
 .submitBtn {
-  margin-top: 10px;
-  padding: 12px;
-  background: var(--color-brand, #2B7FD6);
+  margin-top: 8px;
+  padding: 11px;
+  background: #2B7FD6;
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 4px 14px rgba(43, 127, 214, 0.3);
+  box-shadow: 0 4px 12px rgba(43, 127, 214, 0.25);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .submitBtn:hover:not(:disabled) {
-  background: #1d72c6;
-  box-shadow: 0 6px 20px rgba(43, 127, 214, 0.4);
+  background: #155090;
+  box-shadow: 0 6px 16px rgba(43, 127, 214, 0.35);
   transform: translateY(-1px);
 }
 
@@ -240,26 +245,26 @@
 }
 
 .alert {
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-radius: 8px;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   line-height: 1.4;
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px;
   animation: slideIn 0.3s ease;
 }
 
 .alertError {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  color: #ef4444;
 }
 
 .alertSuccess {
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  color: #a7f3d0;
+  background: #f0fdf4;
+  border: 1px solid #dcfce7;
+  color: #15803d;
 }
 
 .alertIcon {
@@ -268,7 +273,7 @@
 }
 
 @keyframes slideIn {
-  from { opacity: 0; transform: translateY(-10px); }
+  from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -276,12 +281,45 @@
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-top: 2px solid #ffffff;
   border-radius: 50%;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Responsive Tablet/Mobile styling */
+@media (max-width: 768px) {
+  .card {
+    flex-direction: column;
+    max-width: 480px;
+    min-height: auto;
+  }
+
+  .leftPane {
+    width: 100%;
+    padding: 32px 24px;
+  }
+
+  .logoBox {
+    margin-bottom: 16px;
+    padding: 12px 18px;
+  }
+
+  .logo {
+    height: 38px;
+  }
+
+  .leftDesc {
+    font-size: 0.85rem;
+    max-width: 100%;
+  }
+
+  .rightPane {
+    width: 100%;
+    padding: 32px 24px;
+  }
 }

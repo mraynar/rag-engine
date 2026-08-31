@@ -141,132 +141,140 @@ function LoginFormContent() {
 
   return (
     <div className={s.card}>
-      <div className={s.logoContainer}>
-        <img src="/images/Logo_TPS.png" alt="Logo Pelindo Terminal Petikemas" className={s.logo} style={{ height: '55px' }} />
+      {/* Sisi Kiri — Gambar / Logo & Tulisan */}
+      <div className={s.leftPane}>
+        <div className={s.logoBox}>
+          <img src="/images/Logo_TPS.png" alt="Logo Pelindo Terminal Petikemas" className={s.logo} />
+        </div>
+        <p className={s.leftDesc}>
+          Asisten Cerdas & Portal Tanya Jawab Data Tabular PT Terminal Petikemas Surabaya
+        </p>
       </div>
 
-      <div className={s.header}>
-        <h2 className={s.title}>TPS RAG Engine</h2>
-        <p className={s.subtitle}>Asisten Cerdas & Portal Tanya Jawab Data Tabular PT Terminal Petikemas Surabaya</p>
-      </div>
+      {/* Sisi Kanan — Form Login */}
+      <div className={s.rightPane}>
+        <div className={s.header}>
+          <p className={s.subtitle}>Silakan masuk menggunakan akun korporat Anda untuk mulai berinteraksi dengan RAG Engine.</p>
+        </div>
 
-      <div className={s.tabGroup}>
-        <button
-          type="button"
-          onClick={() => { setMode('login'); setErrorMsg(''); setSuccessMsg(''); }}
-          className={`${s.tab} ${mode === 'login' ? s.tabActive : ''}`}
-        >
-          Masuk
-        </button>
-        <button
-          type="button"
-          onClick={() => { setMode('register'); setErrorMsg(''); setSuccessMsg(''); }}
-          className={`${s.tab} ${mode === 'register' ? s.tabActive : ''}`}
-        >
-          Daftar Akun
-        </button>
-      </div>
+        <div className={s.tabGroup}>
+          <button
+            type="button"
+            onClick={() => { setMode('login'); setErrorMsg(''); setSuccessMsg(''); }}
+            className={`${s.tab} ${mode === 'login' ? s.tabActive : ''}`}
+          >
+            Masuk
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode('register'); setErrorMsg(''); setSuccessMsg(''); }}
+            className={`${s.tab} ${mode === 'register' ? s.tabActive : ''}`}
+          >
+            Daftar Akun
+          </button>
+        </div>
 
-      <form onSubmit={handleSubmit} className={s.form}>
-        {errorMsg && (
-          <div className={`${s.alert} ${s.alertError}`}>
-            <AlertIcon size={16} className={s.alertIcon} />
-            <span>{errorMsg}</span>
-          </div>
-        )}
+        <form onSubmit={handleSubmit} className={s.form}>
+          {errorMsg && (
+            <div className={`${s.alert} ${s.alertError}`}>
+              <AlertIcon size={16} className={s.alertIcon} />
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
-        {successMsg && (
-          <div className={`${s.alert} ${s.alertSuccess}`}>
-            <CheckCircleIcon size={16} className={s.alertIcon} />
-            <span>{successMsg}</span>
-          </div>
-        )}
+          {successMsg && (
+            <div className={`${s.alert} ${s.alertSuccess}`}>
+              <CheckCircleIcon size={16} className={s.alertIcon} />
+              <span>{successMsg}</span>
+            </div>
+          )}
 
-        {mode === 'register' && (
+          {mode === 'register' && (
+            <div className={s.formGroup}>
+              <label className={s.label}>Nama Lengkap</label>
+              <div className={s.inputWrapper}>
+                <UserIcon size={16} className={s.inputIcon} />
+                <input
+                  type="text"
+                  placeholder="Masukkan nama lengkap Anda"
+                  value={displayName}
+                  onChange={e => setDisplayName(e.target.value)}
+                  required
+                  className={s.input}
+                />
+              </div>
+            </div>
+          )}
+
           <div className={s.formGroup}>
-            <label className={s.label}>Nama Lengkap</label>
+            <label className={s.label}>Email Korporat</label>
             <div className={s.inputWrapper}>
-              <UserIcon size={16} className={s.inputIcon} />
+              <MailIcon size={16} className={s.inputIcon} />
               <input
-                type="text"
-                placeholder="Masukkan nama lengkap Anda"
-                value={displayName}
-                onChange={e => setDisplayName(e.target.value)}
+                type="email"
+                placeholder="nama@tps.co.id"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
                 required
                 className={s.input}
               />
             </div>
           </div>
-        )}
 
-        <div className={s.formGroup}>
-          <label className={s.label}>Email Korporat</label>
-          <div className={s.inputWrapper}>
-            <MailIcon size={16} className={s.inputIcon} />
-            <input
-              type="email"
-              placeholder="nama@tps.co.id"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              className={s.input}
-            />
-          </div>
-        </div>
-
-        <div className={s.formGroup}>
-          <label className={s.label}>Password</label>
-          <div className={s.inputWrapper}>
-            <LockIcon size={16} className={s.inputIcon} />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              placeholder="••••••••"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              className={s.input}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className={s.eyeButton}
-              title={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
-            >
-              {showPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
-            </button>
-          </div>
-        </div>
-
-        {mode === 'register' && (
           <div className={s.formGroup}>
-            <label className={s.label}>Konfirmasi Password</label>
+            <label className={s.label}>Password</label>
             <div className={s.inputWrapper}>
               <LockIcon size={16} className={s.inputIcon} />
               <input
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
                 required
                 className={s.input}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className={s.eyeButton}
+                title={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+              >
+                {showPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+              </button>
             </div>
           </div>
-        )}
 
-        <button type="submit" disabled={loading} className={s.submitBtn}>
-          {loading ? (
-            <>
-              <div className={s.spinner} />
-              <span>Memproses...</span>
-            </>
-          ) : mode === 'login' ? (
-            <span>Masuk ke RAG Engine</span>
-          ) : (
-            <span>Daftar Akun Baru</span>
+          {mode === 'register' && (
+            <div className={s.formGroup}>
+              <label className={s.label}>Konfirmasi Password</label>
+              <div className={s.inputWrapper}>
+                <LockIcon size={16} className={s.inputIcon} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  required
+                  className={s.input}
+                />
+              </div>
+            </div>
           )}
-        </button>
-      </form>
+
+          <button type="submit" disabled={loading} className={s.submitBtn}>
+            {loading ? (
+              <>
+                <div className={s.spinner} />
+                <span>Memproses...</span>
+              </>
+            ) : mode === 'login' ? (
+              <span>Masuk ke RAG Engine</span>
+            ) : (
+              <span>Daftar Akun Baru</span>
+            )}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
