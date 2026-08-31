@@ -181,7 +181,12 @@
   overflow-x: auto;
   width: 100%;
 }
-.table { width: 100%; border-collapse: collapse; min-width: 700px; }
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 700px;
+  table-layout: fixed;
+}
 
 .th {
   text-align: left;
@@ -232,6 +237,7 @@
   border-radius: 5px;
   padding: 0.125rem 0.4375rem;
   letter-spacing: 0.01em;
+  word-break: break-all;
 }
 .secretBadge {
   display: inline-flex;
