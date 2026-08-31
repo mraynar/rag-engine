@@ -71,6 +71,38 @@ def load_dataframe(source_id: str, sheet: Optional[str] = None) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
+OPERATOR_SYNONYM_GROUPS = [
+    {"TIL", "TANTO", "TANTO INTIM LINE"},
+    {"SPI", "SPIL", "SALAM PACIFIC LINE", "SALAM PACIFIC INDONESIA"},
+    {"MSC", "MEDITERRANEAN SHIPPING COMPANY"},
+    {"MSK", "MAERSK", "MAERSK LINE"},
+    {"EMC", "EVERGREEN", "EVERGREEN LINE"},
+    {"WHL", "WAN HAI", "WAN HAI LINES"},
+    {"OOCL", "ORIENT OVERSEAS CONTAINER LINE"},
+    {"COSCO", "COSCO SHIPPING"},
+    {"HPL", "HAPAG", "HAPAG-LLOYD", "HAPAG LLOYD"},
+    {"ONE", "OCEAN NETWORK EXPRESS"}
+]
+
+def get_operator_synonyms(val: str) -> list[str]:
+    if not isinstance(val, str):
+        return [val]
+    val_upper = val.upper().strip()
+    for group in OPERATOR_SYNONYM_GROUPS:
+        if any(s.upper() == val_upper for s in group):
+            return list(group)
+    return [val]
+
+def get_all_operator_synonyms(val_list: list) -> list:
+    res = []
+    for item in val_list:
+        if isinstance(item, str):
+            res.extend(get_operator_synonyms(item))
+        else:
+            res.append(item)
+    return list(dict.fromkeys(res))
+
+
 def apply_filters(df: pd.DataFrame, filters: List[FilterCondition]) -> pd.DataFrame:
     """
     Apply filter conditions to the DataFrame with support for type coercion and case-insensitive columns.
@@ -109,8 +141,29 @@ def apply_filters(df: pd.DataFrame, filters: List[FilterCondition]) -> pd.DataFr
             df[col] = pd.to_datetime(df[col], errors='coerce')
             val = pd.to_datetime(val, errors='coerce')
 
+        # Map month names in natural language to their numeric code dynamically
+        if col.upper() in ["MONTH", "BULAN"] and isinstance(val, str):
+            month_key = val.lower().strip()
+            from app.services.tabular.registries import MONTH_NORMALIZE_MAP
+            if month_key in MONTH_NORMALIZE_MAP:
+                month_code = MONTH_NORMALIZE_MAP[month_key]["code"]
+                month_name = MONTH_NORMALIZE_MAP[month_key]["id"]
+                df = df[df[col].notnull() & df[col].astype(str).str.lower().str.strip().isin([str(month_code), month_name.lower()])]
+                continue
+
+        is_operator_col = col.strip().upper() in ["LOP", "OPERATOR", "VESSEL OPERATOR", "VESSELOPERATOR"]
+
         # Operator translation to pandas query operations
-        if op == FilterOperator.EQ or op.value == "==":
+        if is_operator_col and (op == FilterOperator.EQ or op.value == "=="):
+            syns = get_operator_synonyms(val)
+            df = df[df[col].notnull() & df[col].astype(str).str.upper().str.strip().isin([s.upper() for s in syns])]
+        elif is_operator_col and (op == FilterOperator.NEQ or op.value == "!="):
+            syns = get_operator_synonyms(val)
+            df = df[df[col].isnull() | (~df[col].astype(str).str.upper().str.strip().isin([s.upper() for s in syns]))]
+        elif is_operator_col and (op == FilterOperator.IN or op.value == "in") and isinstance(val, list):
+            syns = get_all_operator_synonyms(val)
+            df = df[df[col].notnull() & df[col].astype(str).str.upper().str.strip().isin([s.upper() for s in syns])]
+        elif op == FilterOperator.EQ or op.value == "==":
             df = df[df[col] == val]
         elif op == FilterOperator.NEQ or op.value == "!=":
             df = df[df[col] != val]

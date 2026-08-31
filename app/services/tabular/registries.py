@@ -28,6 +28,17 @@ DATASET_REGISTRY = {
             "realisasi": 4,
         }
     },
+    "Realisasi UC": {
+        "keywords": {
+            "realisasi uc": 9,
+            "realisasi": 7,
+            "uc": 8,
+            "unit cost": 6,
+            "unit cost realization": 6,
+            "total": 4,
+            "revenue": 3,
+        }
+    },
     "Market Share": {
         "keywords": {
             "market": 5,
@@ -87,6 +98,14 @@ COLUMN_ALIASES = {
     "throughput": "TEUS",
     "teus": "TEUS",
     "market share": "%",
+    "market share percentage": "%",
+    "customer": "LOP",
+    "customers": "LOP",
+    "realisasi uc": "TOTAL",
+    "total realisasi": "TOTAL",
+    "uc": "TOTAL",
+    "unit cost": "TOTAL REVENUE",
+    "revenue": "TOTAL REVENUE",
     "productivity": "BCH",
     "performance": "ACTUAL VS BUDGET",
     "boxes": "Boxes",

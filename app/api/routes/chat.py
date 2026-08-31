@@ -11,16 +11,22 @@ router = APIRouter()
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest, user: Optional[dict] = Depends(get_current_user)) -> ChatResponse:
-    # Check if this category belongs to Supabase tabular sources
+    tabular_category = request.category
+    if not tabular_category:
+        from app.services.tabular.resolver import route_dataset
+        route = route_dataset(request.message)
+        if route.score > 0:
+            tabular_category = route.dataset
+
     is_supabase_category = False
-    if request.category:
+    if tabular_category:
         try:
             from app.services.db import get_db_conn
             from sqlalchemy import text
             with get_db_conn() as conn:
                 res = conn.execute(
                     text("SELECT id FROM data_sources WHERE category_name = :category"),
-                    {"category": request.category}
+                    {"category": tabular_category}
                 ).fetchone()
                 if res:
                     is_supabase_category = True
@@ -30,7 +36,7 @@ def chat(request: ChatRequest, user: Optional[dict] = Depends(get_current_user))
     if is_supabase_category:
         # Use Supabase + pandas + Gemini function calling query pipeline
         from app.services.tabular_query import answer_tabular_question
-        result = answer_tabular_question(request.message, request.category)
+        result = answer_tabular_question(request.message, tabular_category)
         answer = result["answer"]
         sources = result["sources"]
     else:

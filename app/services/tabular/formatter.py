@@ -38,19 +38,25 @@ def format_number(val: Any) -> str:
         if pd.isna(val) or (isinstance(val, float) and math.isnan(val)):
             return "kosong"
         val_float = float(val)
-        if val_float.is_integer():
-            return f"{int(val_float):,}".replace(",", ".")
+        is_negative = val_float < 0
+        val_abs = abs(val_float)
+        
+        if val_abs.is_integer():
+            formatted = f"{int(val_abs):,}".replace(",", ".")
         else:
-            val_rounded = round(val_float, 2)
+            val_rounded = round(val_abs, 2)
             if val_rounded.is_integer():
-                return f"{int(val_rounded):,}".replace(",", ".")
-            parts = f"{val_rounded:.2f}".split(".")
-            integer_part = f"{int(parts[0]):,}".replace(",", ".")
-            # Strip trailing zeros in decimals if appropriate, but keeping at least 1 or 2
-            dec = parts[1]
-            if dec.endswith("0"):
-                dec = dec[:-1]
-            return f"{integer_part},{dec}"
+                formatted = f"{int(val_rounded):,}".replace(",", ".")
+            else:
+                parts = f"{val_rounded:.2f}".split(".")
+                integer_part = f"{int(parts[0]):,}".replace(",", ".")
+                # Strip trailing zeros in decimals if appropriate, but keeping at least 1 or 2
+                dec = parts[1]
+                if dec.endswith("0"):
+                    dec = dec[:-1]
+                formatted = f"{integer_part},{dec}"
+        
+        return f"-{formatted}" if is_negative else formatted
     return str(val)
 
 
@@ -97,10 +103,31 @@ def format_response(
     year = resolved.month.year if resolved.month else None
 
     # Handle Percentage lookup intent suffix
-    is_percentage = ast.intent == UserIntent.PERCENTAGE_LOOKUP or "%" in question or "market share" in question.lower()
+    is_percentage = False
+    if original_plan and original_plan.aggregation and original_plan.aggregation.column:
+        is_percentage = original_plan.aggregation.column == "%"
+    elif resolved.metrics:
+        is_percentage = "%" in resolved.metrics
+    else:
+        is_percentage = ast.intent == UserIntent.PERCENTAGE_LOOKUP or "%" in question or "market share" in question.lower()
+
 
     # 3. Multi-Hop / Chained results formatting
     if len(results) > 1:
+        if 1 in results and 2 in results and isinstance(results[2].data, pd.DataFrame):
+            annual_total = results[1].data
+            monthly_data = results[2].data
+            numeric_columns = monthly_data.select_dtypes(include=[np.number]).columns
+            value_column = next((column for column in numeric_columns if column.upper() not in ["YEAR", "MONTH", "MONTH_CODE"]), None)
+            if value_column and isinstance(annual_total, (int, float, np.integer, np.floating)):
+                monthly_total = pd.to_numeric(monthly_data[value_column], errors="coerce").sum()
+                difference = float(annual_total) - float(monthly_total)
+                return (
+                    f"Total tahunan {metric_label} adalah {format_number(annual_total)}, "
+                    f"sedangkan penjumlahan data bulanan adalah {format_number(monthly_total)}. "
+                    f"Selisihnya {format_number(abs(difference))}; selisih ini muncul karena cakupan atau pengelompokan baris tahunan dan bulanan berbeda."
+                )
+
         # Check if difference calculation requested
         if any(w in question.lower() for w in ["selisih", "beda", "perbedaan", "difference"]):
             if 1 in results and 2 in results:
@@ -166,7 +193,13 @@ def format_response(
                 if is_percentage:
                     formatted_val = f"{formatted_val}%"
                 op_str = f" {operator}" if operator else ""
-                period_str = f" pada tahun {year}" if year else ""
+                month_str = resolved.month.month_str if resolved.month and resolved.month.month_str else ""
+                if month_str and year:
+                    period_str = f" pada {month_str} {year}"
+                elif year:
+                    period_str = f" pada tahun {year}"
+                else:
+                    period_str = ""
                 metric_name = get_metric_label(resolved.metrics[0]) if resolved.metrics else "nilai"
                 return f"{metric_name}{op_str}{period_str} adalah {formatted_val}."
 
@@ -187,29 +220,28 @@ def format_response(
                             temp_str = str(temp_val)
                     else:
                         temp_str = format_number(temp_val)
-                    lines.append(f"- {temp_str}: {format_number(row[val_col])}")
+                    val_str = format_number(row[val_col])
+                    if is_percentage:
+                        val_str = f"{val_str}%"
+                    lines.append(f"- {temp_str}: {val_str}")
                 return "\n".join(lines)
 
         # Ranking formatting (TOP_N / BOTTOM_N)
         if ast.query_type == QueryType.RANKING or ast.intent in [UserIntent.TOP_N, UserIntent.BOTTOM_N]:
-            row = data.iloc[0]
             group_cols = [c for c in data.columns if c.upper() in ["LOP", "OPERATOR", "VESSEL OPERATOR", "MONTH", "YEAR", "BULAN"]]
             group_col = group_cols[0] if group_cols else data.columns[0]
             val_cols = [c for c in data.columns if c != group_col]
             val_col = val_cols[0] if val_cols else data.columns[1] if len(data.columns) > 1 else group_col
 
             rank_word = "terendah" if ast.intent == UserIntent.BOTTOM_N or (original_plan.sort == "asc") else "tertinggi"
-            formatted_val = format_number(row[val_col])
-            if is_percentage:
-                formatted_val = f"{formatted_val}%"
-
-            group_val = row[group_col]
-            if group_col.upper() in ["YEAR", "TANGGAL", "DATE"] and isinstance(group_val, (int, float, np.integer, np.floating)):
-                formatted_group = str(int(float(group_val)))
-            else:
-                formatted_group = format_number(group_val)
-                
-            return f"Berdasarkan data, {formatted_group} memiliki {metric_label} {rank_word} yaitu {formatted_val}."
+            lines = []
+            for rank, (_, row) in enumerate(data.iterrows(), start=1):
+                formatted_val = format_number(row[val_col])
+                if is_percentage:
+                    formatted_val = f"{formatted_val}%"
+                lines.append(f"{rank}. {format_number(row[group_col])}: {formatted_val}")
+            group_label = "Customer" if "customer" in question.lower() else group_col
+            return f"{len(lines)} besar {group_label} berdasarkan {metric_label} ({rank_word}):\n" + "\n".join(lines)
 
         if ast.query_type == QueryType.COMPARISON or ast.intent == UserIntent.COMPARISON or (ast.query_type == QueryType.MULTI_HOP and len(results) == 1):
             group_cols = [c for c in data.columns if c.upper() in ["LOP", "OPERATOR", "VESSEL OPERATOR", "MONTH", "YEAR", "BULAN", "_SHEET"]]
@@ -224,7 +256,10 @@ def format_response(
                     formatted_group = str(int(float(group_val)))
                 else:
                     formatted_group = str(group_val)
-                lines.append(f"{formatted_group}: {format_number(row[val_col])}")
+                val_str = format_number(row[val_col])
+                if is_percentage:
+                    val_str = f"{val_str}%"
+                lines.append(f"{formatted_group}: {val_str}")
             return "\n".join(lines)
 
         # General DataFrame fallback - format as markdown table instead of raw string to prevent raw data dump

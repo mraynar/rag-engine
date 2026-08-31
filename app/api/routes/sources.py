@@ -65,7 +65,6 @@ def delete_existing_source(id: str, user: dict = Depends(require_user)) -> dict:
             from app.services.ingestion import delete_category_vector_data
             delete_category_vector_data(category_name)
 
-            # Clean up Supabase Postgres tables as well
             from app.services.db import get_db_conn
             from sqlalchemy import text
             try:
@@ -103,7 +102,6 @@ def sync_source(id: str, user: dict = Depends(require_user)) -> dict:
         is_gdrive = "drive.google.com" in url or "docs.google.com" in url
 
         try:
-            # Call new zero-AI tabular sync pipeline
             from app.services.tabular_ingestion import sync_tabular_source
             db_source = sync_tabular_source(
                 category_name=source["category_name"],
@@ -114,7 +112,6 @@ def sync_source(id: str, user: dict = Depends(require_user)) -> dict:
             chunk_count = db_source.get("row_count", 0)
             fetch_method = db_source.get("fetch_method", "unknown")
 
-            # Keep local sources_store.json in sync for frontend compatibility
             updated = mark_synced(id, chunk_count, fetch_method)
             return {
                 "message": f"Synchronization successful. Indexed {chunk_count} rows in Supabase.",
@@ -132,6 +129,23 @@ def sync_source(id: str, user: dict = Depends(require_user)) -> dict:
             _syncing_sources.discard(id)
 
 
+@router.get("/{id}/verify")
+def verify_source_data(id: str, user: dict = Depends(require_user)) -> dict:
+    source = get_source(id)
+    if not source:
+        raise HTTPException(status_code=404, detail="Category not found.")
+
+    category_name = source["category_name"]
+    onedrive_url = source["onedrive_url"]
+
+    try:
+        from app.services.tabular_verify import verify_source
+        report = verify_source(category_name=category_name, source_url=onedrive_url)
+        return report
+    except (ValueError, Exception) as e:
+        raise HTTPException(status_code=400, detail=f"Verification failed: {str(e)}")
+
+
 @router.get("/{id}/preview")
 def get_source_preview(id: str, limit: int = 100, offset: int = 0, user: dict = Depends(require_user)) -> dict:
     """Fetch database preview rows for a synchronized online data source."""
@@ -139,17 +153,14 @@ def get_source_preview(id: str, limit: int = 100, offset: int = 0, user: dict = 
     from sqlalchemy import text
     import json
     
-    # Get category metadata
     source = get_source(id)
     if not source:
         raise HTTPException(status_code=404, detail="Category not found.")
         
     category_name = source["category_name"]
         
-    # Query rows using resolved database UUID
     try:
         with get_db_conn() as conn:
-            # Resolve true UUID from data_sources
             db_source = conn.execute(
                 text("SELECT id FROM data_sources WHERE category_name = :category_name"),
                 {"category_name": category_name}
@@ -167,13 +178,11 @@ def get_source_preview(id: str, limit: int = 100, offset: int = 0, user: dict = 
                 
             db_source_id = db_source[0]
             
-            # Count matching rows
             total_rows = conn.execute(
                 text("SELECT COUNT(*) FROM data_rows WHERE source_id = :source_id"),
                 {"source_id": db_source_id}
             ).scalar() or 0
             
-            # Fetch matching page rows
             query = text("""
                 SELECT sheet_name, row_index, row_data 
                 FROM data_rows 

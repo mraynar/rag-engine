@@ -62,6 +62,24 @@ class TestDatasetRouting(unittest.TestCase):
             category_name=None
         )
         self.assertEqual(result.dataset, "Transhipment")
+
+    def test_p4_realisasi_uc_keyword_routes_to_tabular_dataset(self):
+        """P4: Realisasi UC should route to tabular source even when category is All Data"""
+        from app.services.tabular.resolver import route_dataset
+
+        result = route_dataset(
+            question="Berapa total realisasi UC?",
+            category_name=None
+        )
+        self.assertEqual(result.dataset, "Realisasi UC")
+        self.assertGreater(result.score, 0)
+
+    def test_realisasi_uc_metric_alias_maps_to_total_column(self):
+        """Questions mentioning UC or realisasi should resolve to the actual TOTAL column in the dataset."""
+        from app.services.tabular.resolver import resolve_entities
+
+        entities = resolve_entities("Berapa total realisasi UC?", dataset="Realisasi UC")
+        self.assertIn("TOTAL", entities.metrics)
     
     def test_p5_ambiguous_dataset(self):
         """P5: Multiple datasets have equal evidence"""

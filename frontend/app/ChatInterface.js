@@ -184,16 +184,7 @@ function MessageBubble({ role, content, sources }) {
           </div>
 
           {debugContent && (
-            <div style={{
-              marginTop: '12px',
-              padding: '12px 14px',
-              background: 'var(--color-bg)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--r-md)',
-              fontSize: '0.8rem',
-              color: 'var(--color-text-muted)',
-              overflowX: 'auto',
-            }}>
+            <div className={s.debugContainer}>
               <div className={s.markdownContent}>
                 <ReactMarkdown>{debugContent}</ReactMarkdown>
               </div>

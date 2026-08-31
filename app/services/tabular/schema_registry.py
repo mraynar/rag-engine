@@ -13,6 +13,15 @@ SCHEMA_REGISTRY = {
         "sheets": ["Domestik", "Internasional"],
         "columns": ["YEAR", "MONTH", "ACTUAL", "BUDGET", "ACTUAL VS BUDGET"]
     },
+    "Realisasi UC": {
+        "sheets": ["SUMMARY", "OH OW OL", "TREND UC", "_all_sheets"],
+        "columns": [
+            "TAHUN", "BULAN", "STATUS", "20'", "40'", "45'",
+            "TOTAL BOX", "TOTAL TEUS", "TOTAL", "TOTAL DISCOUNT",
+            "TOTAL REVENUE", "KEGIATAN", "ACTIVITY", "DATE", "MONTH",
+            "YEAR", "URUTAN", "KATEGORI", "UNNAMED: 12"
+        ]
+    },
     "Market Share": {
         "sheets": ["V.OPR DOM", "V.OPR INT"],
         "columns": ["YEAR", "MONTH", "LOP", "%"]

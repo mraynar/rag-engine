@@ -100,6 +100,7 @@ yarl==1.24.5
 
 # --- Document parsing (tambahan untuk dynamic document management) ---
 pandas
+python-calamine
 openpyxl
 python-docx
 pdfplumber

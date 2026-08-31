@@ -875,3 +875,71 @@
   .inputArea { padding: 10px 16px 14px; }
   .emptyState { padding: 32px 16px; }
 }
+
+/* ============================================
+   DEBUG CONTAINER (Black background block)
+   ============================================ */
+.debugContainer {
+  margin-top: 12px;
+  padding: 14px 16px;
+  background: #0f172a !important;
+  border: 1px solid #1e293b !important;
+  border-radius: 8px !important;
+  font-size: 0.8rem !important;
+  color: #94a3b8 !important;
+  overflow-x: auto;
+}
+
+.debugContainer h1,
+.debugContainer h2,
+.debugContainer h3 {
+  color: #f8fafc !important;
+  margin-top: 1.2em !important;
+  margin-bottom: 0.5em !important;
+  border-bottom: 1px solid #334155 !important;
+  padding-bottom: 6px !important;
+  font-size: 0.9rem !important;
+  letter-spacing: 0.02em !important;
+}
+
+.debugContainer h3:first-of-type {
+  margin-top: 0 !important;
+}
+
+.debugContainer strong {
+  color: #38bdf8 !important; /* soft blue for keys/highlights */
+}
+
+.debugContainer code {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #f1f5f9 !important;
+  font-family: 'Fira Mono', 'Cascadia Code', 'Menlo', monospace !important;
+  padding: 0.1em 0.35em !important;
+}
+
+.debugContainer p,
+.debugContainer li {
+  color: #cbd5e1 !important;
+  line-height: 1.6 !important;
+}
+
+.debugContainer ul,
+.debugContainer ol {
+  margin: 0.5em 0 !important;
+  padding-left: 1.5em !important;
+}
+
+.debugContainer pre {
+  background: #020617 !important;
+  border: 1px solid #1e293b !important;
+  padding: 10px 12px !important;
+}
+
+.debugContainer pre code {
+  background: none !important;
+  border: none !important;
+  color: #cbd5e1 !important;
+  padding: 0 !important;
+}
+

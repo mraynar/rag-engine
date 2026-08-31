@@ -261,7 +261,7 @@ class TestDatasetRegistry(unittest.TestCase):
         self.registry = DATASET_REGISTRY
 
     def test_four_datasets_registered(self):
-        expected = {"Container Throughput", "Overview Vessel", "Market Share", "Transhipment"}
+        expected = {"Container Throughput", "Overview Vessel", "Market Share", "Transhipment", "Realisasi UC"}
         self.assertEqual(expected, set(self.registry.keys()))
 
     def test_each_dataset_has_keywords(self):
@@ -411,7 +411,7 @@ class TestMonthNormalizeMap(unittest.TestCase):
 class TestSchemaRegistryStatic(unittest.TestCase):
     def test_four_datasets_in_static_registry(self):
         from app.services.tabular.schema_registry import SCHEMA_REGISTRY
-        expected = {"Container Throughput", "Overview Vessel", "Market Share", "Transhipment"}
+        expected = {"Container Throughput", "Overview Vessel", "Market Share", "Transhipment", "Realisasi UC"}
         self.assertEqual(expected, set(SCHEMA_REGISTRY.keys()))
 
     def test_overview_vessel_has_bch_column(self):

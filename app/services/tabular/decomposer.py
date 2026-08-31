@@ -103,6 +103,26 @@ def _decompose_multihop(
         List of SubQuery objects (2+ for true multi-hop)
     """
     question_lower = question.lower()
+
+    annual_monthly_terms = ["berbeda", "bandingkan", "dibanding", "selisih"]
+    year_match = re.search(r'\b(20\d{2})\b', question_lower)
+    if "per bulan" in question_lower and year_match and any(term in question_lower for term in annual_monthly_terms):
+        year = year_match.group(1)
+        metric = resolved.metrics[0] if resolved.metrics else "TEUS"
+        return [
+            SubQuery(
+                step=1,
+                question=f"Berapa total {metric} tahun {year}?",
+                template_type=QueryType.AGGREGATION,
+                depends_on=None,
+            ),
+            SubQuery(
+                step=2,
+                question=f"Berapa total {metric} per bulan tahun {year}?",
+                template_type=QueryType.TREND,
+                depends_on=None,
+            ),
+        ]
     
     # Pattern 1: Year comparison ("2024 dan 2025", "selisih 2024 dan 2025")
     year_pattern = r'\b(20\d{2})\b.*(?:dan|vs|versus).*\b(20\d{2})\b'

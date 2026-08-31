@@ -73,6 +73,18 @@ def build_query_plan(
     # Get schema for validation
     db_schema = schema or get_schema(dataset, db_schema=None)
     
+    # Helper to resolve readable metric names
+    def get_metric_label(col: str) -> str:
+        return "market share" if col == "%" else col
+
+    # Validate resolved metrics
+    if resolved.metrics:
+        for m in resolved.metrics:
+            if not validate_column(m, dataset, db_schema=db_schema):
+                raise QueryBuildError(
+                    f"Metric '{get_metric_label(m)}' tidak tersedia pada dataset '{dataset}'"
+                )
+    
     # Build filters (preserving AST filters + inherited entities)
     filters = _build_filters(ast, resolved, dataset, db_schema, question)
     
@@ -82,7 +94,7 @@ def build_query_plan(
     group_by = _build_group_by(ast, template, resolved, dataset, db_schema, question)
     
     # Build sort and limit
-    sort, limit = _build_sort_and_limit(template, ast)
+    sort, limit = _build_sort_and_limit(template, ast, question)
     
     # Validate plan before returning
     _validate_plan(filters, aggregation, group_by, dataset, db_schema)
@@ -218,6 +230,8 @@ def _build_aggregation(
                 raise QueryBuildError(
                     f"Metric '{get_metric_label(column)}' tidak tersedia pada dataset '{dataset}'"
                 )
+            # Overrides: % should use mean instead of sum
+            agg_func = "mean" if column == "%" else agg_func
             return AggregationSpec(func=agg_func, column=column)
         elif dataset == "Transhipment":
             raise QueryBuildError(
@@ -244,7 +258,8 @@ def _build_aggregation(
                     raise QueryBuildError(
                         f"Metric '{get_metric_label(column)}' tidak tersedia pada dataset '{dataset}'"
                     )
-                return AggregationSpec(func="sum", column=column)
+                func = "mean" if column == "%" else "sum"
+                return AggregationSpec(func=func, column=column)
         elif len(resolved.operators) >= 2 or any(op.lower() in question_lower for op in resolved.operators):
             column = None
             candidates = []
@@ -263,7 +278,8 @@ def _build_aggregation(
                     raise QueryBuildError(
                         f"Metric '{get_metric_label(column)}' tidak tersedia pada dataset '{dataset}'"
                     )
-                return AggregationSpec(func="sum", column=column)
+                func = "mean" if column == "%" else "sum"
+                return AggregationSpec(func=func, column=column)
 
     return None
 
@@ -347,7 +363,8 @@ def _build_group_by(
 
 def _build_sort_and_limit(
     template: Dict[str, Any],
-    ast: QueryAST
+    ast: QueryAST,
+    question: str = ""
 ) -> tuple:
     """
     Build sort and limit from template.
@@ -361,6 +378,10 @@ def _build_sort_and_limit(
     """
     sort = template.get("sort_order")
     limit = template.get("default_limit")
+    if ast.query_type == QueryType.RANKING:
+        match = re.search(r"\b(\d+)\s*(?:besar|teratas|tertinggi|terendah|terkecil)", question.lower())
+        if match:
+            limit = int(match.group(1))
     
     return sort, limit
 

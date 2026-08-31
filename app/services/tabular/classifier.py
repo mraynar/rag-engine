@@ -143,6 +143,7 @@ def _is_comparison_query(question_lower: str) -> bool:
     comparison_keywords = [
         "selisih",
         "perbedaan",
+        "berbeda",
         "bandingkan",
         "dibanding",
         "versus",
@@ -181,6 +182,10 @@ def _is_ranking_top_query(question_lower: str) -> bool:
         "paling tinggi",
         "terbanyak",
         "terbesar",
+        "10 besar",
+        "top ",
+        "teratas",
+        "paling tinggi",
     ]
     
     return any(kw in question_lower for kw in top_keywords)
@@ -261,6 +266,17 @@ def _create_aggregation_spec(
                 is_operator_query = any(w in question_lower for w in ["operator", "vessel operator", "pelayaran", "pemilik kapal", "lop"])
                 if is_operator_query:
                     return AggregationSpec(func="sum", column=column)
+        
+        # Overrides: % should use mean instead of sum
+        if (
+            column == "%"
+            and question_lower
+            and "market share" in question_lower
+            and re.search(r"\b\d+\s*(?:besar|teratas|tertinggi)\b", question_lower)
+        ):
+            if func in ["max", "min", "sum"]:
+                func = "mean"
+            
         return AggregationSpec(func=func, column=column)
     
     return None
