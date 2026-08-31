@@ -254,14 +254,30 @@
   justify-content: space-between;
   gap: 0.375rem;
   width: 100%;
+  overflow: hidden;
 }
 .valueText {
   font-family: 'SFMono-Regular', Consolas, monospace;
   font-size: 0.8125rem;
   color: var(--color-text);
-  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 .valueTextSecret { letter-spacing: 0.1em; color: var(--color-muted); }
+
+.azureCode {
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.75rem;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
 
 .eyeBtn {
   flex-shrink: 0;

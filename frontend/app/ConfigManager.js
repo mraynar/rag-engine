@@ -404,9 +404,7 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
 
   function formatSecretValue(val, show) {
     if (!show) return '••••••••••••••••';
-    if (!val) return '—';
-    if (val.length <= 12) return val;
-    return `${val.substring(0, 8)}...`;
+    return val || '—';
   }
 
   // Display text formatter
@@ -540,7 +538,7 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
         <>
           <td className={s.td}>
             <div className={s.valueCell}>
-              <code style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--color-text)' }} title={showTenant ? creds.tenant_id : undefined}>
+              <code className={s.azureCode} title={showTenant ? creds.tenant_id : undefined}>
                 {formatSecretValue(creds.tenant_id, showTenant)}
               </code>
               <button
@@ -562,7 +560,7 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
           </td>
           <td className={s.td}>
             <div className={s.valueCell}>
-              <code style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--color-text)' }} title={showClient ? creds.client_id : undefined}>
+              <code className={s.azureCode} title={showClient ? creds.client_id : undefined}>
                 {formatSecretValue(creds.client_id, showClient)}
               </code>
               <button
@@ -584,7 +582,7 @@ function EntryRow({ entry, isOnlyInGroup, onActivate, onUpdate, onDelete, toast 
           </td>
           <td className={s.td}>
             <div className={s.valueCell}>
-              <code style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--color-text)' }} title={showSecretKey ? creds.client_secret : undefined}>
+              <code className={s.azureCode} title={showSecretKey ? creds.client_secret : undefined}>
                 {formatSecretValue(creds.client_secret, showSecretKey)}
               </code>
               <button
