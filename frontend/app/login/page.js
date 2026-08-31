@@ -142,9 +142,7 @@ function LoginFormContent() {
   return (
     <div className={s.card}>
       <div className={s.logoContainer}>
-        <img src="/images/Logo Pelindo.png" alt="Logo Pelindo" className={s.logo} />
-        <div className={s.logoDivider} />
-        <img src="/images/Logo_TPS.png" alt="Logo TPS" className={s.logo} />
+        <img src="/images/Logo_TPS.png" alt="Logo Pelindo Terminal Petikemas" className={s.logo} style={{ height: '55px' }} />
       </div>
 
       <div className={s.header}>
