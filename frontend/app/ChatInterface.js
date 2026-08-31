@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import { useCategory } from './CategoryContext';
 import { useConversation } from './ConversationContext';
@@ -366,6 +366,7 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
 
   const { user, loading: authLoading, logout } = useAuth();
   const { setIsAuthModalOpen } = useCategory();
+  const router = useRouter();
 
   const [shake, setShake] = useState(false);
 
@@ -608,7 +609,7 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
           </div>
         ) : (
           <button
-            onClick={() => setIsAuthModalOpen(true)}
+            onClick={() => router.push('/login')}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -642,7 +643,7 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
               <polyline points="10 17 15 12 10 7" />
               <line x1="15" y1="12" x2="3" y2="12" />
             </svg>
-            {/* <span>Sign In / Sign Up</span> */}
+            <span>Sign In</span>
           </button>
         )}
       </div>

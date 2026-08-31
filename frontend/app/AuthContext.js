@@ -5,6 +5,20 @@ import { supabase } from './supabase';
 
 const AuthContext = createContext(null);
 
+function setCookie(name, value, days) {
+  let expires = "";
+  if (days) {
+    const date = new Date();
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    expires = "; expires=" + date.toUTCString();
+  }
+  document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax; Secure";
+}
+
+function deleteCookie(name) {
+  document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax; Secure';
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
@@ -15,6 +29,11 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session) {
+        setCookie('sb-access-token', session.access_token, 7);
+      } else {
+        deleteCookie('sb-access-token');
+      }
       setLoading(false);
     });
 
@@ -24,6 +43,12 @@ export function AuthProvider({ children }) {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         setLoading(false);
+
+        if (currentSession) {
+          setCookie('sb-access-token', currentSession.access_token, 7);
+        } else {
+          deleteCookie('sb-access-token');
+        }
 
         if (event === 'SIGNED_OUT') {
           // Clear any client side local state keys that shouldn't leak
@@ -68,10 +93,11 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Logout handler
   const logout = async () => {
     try {
       await supabase.auth.signOut();
+      deleteCookie('sb-access-token');
+      window.location.href = '/login';
     } catch (err) {
       console.error('[AuthContext] Sign out error:', err);
     }
