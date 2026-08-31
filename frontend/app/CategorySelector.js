@@ -118,74 +118,78 @@ export default function CategorySelector() {
 
       {isOpen && (
         <div className="category-selector-dropdown" role="listbox">
-          <div
-            className={`category-selector-item ${selectedCategory === 'All Data' ? 'selected' : ''}`}
-            role="option"
-            aria-selected={selectedCategory === 'All Data'}
-            onClick={() => handleSelect('All Data')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FolderIcon size={14} />
-              <span>All Data (Default)</span>
+          <div className="category-selector-scrollable-content">
+            <div
+              className={`category-selector-item ${selectedCategory === 'All Data' ? 'selected' : ''}`}
+              role="option"
+              aria-selected={selectedCategory === 'All Data'}
+              onClick={() => handleSelect('All Data')}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FolderIcon size={14} />
+                <span>All Data (Default)</span>
+              </div>
             </div>
+            
+            <div className="category-section-header">OneDrive Categories</div>
+            {categories.map((cat) => {
+              const isUnsynced = cat.sync_status === 'never_synced';
+              return (
+                <div
+                  key={cat.id}
+                  className={`category-selector-item ${selectedCategory === cat.category_name ? 'selected' : ''}`}
+                  role="option"
+                  aria-selected={selectedCategory === cat.category_name}
+                  onClick={() => handleSelect(cat.category_name)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                    <FolderIcon size={14} style={{ flexShrink: 0 }} />
+                    <span style={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                      {cat.category_name}
+                    </span>
+                  </div>
+                  {isUnsynced && <span className="category-selector-warning-badge">Unsynced</span>}
+                </div>
+              );
+            })}
+            {categories.length === 0 && !loadingCategories && (
+              <div className="category-selector-empty">No OneDrive categories found</div>
+            )}
+
+            <div className="category-section-header">Manual Documents (Active)</div>
+            {activeDocs.map((doc) => {
+              return (
+                <div
+                  key={doc.filename}
+                  className={`category-selector-item ${selectedCategory === doc.filename ? 'selected' : ''}`}
+                  role="option"
+                  aria-selected={selectedCategory === doc.filename}
+                  onClick={() => handleSelect(doc.filename)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                    <FileTextIcon size={14} style={{ flexShrink: 0 }} />
+                    <span style={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }} title={doc.filename}>
+                      {doc.filename}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+            {activeDocs.length === 0 && (
+              <div className="category-selector-empty">No active manual documents</div>
+            )}
           </div>
-          
-          <div className="category-section-header">OneDrive Categories</div>
-          {categories.map((cat) => {
-            const isUnsynced = cat.sync_status === 'never_synced';
-            return (
-              <div
-                key={cat.id}
-                className={`category-selector-item ${selectedCategory === cat.category_name ? 'selected' : ''}`}
-                role="option"
-                aria-selected={selectedCategory === cat.category_name}
-                onClick={() => handleSelect(cat.category_name)}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                  <FolderIcon size={14} style={{ flexShrink: 0 }} />
-                  <span style={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                    {cat.category_name}
-                  </span>
-                </div>
-                {isUnsynced && <span className="category-selector-warning-badge">Unsynced</span>}
-              </div>
-            );
-          })}
-          {categories.length === 0 && !loadingCategories && (
-            <div className="category-selector-empty">No OneDrive categories found</div>
-          )}
 
-          <div className="category-section-header">Manual Documents (Active)</div>
-          {activeDocs.map((doc) => {
-            return (
-              <div
-                key={doc.filename}
-                className={`category-selector-item ${selectedCategory === doc.filename ? 'selected' : ''}`}
-                role="option"
-                aria-selected={selectedCategory === doc.filename}
-                onClick={() => handleSelect(doc.filename)}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                  <FileTextIcon size={14} style={{ flexShrink: 0 }} />
-                  <span style={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }} title={doc.filename}>
-                    {doc.filename}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-          {activeDocs.length === 0 && (
-            <div className="category-selector-empty">No active manual documents</div>
-          )}
-
-          <hr className="category-selector-divider" />
-          <div
-            className="category-selector-manage-btn"
-            onClick={handleManageDataClick}
-            role="button"
-          >
-            <SettingsIcon size={14} />
-            <span>Manage Data Sources</span>
+          <div className="category-selector-fixed-footer">
+            <hr className="category-selector-divider" />
+            <div
+              className="category-selector-manage-btn"
+              onClick={handleManageDataClick}
+              role="button"
+            >
+              <SettingsIcon size={14} />
+              <span>Manage Data Sources</span>
+            </div>
           </div>
         </div>
       )}
@@ -241,13 +245,26 @@ export default function CategorySelector() {
           border: 1px solid var(--color-border);
           border-radius: 8px;
           box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-          padding: 6px;
+          padding: 0;
           margin: 0;
           max-height: 380px;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        .category-selector-scrollable-content {
+          flex: 1;
           overflow-y: auto;
+          padding: 6px 6px 0 6px;
           display: flex;
           flex-direction: column;
           gap: 2px;
+        }
+
+        .category-selector-fixed-footer {
+          padding: 0 6px 6px 6px;
+          background: var(--color-surface);
         }
 
         .category-section-header {
