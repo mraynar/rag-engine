@@ -184,6 +184,7 @@ export default function OneDriveManager() {
                   fontWeight: '600',
                   cursor: 'pointer',
                   opacity: isBulkDeleting ? 0.7 : 1,
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {isBulkDeleting ? 'Deleting...' : (
@@ -207,6 +208,7 @@ export default function OneDriveManager() {
                 fontSize: '0.8rem',
                 fontWeight: '600',
                 cursor: 'pointer',
+                whiteSpace: 'nowrap',
               }}
             >
               <PlusIcon size={12} /> Add Category
