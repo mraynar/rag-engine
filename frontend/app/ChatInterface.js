@@ -947,10 +947,14 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
   };
 
   async function handleNewChat() {
-    if (messages.length === 0) return false;
+    // If currently already on an empty conversation, simply reset view
+    if (messages.length === 0 && activeConvId) {
+      return true;
+    }
     const data = await createConversation();
     if (!data) return false;
     setActiveConvId(data.id);
+    setMessages([]);
     return true;
   }
 

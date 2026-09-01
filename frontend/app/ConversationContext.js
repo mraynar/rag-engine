@@ -129,7 +129,8 @@ export function ConversationProvider({ children }) {
         });
         if (res.ok) {
           const data = await res.json();
-          await loadConversations();
+          // Optimistically update conversation list
+          setConversations(prev => [data, ...prev.filter(c => c.id !== data.id)]);
           return data;
         }
       } catch (err) {
@@ -151,9 +152,9 @@ export function ConversationProvider({ children }) {
       try {
         const stored = localStorage.getItem(GUEST_CONVS_KEY);
         const guestConvs = stored ? JSON.parse(stored) : [];
-        guestConvs.push(newConv);
+        guestConvs.unshift(newConv);
         localStorage.setItem(GUEST_CONVS_KEY, JSON.stringify(guestConvs));
-        await loadConversations();
+        setConversations(prev => [newConv, ...prev.filter(c => c.id !== newConv.id)]);
         return newConv;
       } catch (err) {
         console.error('[createConversation] guest error:', err);
@@ -193,6 +194,10 @@ export function ConversationProvider({ children }) {
   // Rename conversation
   const renameConversation = async (id, title) => {
     const cleanTitle = title.trim() || 'New conversation';
+    
+    // Optimistic UI update
+    setConversations(prev => prev.map(c => c.id === id ? { ...c, title: cleanTitle, title_source: 'manual' } : c));
+
     if (user) {
       try {
         const res = await fetch(`${API_BASE}/conversations/${id}`, {
@@ -201,11 +206,11 @@ export function ConversationProvider({ children }) {
           body: JSON.stringify({ title: cleanTitle })
         });
         if (res.ok) {
-          await loadConversations();
           return await res.json();
         }
       } catch (err) {
         console.error('[renameConversation] error:', err);
+        await loadConversations();
       }
       return null;
     } else {
@@ -219,7 +224,6 @@ export function ConversationProvider({ children }) {
           guestConvs[index].title_source = 'manual';
           guestConvs[index].updated_at = new Date().toISOString();
           localStorage.setItem(GUEST_CONVS_KEY, JSON.stringify(guestConvs));
-          await loadConversations();
           return guestConvs[index];
         }
       } catch (err) {
@@ -231,6 +235,17 @@ export function ConversationProvider({ children }) {
 
   // Pin/Unpin conversation
   const togglePin = async (id, pinned) => {
+    // Optimistic UI update & sort
+    setConversations(prev => {
+      const next = prev.map(c => c.id === id ? { ...c, pinned } : c);
+      next.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return new Date(b.updated_at) - new Date(a.updated_at);
+      });
+      return next;
+    });
+
     if (user) {
       try {
         const res = await fetch(`${API_BASE}/conversations/${id}`, {
@@ -239,11 +254,11 @@ export function ConversationProvider({ children }) {
           body: JSON.stringify({ pinned })
         });
         if (res.ok) {
-          await loadConversations();
           return await res.json();
         }
       } catch (err) {
         console.error('[togglePin] error:', err);
+        await loadConversations();
       }
       return null;
     } else {
@@ -256,7 +271,6 @@ export function ConversationProvider({ children }) {
           guestConvs[index].pinned = pinned;
           guestConvs[index].updated_at = new Date().toISOString();
           localStorage.setItem(GUEST_CONVS_KEY, JSON.stringify(guestConvs));
-          await loadConversations();
           return guestConvs[index];
         }
       } catch (err) {
@@ -268,6 +282,21 @@ export function ConversationProvider({ children }) {
 
   // Delete conversation
   const deleteConversation = async (id) => {
+    // 1. Optimistic UI update: remove immediately from state
+    setConversations(prev => {
+      const remaining = prev.filter(c => c.id !== id);
+      if (activeConvId === id) {
+        const nextActive = remaining.length > 0 ? remaining[0].id : null;
+        _setActiveConvId(nextActive);
+        try {
+          const key = getActiveConvIdKey();
+          if (nextActive) localStorage.setItem(key, nextActive);
+          else localStorage.removeItem(key);
+        } catch {}
+      }
+      return remaining;
+    });
+
     if (user) {
       try {
         const res = await fetch(`${API_BASE}/conversations/${id}`, {
@@ -275,14 +304,12 @@ export function ConversationProvider({ children }) {
           headers: getAuthHeaders()
         });
         if (res.ok) {
-          if (activeConvId === id) {
-            setActiveConvId(null);
-          }
-          await loadConversations();
           return true;
         }
       } catch (err) {
         console.error('[deleteConversation] error:', err);
+        // Rollback from server if failed
+        await loadConversations();
       }
       return false;
     } else {
@@ -292,10 +319,6 @@ export function ConversationProvider({ children }) {
         let guestConvs = stored ? JSON.parse(stored) : [];
         guestConvs = guestConvs.filter(c => c.id !== id);
         localStorage.setItem(GUEST_CONVS_KEY, JSON.stringify(guestConvs));
-        if (activeConvId === id) {
-          setActiveConvId(null);
-        }
-        await loadConversations();
         return true;
       } catch (err) {
         console.error('[deleteConversation] guest error:', err);
