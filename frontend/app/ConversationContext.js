@@ -17,6 +17,12 @@ export function ConversationProvider({ children }) {
   const [activeConvId, _setActiveConvId] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [loadingConvs, setLoadingConvs] = useState(true);
+  const messagesCacheRef = useRef({});
+
+  // Synchronous cache reader for instant UI render
+  const getCachedConversation = useCallback((id) => {
+    return messagesCacheRef.current[id] || null;
+  }, []);
   const initializedRef = useRef(false);
 
   // Dynamic localStorage key for active conversation ID to prevent data leakage between users
@@ -171,23 +177,28 @@ export function ConversationProvider({ children }) {
           headers: getAuthHeaders()
         });
         if (res.ok) {
-          return await res.json();
+          const data = await res.json();
+          if (data?.id) {
+            messagesCacheRef.current[data.id] = data;
+          }
+          return data;
         }
       } catch (err) {
         console.error('[getConversation] error:', err);
       }
-      return null;
+      return messagesCacheRef.current[id] || null;
     } else {
       // Guest
       try {
         const stored = localStorage.getItem(GUEST_CONVS_KEY);
         const guestConvs = stored ? JSON.parse(stored) : [];
         const found = guestConvs.find(c => c.id === id);
+        if (found) messagesCacheRef.current[id] = found;
         return found || null;
       } catch (err) {
         console.error('[getConversation] guest error:', err);
       }
-      return null;
+      return messagesCacheRef.current[id] || null;
     }
   };
 
@@ -404,6 +415,7 @@ export function ConversationProvider({ children }) {
         loadConversations,
         createConversation,
         getConversation,
+        getCachedConversation,
         renameConversation,
         togglePin,
         deleteConversation,

@@ -320,12 +320,43 @@ def _build_group_by(
                     return [op_col]
         return None
     
-    # Resolve abstract grouping dimension
+    # Resolve abstract grouping dimension from template
     grouping_dimension = template.get("grouping_dimension")
-    
+
+    # Dynamic grouping dimension override:
+    question_lower = question.lower()
+    columns = schema.get("columns", [])
+
+    if "status mana" in question_lower or "berdasarkan status" in question_lower or "per status" in question_lower:
+        status_col = next((c for c in columns if c.upper() == "STATUS"), None)
+        if status_col:
+            return [status_col]
+
+    if "service mana" in question_lower or "berdasarkan service" in question_lower or "per service" in question_lower or "routes" in question_lower:
+        service_col = next((c for c in columns if c.upper() in ["SERVICE", "ROUTES"]), None)
+        if service_col:
+            return [service_col]
+
+    if "aktivitas" in question_lower or "kegiatan" in question_lower:
+        act_col = next((c for c in columns if c.upper() in ["AKTIVITAS", "KEGIATAN", "ACTIVITY"]), None)
+        if act_col:
+            return [act_col]
+
+    if "perusahaan mana" in question_lower or "perusahaan apa" in question_lower:
+        comp_col = next((c for c in columns if "perusahaan" in c.lower() or "customer" in c.lower()), None)
+        if comp_col:
+            return [comp_col]
+
+    # "masing-masing" / "setiap" / "per operator" detection
+    if "masing-masing" in question_lower or "setiap" in question_lower or "per " in question_lower:
+        if "vessel operator" in question_lower or "operator" in question_lower or "pelayaran" in question_lower:
+            op_col = _resolve_operator_column(dataset, schema)
+            if op_col and validate_column(op_col, dataset, db_schema=schema):
+                return [op_col]
+
     # Dynamic grouping dimension override:
     # If the question asks "Tahun berapa..." or "Bulan apa...", we override grouping_dimension to "temporal"
-    if "tahun berapa" in question.lower() or "bulan apa" in question.lower() or "bulan berapa" in question.lower():
+    if "tahun berapa" in question.lower() or "bulan apa" in question.lower() or "bulan berapa" in question.lower() or "tren" in question.lower():
         grouping_dimension = "temporal"
     
     if not grouping_dimension:
@@ -338,7 +369,7 @@ def _build_group_by(
         # Validate column exists
         if not validate_column(column, dataset, db_schema=schema):
             raise QueryBuildError(
-                f"Operator grouping column '{column}'    not found in dataset '{dataset}'"
+                f"Operator grouping column '{column}' not found in dataset '{dataset}'"
             )
         
         return [column]
@@ -350,9 +381,10 @@ def _build_group_by(
         if column and validate_column(column, dataset, db_schema=schema):
             return [column]
         
-        # Fallback to MONTH if exists
-        if validate_column("MONTH", dataset, db_schema=schema):
-            return ["MONTH"]
+        # Fallback to MONTH / BULAN if exists
+        for m_name in ["MONTH", "BULAN"]:
+            if validate_column(m_name, dataset, db_schema=schema):
+                return [m_name]
         
         raise QueryBuildError(
             f"Temporal grouping column not found in dataset '{dataset}'"
@@ -368,16 +400,18 @@ def _build_sort_and_limit(
 ) -> tuple:
     """
     Build sort and limit from template.
-    
-    Args:
-        template: Query template
-        ast: QueryAST
-    
-    Returns:
-        (sort_order, limit) tuple
     """
     sort = template.get("sort_order")
     limit = template.get("default_limit")
+    
+    question_lower = question.lower()
+    if any(w in question_lower for w in ["terbesar", "terbanyak", "tertinggi", "paling banyak", "maksimal"]):
+        sort = "desc"
+        limit = limit or 1
+    elif any(w in question_lower for w in ["terkecil", "terendah", "tersedikit", "paling sedikit", "minimal"]):
+        sort = "asc"
+        limit = limit or 1
+
     if ast.query_type == QueryType.RANKING:
         match = re.search(r"\b(\d+)\s*(?:besar|teratas|tertinggi|terendah|terkecil)", question.lower())
         if match:
@@ -389,29 +423,19 @@ def _build_sort_and_limit(
 def _resolve_operator_column(dataset: str, schema: Dict) -> str:
     """
     Resolve operator dimension to physical column name.
-    
-    Different datasets use different operator columns:
-    - Overview Vessel: LOP
-    - Market Share: LOP
-    - Transhipment: VESSEL OPERATOR
-    
-    Args:
-        dataset: Dataset name
-        schema: Schema dict
-    
-    Returns:
-        Physical column name
     """
     resolved_schema = get_schema(dataset, db_schema=schema)
     columns = resolved_schema.get("columns", [])
     
     # Smart operator column search with dataset-specific priority
-    if dataset == "Transhipment":
-        targets = ["vessel operator", "operator", "lop", "v.opr"]
+    if dataset in ["Transhipment", "Vessel Service", "Komersial Dashboard", "Overview Box"]:
+        targets = ["vessel operator", "operator", "lop", "v.opr", "customer", "shipping line"]
+    elif dataset in ["RestNDisc"]:
+        targets = ["nama perusahaan", "perusahaan", "customer"]
     elif dataset in ["Market Share", "Overview Vessel"]:
         targets = ["lop", "operator", "vessel operator", "v.opr"]
     else:
-        targets = ["lop", "vessel operator", "operator", "v.opr"]
+        targets = ["vessel operator", "lop", "operator", "nama perusahaan", "v.opr"]
 
     for target in targets:
         for col in columns:
@@ -423,8 +447,11 @@ def _resolve_operator_column(dataset: str, schema: Dict) -> str:
             if target in col.lower():
                 return col
     
-    # Default fallback (will fail validation later)
-    return "LOP"
+    for col in columns:
+        if col.upper() in ["VESSEL OPERATOR", "LOP", "NAMA PERUSAHAAN", "CUSTOMER"]:
+            return col
+
+    return "VESSEL OPERATOR" if "VESSEL OPERATOR" in columns else "LOP"
 
 
 def _validate_plan(

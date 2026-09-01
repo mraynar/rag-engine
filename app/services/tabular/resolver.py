@@ -246,6 +246,31 @@ def resolve_entities(
                     metrics.append(col)
                 if col not in columns:
                     columns.append(col)
+                    
+        # Context-aware refinement
+        if dataset == "Overview Vessel":
+            if "aktivitas" in question_lower and "TEUS" not in metrics:
+                metrics.append("TEUS")
+        elif dataset == "Container Throughput":
+            if "actual" in question_lower or "throughput" in question_lower:
+                if "ACTUAL" not in metrics and "ACTUAL" in schema_columns:
+                    metrics.append("ACTUAL")
+            if "TEUS" in metrics and "TEUS" not in schema_columns and "ACTUAL" in schema_columns:
+                metrics = [m for m in metrics if m != "TEUS"]
+                if "ACTUAL" not in metrics:
+                    metrics.append("ACTUAL")
+        elif dataset == "Realisasi UC":
+            if "TEUS" in metrics and "TEUS" not in schema_columns and "TOTAL TEUS" in schema_columns:
+                metrics = ["TOTAL TEUS" if m == "TEUS" else m for m in metrics]
+        elif dataset == "Komersial Dashboard":
+            if "TOTAL REVENUE" in metrics and "TOTAL ALL REVENUE" in schema_columns:
+                metrics = ["TOTAL ALL REVENUE" if m == "TOTAL REVENUE" else m for m in metrics]
+        elif dataset == "RestNDisc":
+            # For RestNDisc, avoid defaulting to TEUS
+            metrics = [m for m in metrics if m != "TEUS"]
+            if ("nominal" in question_lower or "keringanan" in question_lower or "persetujuan" in question_lower) and "NOMINAL PERSETUJUAN KERINGANAN" in schema_columns:
+                if "NOMINAL PERSETUJUAN KERINGANAN" not in metrics:
+                    metrics.append("NOMINAL PERSETUJUAN KERINGANAN")
     
     # Resolve month and year
     month_context = _resolve_month_and_year(question)

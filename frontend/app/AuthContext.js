@@ -111,11 +111,15 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
       deleteCookie('sb-access-token');
+      setUser(null);
+      setSession(null);
+      // Fire-and-forget signout in background without blocking navigation
+      supabase.auth.signOut().catch(() => {});
       window.location.href = '/login';
     } catch (err) {
       console.error('[AuthContext] Sign out error:', err);
+      window.location.href = '/login';
     }
   };
 

@@ -29,6 +29,34 @@ SCHEMA_REGISTRY = {
     "Transhipment": {
         "sheets": ["Transhipment"],
         "columns": ["YEAR", "MONTH", "20'", "40'", "VESSEL OPERATOR"]
+    },
+    "RestNDisc": {
+        "sheets": ["Form Responses 1"],
+        "columns": [
+            "STATUS", "AKTIVITAS", "TIMESTAMP", "NAMA PERUSAHAAN",
+            "SUPPORTING DOCUMENT", "NOMOR JASA KEPELABUHAN", "NOMOR SURAT JAWABAN TPS",
+            "TANGGAL SURAT JAWABAN TPS", "NOMOR MASTER PELANGGAN TPS",
+            "NOMINAL PERSETUJUAN KERINGANAN"
+        ]
+    },
+    "Komersial Dashboard": {
+        "sheets": ["Sheet1"],
+        "columns": [
+            "YEAR", "MONTH", "VESSEL OPERATOR", "TOTAL REVENUE",
+            "TOTAL ALL REVENUE", "TOTAL TEUS", "TEUS FULL", "TEUS EMPTY", "BOX"
+        ]
+    },
+    "Vessel Service": {
+        "sheets": ["New"],
+        "columns": [
+            "YEAR", "MONTH", "VESSEL OPERATOR", "SERVICE", "ROUTES",
+            "TOTAL CALL", "TEUS", "BOXES", "MOVES", "BMPH", "GMPH",
+            "AVERAGE BMPH", "AVERAGE GMPH", "AVERAGE TEUS", "STATUS"
+        ]
+    },
+    "Overview Box": {
+        "sheets": ["Sheet1"],
+        "columns": ["YEAR", "MONTH", "VESSEL OPERATOR", "BOX", "TEUS"]
     }
 }
 
@@ -36,18 +64,10 @@ SCHEMA_REGISTRY = {
 def get_schema(dataset_name: str, db_schema: Optional[Dict] = None) -> Dict:
     """
     Get schema for a dataset, merging DB schema with static fallback.
-    
-    Args:
-        dataset_name: Name of the dataset
-        db_schema: Optional schema from database (dict of sheet_name -> [columns])
-    
-    Returns:
-        Dict with 'sheets' and 'columns' keys, or empty dict if dataset unknown
     """
     # If db_schema is provided and not empty, use it
     if db_schema:
         sheets = list(db_schema.keys())
-        # Flatten and deduplicate columns from all sheets
         columns = []
         seen = set()
         for sheet_columns in db_schema.values():
@@ -55,38 +75,64 @@ def get_schema(dataset_name: str, db_schema: Optional[Dict] = None) -> Dict:
                 if col not in seen:
                     columns.append(col)
                     seen.add(col)
+        # Merge with known columns if available
+        static = SCHEMA_REGISTRY.get(dataset_name, {})
+        for col in static.get("columns", []):
+            if col not in seen:
+                columns.append(col)
+                seen.add(col)
         return {"sheets": sheets, "columns": columns}
     
     # Fallback to static registry
     if dataset_name in SCHEMA_REGISTRY:
         return SCHEMA_REGISTRY[dataset_name]
     
-    # Unknown dataset
     return {}
 
 
 def validate_column(column: Optional[str], dataset: str, db_schema: Optional[Dict] = None) -> bool:
     """
-    Check if a column exists in the dataset schema (case-insensitive).
-    
-    Args:
-        column: Column name to validate
-        dataset: Dataset name
-        db_schema: Optional DB schema
-    
-    Returns:
-        True if column exists, False otherwise
+    Check if a column exists in the dataset schema (case-insensitive) or matches valid aliases/temporal columns.
     """
     if column is None:
         return True
         
     schema = get_schema(dataset, db_schema)
     if not schema:
-        return False
+        return True
     
     columns = schema.get("columns", [])
-    column_lower = column.lower()
-    return any(col.lower() == column_lower for col in columns)
+    column_lower = column.lower().strip()
+    
+    # 1. Direct match
+    if any(col.lower().strip() == column_lower for col in columns):
+        return True
+        
+    # 2. Virtual temporal column validation (if dataset has timestamp/date columns)
+    if column_lower in ["year", "tahun"]:
+        date_keywords = ["year", "tahun", "timestamp", "date", "tanggal", "tanggal surat jawaban tps"]
+        if any(any(d in col.lower() for d in date_keywords) for col in columns):
+            return True
+            
+    if column_lower in ["month", "bulan"]:
+        date_keywords = ["month", "bulan", "timestamp", "date", "tanggal", "tanggal surat jawaban tps"]
+        if any(any(d in col.lower() for d in date_keywords) for col in columns):
+            return True
+
+    # 3. Metric aliases
+    if column_lower in ["teus", "throughput"]:
+        if any("teus" in col.lower() or "throughput" in col.lower() or col.lower() in ["actual", "boxes", "box"] for col in columns):
+            return True
+            
+    if column_lower in ["revenue", "total revenue", "total all revenue"]:
+        if any("revenue" in col.lower() or "nominal" in col.lower() for col in columns):
+            return True
+
+    if column_lower in ["lop", "vessel operator", "operator"]:
+        if any(col.lower() in ["lop", "vessel operator", "operator", "nama perusahaan", "customer"] for col in columns):
+            return True
+
+    return False
 
 
 def validate_sheet(sheet: str, dataset: str, db_schema: Optional[Dict] = None) -> bool:

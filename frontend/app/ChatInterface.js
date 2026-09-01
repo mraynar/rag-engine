@@ -786,7 +786,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
     activeConvId, setActiveConvId,
     conversations, loadingConvs,
     loadConversations,
-    createConversation, getConversation, postChatMessage,
+    createConversation, getConversation, getCachedConversation, postChatMessage,
   } = useConversation();
 
   const searchParams = useSearchParams();
@@ -794,6 +794,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
   const queryCategoryName = searchParams.get('category_name');
 
   const [messages, setMessages] = useState([]);
+  const [loadingMsgHistory, setLoadingMsgHistory] = useState(false);
   const [input, setInput]       = useState('');
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState(null);
@@ -861,38 +862,56 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
     }
   }, [loadingConvs, activeConvId, conversations, createConversation, setActiveConvId]);
 
-  // Load messages when conv changes
+  // Load messages instantly from cache, then sync from server
   useEffect(() => {
     if (!activeConvId) return;
-    if (loadedConvRef.current === activeConvId) return;
     setInput(getDraft(activeConvId));
+
+    // 1. Instant synchronous cache check — 0ms transition, no welcome screen flash
+    const cached = getCachedConversation(activeConvId);
+    if (cached && Array.isArray(cached.messages)) {
+      setMessages(cached.messages.map(m => ({
+        role: m.role === 'assistant' ? 'ai' : 'user',
+        content: m.content,
+        sources: m.sources || [],
+      })));
+      loadedConvRef.current = activeConvId;
+    } else {
+      // Not in cache yet: check if it's a known empty conversation or newly created
+      const convMeta = conversations.find(c => c.id === activeConvId);
+      if (convMeta && convMeta.message_count === 0) {
+        setMessages([]);
+        loadedConvRef.current = activeConvId;
+      }
+    }
+
+    // 2. Fetch fresh data from server in background
+    let isCurrent = true;
     getConversation(activeConvId)
       .then(data => {
-        if (!data) return;
+        if (!isCurrent || !data) return;
         loadedConvRef.current = activeConvId;
         setMessages(data.messages.map(m => ({
           role: m.role === 'assistant' ? 'ai' : 'user',
           content: m.content,
           sources: m.sources || [],
         })));
-      }).catch(() => {});
-  }, [activeConvId]);
+      })
+      .catch(() => {});
 
-  const prevConvRef = useRef(null);
-  useEffect(() => {
-    if (prevConvRef.current !== activeConvId) {
-      loadedConvRef.current = null;
-      prevConvRef.current = activeConvId;
-      setMessages([]);
-    }
-  }, [activeConvId]);
+    return () => {
+      isCurrent = false;
+    };
+  }, [activeConvId, getConversation, getCachedConversation, conversations]);
 
-  // Auto-scroll
+  // Auto-scroll only on new message sent/received (prevent fighting manual scroll)
+  const prevMsgCountRef = useRef(0);
   useEffect(() => {
-    if (activeView === 'chat') {
+    if (activeView === 'chat' && messages.length > prevMsgCountRef.current) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, loading, activeView]);
+    prevMsgCountRef.current = messages.length;
+  }, [messages.length, activeView]);
 
   // Auto-resize textarea height as content changes (max ~40% of viewport)
   useEffect(() => {

@@ -132,14 +132,35 @@ def apply_filters(df: pd.DataFrame, filters: List[FilterCondition]) -> pd.DataFr
                 
             if matched_col:
                 col = matched_col
+            elif col.upper() in ["YEAR", "TAHUN"]:
+                # Filter on any datetime/timestamp column (e.g. TIMESTAMP, TANGGAL...)
+                dt_col = next((c for c in df.columns if any(d in c.lower() for d in ["timestamp", "tanggal", "date"])), None)
+                if dt_col:
+                    try:
+                        dt_series = pd.to_datetime(df[dt_col], errors='coerce')
+                        year_val = int(val)
+                        df = df[dt_series.dt.year == year_val]
+                    except Exception as e:
+                        pass
+                    continue
             else:
                 continue
 
         if isinstance(val, (int, float)):
             df[col] = pd.to_numeric(df[col], errors='coerce')
-        elif "date" in col.lower() or "tanggal" in col.lower():
+        elif "date" in col.lower() or "tanggal" in col.lower() or "timestamp" in col.lower():
             df[col] = pd.to_datetime(df[col], errors='coerce')
             val = pd.to_datetime(val, errors='coerce')
+
+        # Status normalization (Approved -> Diterima, Rejected -> Ditolak)
+        if "status" in col.lower() and isinstance(val, str):
+            val_lower = val.lower().strip()
+            if val_lower in ["approved", "approve", "terima", "diterima", "disetujui"]:
+                df = df[df[col].astype(str).str.lower().str.strip().isin(["diterima", "approved", "disetujui", "approve"])]
+                continue
+            elif val_lower in ["rejected", "reject", "tolak", "ditolak"]:
+                df = df[df[col].astype(str).str.lower().str.strip().isin(["ditolak", "rejected", "reject", "tolak"])]
+                continue
 
         # Map month names in natural language to their numeric code dynamically
         if col.upper() in ["MONTH", "BULAN"] and isinstance(val, str):
@@ -151,7 +172,7 @@ def apply_filters(df: pd.DataFrame, filters: List[FilterCondition]) -> pd.DataFr
                 df = df[df[col].notnull() & df[col].astype(str).str.lower().str.strip().isin([str(month_code), month_name.lower()])]
                 continue
 
-        is_operator_col = col.strip().upper() in ["LOP", "OPERATOR", "VESSEL OPERATOR", "VESSELOPERATOR"]
+        is_operator_col = col.strip().upper() in ["LOP", "OPERATOR", "VESSEL OPERATOR", "VESSELOPERATOR", "NAMA PERUSAHAAN", "CUSTOMER"]
 
         # Operator translation to pandas query operations
         if is_operator_col and (op == FilterOperator.EQ or op.value == "=="):
@@ -190,14 +211,6 @@ def apply_aggregation(
 ) -> Any:
     """
     Apply aggregation spec and grouping on a DataFrame.
-    
-    Args:
-        df: Filtered pandas DataFrame
-        agg: Optional AggregationSpec
-        group_by: Optional list of columns to group by
-        
-    Returns:
-        Any scalar result, pd.DataFrame of grouped values, or the DataFrame itself if no aggregation.
     """
     if agg is None or not agg.func or agg.func == "null":
         return df
@@ -206,13 +219,20 @@ def apply_aggregation(
     clean_group_by = []
     if group_by:
         for g in group_by:
-            g_col = next((c for c in df.columns if c.strip().lower() == g.strip().lower()), g)
-            clean_group_by.append(g_col)
+            g_col = next((c for c in df.columns if c.strip().lower() == g.strip().lower()), None)
+            if not g_col and g.lower() in ["vessel operator", "operator", "lop"]:
+                g_col = next((c for c in df.columns if c.lower() in ["vessel operator", "lop", "operator", "nama perusahaan"]), g)
+            clean_group_by.append(g_col or g)
 
     # Resolve aggregation column case-insensitively if specified
     agg_col = agg.column
     if agg_col:
         matched_col = next((c for c in df.columns if c.strip().lower() == agg_col.strip().lower()), None)
+        if not matched_col:
+            if agg_col.upper() in ["TEUS", "THROUGHPUT"]:
+                matched_col = next((c for c in df.columns if "teus" in c.lower() or c.lower() == "actual"), None)
+            elif agg_col.upper() in ["REVENUE", "TOTAL REVENUE", "TOTAL ALL REVENUE"]:
+                matched_col = next((c for c in df.columns if "all revenue" in c.lower() or "revenue" in c.lower() or "nominal" in c.lower()), None)
         if matched_col:
             agg_col = matched_col
         else:
@@ -381,7 +401,15 @@ def execute_query(
 
         if sort_col and plan.sort:
             ascending = (plan.sort == "asc")
-            data = data.sort_values(by=sort_col, ascending=ascending)
+            try:
+                data[sort_col] = pd.to_numeric(data[sort_col], errors='ignore')
+                data = data.sort_values(by=sort_col, ascending=ascending)
+            except Exception:
+                try:
+                    data[sort_col] = pd.to_numeric(data[sort_col], errors='coerce')
+                    data = data.sort_values(by=sort_col, ascending=ascending)
+                except Exception:
+                    pass
 
         if plan.limit is not None:
             data = data.head(plan.limit)

@@ -20,23 +20,23 @@ DATASET_REGISTRY = {
     },
     "Container Throughput": {
         "keywords": {
+            "container throughput": 10,
             "throughput": 5,
             "actual": 4,
             "budget": 4,
             "performance": 4,
             "target": 3,
-            "realisasi": 4,
+            "realisasi": 3,
         }
     },
     "Realisasi UC": {
         "keywords": {
             "realisasi uc": 9,
-            "realisasi": 7,
+            "realisasi": 6,
             "uc": 8,
             "unit cost": 6,
             "unit cost realization": 6,
-            "total": 4,
-            "revenue": 3,
+            "total teus": 5,
         }
     },
     "Market Share": {
@@ -56,6 +56,45 @@ DATASET_REGISTRY = {
             "alih": 4,
             "muat": 4,
             "container": 3,
+        }
+    },
+    "RestNDisc": {
+        "keywords": {
+            "restndisc": 10,
+            "keringanan": 8,
+            "diskon": 7,
+            "discount": 7,
+            "permohonan": 7,
+            "persetujuan": 6,
+            "surat jawaban": 6,
+        }
+    },
+    "Komersial Dashboard": {
+        "keywords": {
+            "komersial": 9,
+            "dashboard": 7,
+            "all revenue": 8,
+            "total all revenue": 9,
+            "revenue": 5,
+            "pendapatan": 6,
+        }
+    },
+    "Vessel Service": {
+        "keywords": {
+            "vessel service": 10,
+            "service": 6,
+            "total call": 8,
+            "call": 5,
+            "routes": 5,
+            "bmph": 5,
+            "gmph": 5,
+        }
+    },
+    "Overview Box": {
+        "keywords": {
+            "overview box": 10,
+            "box": 6,
+            "boxes": 6,
         }
     }
 }
@@ -90,7 +129,8 @@ OPERATORS = [
     "SPI", "TIL", "MSC", "MSK", "ONE", "CMA", "COSCO", "OOCL",
     "HMM", "YANG", "EVERGREEN", "APL", "PIL", "WHL", "KMTC",
     "RCL", "SITC", "GOLD", "TS", "SINOKOR", "HEUNG", "SAMUDERA",
-    "TEMAS", "MERATUS", "TANTO", "CNC", "MPN", "SAI", "OGS"
+    "TEMAS", "MERATUS", "TANTO", "CNC", "MPN", "SAI", "OGS",
+    "ANL", "CMA CGM", "WAN HAI", "MAERSK", "EVERGREEN LINE"
 ]
 
 # Natural language column aliases
@@ -99,23 +139,28 @@ COLUMN_ALIASES = {
     "teus": "TEUS",
     "market share": "%",
     "market share percentage": "%",
-    "customer": "LOP",
-    "customers": "LOP",
     "realisasi uc": "TOTAL",
     "total realisasi": "TOTAL",
     "uc": "TOTAL",
-    "unit cost": "TOTAL REVENUE",
-    "revenue": "TOTAL REVENUE",
     "productivity": "BCH",
     "performance": "ACTUAL VS BUDGET",
     "boxes": "Boxes",
     "box": "Boxes",
-    "aktivitas": "TEUS",
     "crane hours": "BCH",
     "ship hours": "BSH",
     "bch": "BCH",
     "bsh": "BSH",
-    # Explicit container sizes for Transhipment
+    "total call": "TOTAL CALL",
+    "total calls": "TOTAL CALL",
+    "call": "TOTAL CALL",
+    "calls": "TOTAL CALL",
+    "actual": "ACTUAL",
+    "budget": "BUDGET",
+    "actual throughput": "ACTUAL",
+    "nominal persetujuan": "NOMINAL PERSETUJUAN KERINGANAN",
+    "nominal persetujuan keringanan": "NOMINAL PERSETUJUAN KERINGANAN",
+    "keringanan": "NOMINAL PERSETUJUAN KERINGANAN",
+    # Explicit container sizes for Transhipment & Realisasi UC
     "20'": "20'",
     "20’": "20'",
     "20 feet": "20'",
