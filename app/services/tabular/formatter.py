@@ -117,17 +117,6 @@ def format_response(
 ) -> str:
     """
     Generate natural-language response based on query execution results and semantic context.
-    
-    Args:
-        question: Original question string
-        results: Dict mapping step number -> ExecutionResult
-        ast: Parsed QueryAST containing intent
-        resolved: ResolvedEntities from parsing
-        dataset: Dataset category name
-        original_plan: Base QueryPlan used
-        
-    Returns:
-        String containing natural-language response
     """
     if not results:
         return "Data tidak ditemukan untuk kriteria pencarian tersebut."
@@ -165,7 +154,6 @@ def format_response(
     else:
         is_percentage = ast.intent == UserIntent.PERCENTAGE_LOOKUP or "%" in question or "market share" in question.lower()
 
-
     # 3. Multi-Hop / Chained results formatting
     if len(results) > 1:
         if 1 in results and 2 in results and isinstance(results[2].data, pd.DataFrame):
@@ -176,10 +164,13 @@ def format_response(
             if value_column and isinstance(annual_total, (int, float, np.integer, np.floating)):
                 monthly_total = pd.to_numeric(monthly_data[value_column], errors="coerce").sum()
                 difference = float(annual_total) - float(monthly_total)
+                fmt_ann = format_value_with_metric(annual_total, raw_metric, is_percentage)
+                fmt_mth = format_value_with_metric(monthly_total, raw_metric, is_percentage)
+                fmt_diff = format_value_with_metric(abs(difference), raw_metric, is_percentage)
                 return (
-                    f"Total tahunan {metric_label} adalah {format_number(annual_total)}, "
-                    f"sedangkan penjumlahan data bulanan adalah {format_number(monthly_total)}. "
-                    f"Selisihnya {format_number(abs(difference))}; selisih ini muncul karena cakupan atau pengelompokan baris tahunan dan bulanan berbeda."
+                    f"Total tahunan {metric_label} adalah {fmt_ann}, "
+                    f"sedangkan penjumlahan data bulanan adalah {fmt_mth}. "
+                    f"Selisihnya {fmt_diff}; selisih ini muncul karena cakupan atau pengelompokan baris tahunan dan bulanan berbeda."
                 )
 
         # Check if difference calculation requested
@@ -189,11 +180,9 @@ def format_response(
                 val2 = results[2].data
                 if isinstance(val1, (int, float, np.integer, np.floating)) and isinstance(val2, (int, float, np.integer, np.floating)):
                     diff = abs(val2 - val1)
-                    formatted_diff = format_number(diff)
-                    if is_percentage:
-                        formatted_diff = f"{formatted_diff}%"
+                    formatted_diff = format_value_with_metric(diff, raw_metric, is_percentage)
                     return f"Selisih {metric_label} adalah {formatted_diff}."
-        
+
         # Check if percentage contribution requested
         if any(w in question.lower() for w in ["persentase", "kontribusi", "percentage", "contribution"]):
             if 1 in results and 2 in results:
@@ -205,11 +194,11 @@ def format_response(
                         formatted_pct = format_number(pct)
                         sheet_word = "internasional" if any(w in question.lower() for w in ["internasional", "international"]) else "domestik"
                         return f"Persentase kontribusi {metric_label} {sheet_word} adalah {formatted_pct}%."
-        
+
         # Fallback for multi-hop: present step results sequentially
         output_parts = []
         for step, res in sorted(results.items()):
-            output_parts.append(f"Langkah {step}: {format_number(res.data)}")
+            output_parts.append(f"Langkah {step}: {format_value_with_metric(res.data, raw_metric, is_percentage)}")
         return " | ".join(output_parts)
 
     # 4. Single execution result formatting
@@ -220,7 +209,7 @@ def format_response(
     if isinstance(data, pd.Series):
         lines = []
         for idx, val in data.items():
-            lines.append(f"{idx}: {format_number(val)}")
+            lines.append(f"{idx}: {format_value_with_metric(val, raw_metric, is_percentage)}")
         return "\n".join(lines)
 
     # Formatting pandas.DataFrame result
@@ -242,10 +231,8 @@ def format_response(
                         val = series_numeric.sum()
                     else:
                         val = series_numeric.mean()
-                
-                formatted_val = format_number(val)
-                if is_percentage:
-                    formatted_val = f"{formatted_val}%"
+
+                formatted_val = format_value_with_metric(val, metric_col, is_percentage)
                 op_str = f" {operator}" if operator else ""
                 month_str = resolved.month.month_str if resolved.month and resolved.month.month_str else ""
                 if month_str and year:
@@ -262,7 +249,7 @@ def format_response(
             temporal_col = next((c for c in data.columns if c.upper() in ["MONTH", "YEAR", "MONTH_CODE", "BULAN"]), None)
             val_cols = [c for c in data.columns if c != temporal_col]
             val_col = val_cols[0] if val_cols else None
-            
+
             if temporal_col and val_col:
                 lines = []
                 for _, row in data.iterrows():
@@ -274,9 +261,7 @@ def format_response(
                             temp_str = str(temp_val)
                     else:
                         temp_str = format_number(temp_val)
-                    val_str = format_number(row[val_col])
-                    if is_percentage:
-                        val_str = f"{val_str}%"
+                    val_str = format_value_with_metric(row[val_col], str(val_col), is_percentage)
                     lines.append(f"- {temp_str}: {val_str}")
                 return "\n".join(lines)
 
@@ -290,9 +275,7 @@ def format_response(
             rank_word = "terendah" if ast.intent == UserIntent.BOTTOM_N or (original_plan.sort == "asc") else "tertinggi"
             lines = []
             for rank, (_, row) in enumerate(data.iterrows(), start=1):
-                formatted_val = format_number(row[val_col])
-                if is_percentage:
-                    formatted_val = f"{formatted_val}%"
+                formatted_val = format_value_with_metric(row[val_col], str(val_col), is_percentage)
                 lines.append(f"{rank}. {format_number(row[group_col])}: {formatted_val}")
             group_label = "Customer" if "customer" in question.lower() else group_col
             return f"{len(lines)} besar {group_label} berdasarkan {metric_label} ({rank_word}):\n" + "\n".join(lines)

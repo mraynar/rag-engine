@@ -136,10 +136,23 @@ function MessageBubble({ role, content, sources, debug }) {
   const isUser = role === 'user';
   const [debugOpen, setDebugOpen] = useState(false);
 
-  // Strip any legacy inline debug text (backward compat)
+  // Separate main content from embedded debug text
   let mainContent = content || '';
+  let legacyDebugText = '';
   if (!isUser && mainContent.includes('\n---\n### Debug Information')) {
-    mainContent = mainContent.split('\n---\n### Debug Information')[0];
+    const parts = mainContent.split('\n---\n### Debug Information');
+    mainContent = parts[0];
+    legacyDebugText = '### Debug Information' + parts[1];
+  } else if (!isUser && mainContent.includes('---') && mainContent.includes('Debug Information')) {
+    const parts = mainContent.split('---');
+    for (let idx = 0; idx < parts.length; idx++) {
+      if (parts[idx].includes('Debug Information')) {
+        mainContent = parts.slice(0, idx).join('---');
+        legacyDebugText = parts.slice(idx).join('---');
+        if (!legacyDebugText.startsWith('###')) legacyDebugText = '### ' + legacyDebugText.trim();
+        break;
+      }
+    }
   }
 
   if (isUser) {
@@ -153,14 +166,9 @@ function MessageBubble({ role, content, sources, debug }) {
     );
   }
 
-  // Format debug info for display
-  const hasDebug = debug && typeof debug === 'object';
-  const formatDebugValue = (val) => {
-    if (val === null || val === undefined) return 'null';
-    if (Array.isArray(val)) return val.join(', ') || '—';
-    if (typeof val === 'object') return JSON.stringify(val, null, 2);
-    return String(val);
-  };
+  const hasDebugObject = debug && typeof debug === 'object' && Object.keys(debug).length > 0;
+  const hasLegacyDebug = Boolean(legacyDebugText);
+  const showDebugToggle = hasDebugObject || hasLegacyDebug;
 
   return (
     <div className={s.msgRow}>
@@ -178,7 +186,7 @@ function MessageBubble({ role, content, sources, debug }) {
             <ReactMarkdown>{mainContent}</ReactMarkdown>
           </div>
 
-          {hasDebug && (
+          {showDebugToggle && (
             <div className={s.debugWrapper}>
               <button
                 className={s.debugToggle}
@@ -201,70 +209,78 @@ function MessageBubble({ role, content, sources, debug }) {
                 </svg>
               </button>
               {debugOpen && (
-                <div className={s.debugPanel}>
-                  <div className={s.debugSection}>
-                    <span className={s.debugLabel}>📊 Dataset</span>
-                    <span className={s.debugValue}>
-                      {debug.routing?.selected || debug.routing?.method === 'explicit' ? (debug.routing?.selected || debug.category) : '—'}
-                    </span>
-                  </div>
-                  <div className={s.debugSection}>
-                    <span className={s.debugLabel}>🔍 Routing</span>
-                    <span className={s.debugValue}>
-                      {debug.routing?.method} {debug.routing?.confidence ? `(confidence: ${(debug.routing.confidence * 100).toFixed(0)}%)` : ''}
-                    </span>
-                  </div>
-                  {debug.routing?.reason && (
+                hasDebugObject ? (
+                  <div className={s.debugPanel}>
                     <div className={s.debugSection}>
-                      <span className={s.debugLabel}>💡 Alasan</span>
-                      <span className={s.debugValue}>{debug.routing.reason}</span>
-                    </div>
-                  )}
-                  {debug.query_plan?.sheet && (
-                    <div className={s.debugSection}>
-                      <span className={s.debugLabel}>📋 Sheet</span>
-                      <span className={s.debugValue}>{debug.query_plan.sheet}</span>
-                    </div>
-                  )}
-                  {debug.query_plan?.filters?.length > 0 && (
-                    <div className={s.debugSection}>
-                      <span className={s.debugLabel}>🔎 Filter</span>
-                      <span className={s.debugValue}>{debug.query_plan.filters.join(' AND ')}</span>
-                    </div>
-                  )}
-                  {debug.query_plan?.aggregation && (
-                    <div className={s.debugSection}>
-                      <span className={s.debugLabel}>📐 Aggregasi</span>
-                      <span className={s.debugValue}>{debug.query_plan.aggregation}</span>
-                    </div>
-                  )}
-                  {debug.query_plan?.path && (
-                    <div className={s.debugSection}>
-                      <span className={s.debugLabel}>⚙️ Path</span>
-                      <span className={s.debugValue} style={{color: debug.query_plan.path === 'llm_fallback' ? '#f59e0b' : '#10b981'}}>
-                        {debug.query_plan.path === 'llm_fallback' ? '🤖 LLM Query Builder' : '⚡ Deterministic'}
-                      </span>
-                    </div>
-                  )}
-                  {debug.execution?.steps && Object.keys(debug.execution.steps).length > 0 && (
-                    <div className={s.debugSection}>
-                      <span className={s.debugLabel}>📈 Hasil</span>
+                      <span className={s.debugLabel}>📊 Dataset</span>
                       <span className={s.debugValue}>
-                        {Object.entries(debug.execution.steps).map(([k, v]) =>
-                          `Step ${k}: ${v.quality} (${v.row_count} rows)`
-                        ).join(' | ')}
+                        {debug.routing?.selected || debug.routing?.dataset || debug.category || '—'}
                       </span>
                     </div>
-                  )}
-                  {debug.query_plan?.deterministic_error && (
                     <div className={s.debugSection}>
-                      <span className={s.debugLabel}>⚠️ Fallback</span>
-                      <span className={s.debugValue} style={{color: '#f59e0b', fontSize: '0.7rem'}}>
-                        {debug.query_plan.deterministic_error}
+                      <span className={s.debugLabel}>🔍 Routing</span>
+                      <span className={s.debugValue}>
+                        {debug.routing?.method || '—'} {debug.routing?.confidence ? `(confidence: ${(debug.routing.confidence * 100).toFixed(0)}%)` : ''}
                       </span>
                     </div>
-                  )}
-                </div>
+                    {debug.routing?.reason && (
+                      <div className={s.debugSection}>
+                        <span className={s.debugLabel}>💡 Alasan</span>
+                        <span className={s.debugValue}>{debug.routing.reason}</span>
+                      </div>
+                    )}
+                    {debug.query_plan?.sheet && (
+                      <div className={s.debugSection}>
+                        <span className={s.debugLabel}>📋 Sheet</span>
+                        <span className={s.debugValue}>{debug.query_plan.sheet}</span>
+                      </div>
+                    )}
+                    {debug.query_plan?.filters?.length > 0 && (
+                      <div className={s.debugSection}>
+                        <span className={s.debugLabel}>🔎 Filter</span>
+                        <span className={s.debugValue}>{debug.query_plan.filters.join(' AND ')}</span>
+                      </div>
+                    )}
+                    {debug.query_plan?.aggregation && (
+                      <div className={s.debugSection}>
+                        <span className={s.debugLabel}>📐 Aggregasi</span>
+                        <span className={s.debugValue}>{debug.query_plan.aggregation}</span>
+                      </div>
+                    )}
+                    {debug.query_plan?.path && (
+                      <div className={s.debugSection}>
+                        <span className={s.debugLabel}>⚙️ Path</span>
+                        <span className={s.debugValue} style={{color: debug.query_plan.path === 'llm_fallback' ? '#f59e0b' : '#10b981'}}>
+                          {debug.query_plan.path === 'llm_fallback' ? '🤖 LLM Query Builder' : '⚡ Deterministic'}
+                        </span>
+                      </div>
+                    )}
+                    {debug.execution?.steps && Object.keys(debug.execution.steps).length > 0 && (
+                      <div className={s.debugSection}>
+                        <span className={s.debugLabel}>📈 Hasil</span>
+                        <span className={s.debugValue}>
+                          {Object.entries(debug.execution.steps).map(([k, v]) =>
+                            `Step ${k}: ${v.quality} (${v.row_count} rows)`
+                          ).join(' | ')}
+                        </span>
+                      </div>
+                    )}
+                    {debug.query_plan?.deterministic_error && (
+                      <div className={s.debugSection}>
+                        <span className={s.debugLabel}>⚠️ Fallback</span>
+                        <span className={s.debugValue} style={{color: '#f59e0b', fontSize: '0.7rem'}}>
+                          {debug.query_plan.deterministic_error}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className={s.debugPanel}>
+                    <div className={s.markdownContent}>
+                      <ReactMarkdown>{legacyDebugText}</ReactMarkdown>
+                    </div>
+                  </div>
+                )
               )}
             </div>
           )}

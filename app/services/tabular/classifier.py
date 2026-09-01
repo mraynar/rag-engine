@@ -266,16 +266,21 @@ def _create_aggregation_spec(
     Returns:
         AggregationSpec or None if no valid column
     """
-    # Pick first metric/column as aggregation target, filtering out categorical grouping dimensions
+    # Pick first valid metric column as aggregation target (metrics priority over columns)
     column = None
     target_columns = []
-    if resolved.columns:
-        target_columns.extend(resolved.columns)
     if resolved.metrics:
         target_columns.extend(resolved.metrics)
+    if resolved.columns:
+        target_columns.extend(resolved.columns)
         
+    excluded_cols = {
+        "VESSEL OPERATOR", "LOP", "OPERATOR", "NAMA PERUSAHAAN", "CUSTOMER",
+        "YEAR", "TAHUN", "_YEAR", "MONTH", "BULAN", "MONTH_CODE", "_MONTH_CODE", "_MONTH_EN",
+        "DATE", "TANGGAL", "TIMESTAMP", "_SHEET", "_OPERATOR", "KATEGORI", "STATUS", "SERVICE", "ROUTES"
+    }
     for col in target_columns:
-        if col.upper() not in ["VESSEL OPERATOR", "LOP", "OPERATOR", "YEAR", "MONTH", "BULAN", "_SHEET"]:
+        if col.upper().strip() not in excluded_cols:
             column = col
             break
     
