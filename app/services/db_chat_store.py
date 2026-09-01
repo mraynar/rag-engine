@@ -166,20 +166,20 @@ def append_user_messages(
 
             is_first = (msg_count == 0)
 
-            # Insert user message
+            # Insert user message with explicit current clock timestamp
             conn.execute(
                 text("""
-                    INSERT INTO public.messages (conversation_id, role, content)
-                    VALUES (:conv_id, 'user', :content)
+                    INSERT INTO public.messages (conversation_id, role, content, created_at)
+                    VALUES (:conv_id, 'user', :content, clock_timestamp())
                 """),
                 {"conv_id": conv_id, "content": user_content}
             )
 
-            # Insert assistant message
+            # Insert assistant message with explicit timestamp incremented by 50ms to guarantee correct chronological order
             conn.execute(
                 text("""
-                    INSERT INTO public.messages (conversation_id, role, content, sources)
-                    VALUES (:conv_id, 'assistant', :content, :sources)
+                    INSERT INTO public.messages (conversation_id, role, content, sources, created_at)
+                    VALUES (:conv_id, 'assistant', :content, :sources, clock_timestamp() + interval '50 milliseconds')
                 """),
                 {
                     "conv_id": conv_id,
