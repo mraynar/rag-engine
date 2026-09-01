@@ -128,7 +128,7 @@ def _execute_llm_query_plan(
     try:
         with get_db_conn() as conn:
             sample_rows = conn.execute(
-                text("SELECT data FROM tabular_rows WHERE source_id = :sid LIMIT 5"),
+                text("SELECT row_data FROM data_rows WHERE source_id = :sid LIMIT 5"),
                 {"sid": source_id}
             ).fetchall()
             for row in sample_rows:
