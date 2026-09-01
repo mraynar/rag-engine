@@ -93,18 +93,26 @@ function LoginFormContent() {
     setErrorMsg('');
     setSuccessMsg('');
 
-    const cleanEmail = (email || '').trim();
-    if (!cleanEmail || !password) {
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    
+    // Support both DOM values (Safari/browser autofill) and React state
+    const cleanEmail = (formData.get('email') || email || '').toString().trim();
+    const cleanPassword = (formData.get('password') || password || '').toString();
+    const cleanConfirmPassword = (formData.get('confirmPassword') || confirmPassword || '').toString();
+    const cleanDisplayName = (formData.get('displayName') || displayName || '').toString().trim();
+
+    if (!cleanEmail || !cleanPassword) {
       setErrorMsg('Email and password are required.');
       return;
     }
 
     if (mode === 'register') {
-      if (password.length < 6) {
+      if (cleanPassword.length < 6) {
         setErrorMsg('Password must be at least 6 characters.');
         return;
       }
-      if (password !== confirmPassword) {
+      if (cleanPassword !== cleanConfirmPassword) {
         setErrorMsg('Confirm password does not match.');
         return;
       }
@@ -114,7 +122,7 @@ function LoginFormContent() {
 
     try {
       if (mode === 'login') {
-        const { data, error } = await login(cleanEmail, password);
+        const { data, error } = await login(cleanEmail, cleanPassword);
         if (error) {
           let msg = error.message || 'Failed to sign in. Please verify your email and password.';
           const lowerMsg = (error.message || '').toLowerCase();
@@ -138,8 +146,8 @@ function LoginFormContent() {
         }
       } else {
         // Register
-        const name = (displayName || '').trim();
-        const { data, error } = await register(cleanEmail, password, name || cleanEmail.split('@')[0]);
+        const name = cleanDisplayName;
+        const { data, error } = await register(cleanEmail, cleanPassword, name || cleanEmail.split('@')[0]);
         if (error) {
           setErrorMsg(error.message || 'Registration failed. Please try again.');
           setLoading(false);
@@ -214,14 +222,17 @@ function LoginFormContent() {
 
           {mode === 'register' && (
             <div className={s.formGroup}>
-              <label className={s.label}>Full Name</label>
+              <label htmlFor="displayName" className={s.label}>Full Name</label>
               <div className={s.inputWrapper}>
                 <UserIcon size={16} className={s.inputIcon} />
                 <input
+                  id="displayName"
+                  name="displayName"
                   type="text"
                   placeholder="Enter your full name"
                   value={displayName}
                   onChange={e => setDisplayName(e.target.value)}
+                  autoComplete="name"
                   required
                   className={s.input}
                 />
@@ -230,14 +241,17 @@ function LoginFormContent() {
           )}
 
           <div className={s.formGroup}>
-            <label className={s.label}>Corporate Email</label>
+            <label htmlFor="email" className={s.label}>Corporate Email</label>
             <div className={s.inputWrapper}>
               <MailIcon size={16} className={s.inputIcon} />
               <input
+                id="email"
+                name="email"
                 type="email"
                 placeholder="username@tps.co.id"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
+                autoComplete="email"
                 required
                 className={s.input}
               />
@@ -245,14 +259,17 @@ function LoginFormContent() {
           </div>
 
           <div className={s.formGroup}>
-            <label className={s.label}>Password</label>
+            <label htmlFor="password" className={s.label}>Password</label>
             <div className={s.inputWrapper}>
               <LockIcon size={16} className={s.inputIcon} />
               <input
+                id="password"
+                name="password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
+                autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
                 required
                 className={s.input}
               />
@@ -269,14 +286,17 @@ function LoginFormContent() {
 
           {mode === 'register' && (
             <div className={s.formGroup}>
-              <label className={s.label}>Confirm Password</label>
+              <label htmlFor="confirmPassword" className={s.label}>Confirm Password</label>
               <div className={s.inputWrapper}>
                 <LockIcon size={16} className={s.inputIcon} />
                 <input
+                  id="confirmPassword"
+                  name="confirmPassword"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
                   required
                   className={s.input}
                 />
