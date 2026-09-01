@@ -902,7 +902,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
     return () => {
       isCurrent = false;
     };
-  }, [activeConvId, getConversation, getCachedConversation, conversations]);
+  }, [activeConvId, getConversation, getCachedConversation]);
 
   // Auto-scroll only on new message sent/received (prevent fighting manual scroll)
   const prevMsgCountRef = useRef(0);

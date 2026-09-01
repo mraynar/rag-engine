@@ -54,7 +54,7 @@ def get_user_conversation(conv_id: str, user_id: str) -> dict:
                 SELECT role, content, sources, created_at
                 FROM public.messages
                 WHERE conversation_id = :conv_id
-                ORDER BY created_at ASC
+                ORDER BY created_at ASC, id ASC
             """),
             {"conv_id": conv_id}
         ).fetchall()
