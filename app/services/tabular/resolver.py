@@ -277,6 +277,18 @@ def resolve_entities(
             if ("nominal" in question_lower or "keringanan" in question_lower or "persetujuan" in question_lower) and "NOMINAL PERSETUJUAN KERINGANAN" in schema_columns:
                 if "NOMINAL PERSETUJUAN KERINGANAN" not in metrics:
                     metrics.append("NOMINAL PERSETUJUAN KERINGANAN")
+
+        # Strict schema column validation: prune metrics not present in target dataset schema
+        if schema_columns:
+            valid_metrics = []
+            for m in metrics:
+                if m in schema_columns:
+                    valid_metrics.append(m)
+                elif dataset in ["Overview Vessel", "Market Share", "Container Throughput", "Overview Box"] and m in ["TEUS", "ACTUAL"]:
+                    valid_metrics.append(m)
+                elif dataset in ["Transhipment", "Realisasi UC"] and m in ["20'", "40'", "45'", "TOTAL TEUS"]:
+                    valid_metrics.append(m)
+            metrics = valid_metrics
     
     # Resolve month and year
     month_context = _resolve_month_and_year(question)

@@ -97,11 +97,28 @@ def answer_tabular_question(question: str, category_name: str) -> dict:
             "sources": [f"Category Info: {category_name}"]
         }
     
+    is_all_data = not category_name or str(category_name).strip().lower() in ["all data", "all datasource", "all datasources", "all", ""]
+    
+    if is_all_data:
+        route_res = route_dataset(question, None)
+    else:
+        route_res = route_dataset(question, category_name)
+        if route_res:
+            route_res.dataset = category_name
+            
+    if not route_res or not route_res.dataset:
+        return {
+            "answer": "Maaf, tidak dapat menentukan dataset yang tepat untuk pertanyaan Anda.",
+            "sources": [f"Supabase Table: {category_name}"]
+        }
+
+    target_category = route_res.dataset
+
     try:
         with get_db_conn() as conn:
             res = conn.execute(
                 text("SELECT id, column_schema FROM data_sources WHERE category_name = :category_name"),
-                {"category_name": category_name}
+                {"category_name": target_category}
             ).fetchone()
     except Exception as e:
         return {
@@ -111,22 +128,12 @@ def answer_tabular_question(question: str, category_name: str) -> dict:
 
     if not res:
         return {
-            "answer": f"Maaf, dataset untuk kategori '{category_name}' tidak ditemukan di database. Kemungkinan dataset ini telah dihapus atau belum disinkronisasikan.",
+            "answer": f"Maaf, dataset untuk kategori '{target_category}' tidak ditemukan di database. Kemungkinan dataset ini telah dihapus atau belum disinkronisasikan.",
             "sources": []
         }
 
     source_id, schema_raw = res
     column_schema = schema_raw if isinstance(schema_raw, dict) else json.loads(schema_raw or "{}")
-
-    route_res = route_dataset(question, category_name)
-    if category_name and route_res:
-        route_res.dataset = category_name
-        
-    if not route_res or not route_res.dataset:
-        return {
-            "answer": f"Maaf, tidak dapat menentukan dataset yang tepat untuk pertanyaan Anda.",
-            "sources": [f"Supabase Table: {category_name}"]
-        }
     try:
         resolved = resolve_entities(question, route_res.dataset)
         sheets = route_sheet(question, route_res.dataset)
