@@ -857,10 +857,9 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
       const empty = conversations.find(c => c.message_count === 0);
       setActiveConvId(empty ? empty.id : conversations[0].id);
     } else {
-      createConversation().then(data => { if (data) setActiveConvId(data.id); });
+      createConversation().then(data => { if (data?.id) setActiveConvId(data.id); });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingConvs, activeConvId]);
+  }, [loadingConvs, activeConvId, conversations, createConversation, setActiveConvId]);
 
   // Load messages when conv changes
   useEffect(() => {
@@ -957,16 +956,39 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
 
   async function handleSend() {
     const text = input.trim();
-    if (!text || loading || !activeConvId) return;
-    setMessages(prev => [...prev, { role: 'user', content: text }]);
-    setInput('');
-    setDraft(activeConvId, '');
+    if (!text || loading) return;
+
     setLoading(true);
     setError(null);
+
+    let convId = activeConvId;
+    if (!convId) {
+      try {
+        const newConv = await createConversation();
+        if (newConv?.id) {
+          convId = newConv.id;
+          setActiveConvId(convId);
+        } else {
+          throw new Error('Failed to initialize conversation session.');
+        }
+      } catch (err) {
+        console.error('[handleSend] Conv creation error:', err);
+        setError(err.message || 'Could not start conversation.');
+        setLoading(false);
+        return;
+      }
+    }
+
+    setMessages(prev => [...prev, { role: 'user', content: text }]);
+    setInput('');
+    if (convId) setDraft(convId, '');
+
     try {
-      const data = await postChatMessage(activeConvId, text, selectedCategory);
+      const data = await postChatMessage(convId, text, selectedCategory);
       setMessages(prev => [...prev, { role: 'ai', content: data.answer, sources: data.sources || [] }]);
+      await loadConversations();
     } catch (err) {
+      console.error('[handleSend] Chat post error:', err);
       setError(err.message || 'Failed to connect to server.');
     } finally {
       setLoading(false);
