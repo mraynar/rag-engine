@@ -50,7 +50,6 @@ def format_number(val: Any) -> str:
             else:
                 parts = f"{val_rounded:.2f}".split(".")
                 integer_part = f"{int(parts[0]):,}".replace(",", ".")
-                # Strip trailing zeros in decimals if appropriate, but keeping at least 1 or 2
                 dec = parts[1]
                 if dec.endswith("0"):
                     dec = dec[:-1]
@@ -58,6 +57,54 @@ def format_number(val: Any) -> str:
         
         return f"-{formatted}" if is_negative else formatted
     return str(val)
+
+
+def is_monetary_metric(metric_name: str) -> bool:
+    """Check if metric refers to money, revenue, nominal, or discount."""
+    if not metric_name:
+        return False
+    m = str(metric_name).upper()
+    return any(k in m for k in ["REVENUE", "NOMINAL", "KERINGANAN", "PENDAPATAN", "RUPIAH", "IDR", "DISCOUNT"])
+
+
+def format_currency(val: Any) -> str:
+    """
+    Format numeric monetary values into Indonesian Rupiah (Rp) with standard Indonesian number formatting and human readable scale.
+    Example: 15250000000 -> "Rp 15.250.000.000 (15,25 Miliar)"
+    """
+    if isinstance(val, (int, float, np.integer, np.floating)):
+        if pd.isna(val) or (isinstance(val, float) and math.isnan(val)):
+            return "Rp 0"
+        val_float = float(val)
+        if val_float == 0:
+            return "Rp 0"
+        
+        is_neg = val_float < 0
+        val_abs = abs(val_float)
+        prefix = "Rp " if not is_neg else "-Rp "
+        
+        num_full = format_number(val_abs)
+        if val_abs >= 1_000_000_000_000:
+            num_short = format_number(val_abs / 1_000_000_000_000)
+            return f"{prefix}{num_full} ({num_short} Triliun)"
+        elif val_abs >= 1_000_000_000:
+            num_short = format_number(val_abs / 1_000_000_000)
+            return f"{prefix}{num_full} ({num_short} Miliar)"
+        elif val_abs >= 1_000_000:
+            num_short = format_number(val_abs / 1_000_000)
+            return f"{prefix}{num_full} ({num_short} Juta)"
+        else:
+            return f"{prefix}{num_full}"
+    return str(val)
+
+
+def format_value_with_metric(val: Any, metric_name: str, is_percentage: bool = False) -> str:
+    """Format numeric values according to metric context (Currency, Percentage, or Number)."""
+    if is_percentage:
+        return f"{format_number(val)}%"
+    if is_monetary_metric(metric_name):
+        return format_currency(val)
+    return format_number(val)
 
 
 def format_response(
@@ -85,6 +132,11 @@ def format_response(
     if not results:
         return "Data tidak ditemukan untuk kriteria pencarian tersebut."
 
+    raw_metric = resolved.metrics[0] if resolved.metrics else "nilai"
+    metric_label = get_metric_label(raw_metric).lower()
+    year = resolved.month.year if resolved.month else None
+    year_str = f"pada tahun {year}" if year else ""
+
     # 1. Quality-based early exit handlers (prioritizing worst-quality signal first)
     qualities = [r.quality for r in results.values()]
     if ResultQuality.EMPTY in qualities:
@@ -92,15 +144,17 @@ def format_response(
     if ResultQuality.NAN in qualities:
         return "Data tersedia, tetapi nilai yang diminta tidak dapat dihitung."
     if ResultQuality.ALL_ZERO in qualities:
+        r_first = list(results.values())[0]
+        if r_first.row_count == 0:
+            if year:
+                return f"Data {metric_label} pada tahun {year} tidak tersedia pada dataset '{dataset}'."
+            return "Data tidak ditemukan untuk kriteria pencarian tersebut."
         if ast.query_type not in [QueryType.RANKING, QueryType.TREND, QueryType.COMPARISON] \
            and ast.intent not in [UserIntent.TOP_N, UserIntent.BOTTOM_N, UserIntent.COMPARISON, UserIntent.TREND_ANALYSIS]:
             return "Berdasarkan data yang ditemukan, nilainya adalah 0."
 
     # 2. Extract common context elements
-    raw_metric = resolved.metrics[0] if resolved.metrics else "nilai"
-    metric_label = get_metric_label(raw_metric).lower()
     operator = resolved.operators[0] if resolved.operators else None
-    year = resolved.month.year if resolved.month else None
 
     # Handle Percentage lookup intent suffix
     is_percentage = False
@@ -278,9 +332,7 @@ def format_response(
         return f"Berikut adalah data yang relevan:\n\n{rows_str}{suffix}"
 
     # Scalar formatting (single lookup or aggregation)
-    formatted_val = format_number(data)
-    if is_percentage:
-        formatted_val = f"{formatted_val}%"
+    formatted_val = format_value_with_metric(data, raw_metric, is_percentage)
 
     if ast.query_type == QueryType.AGGREGATION:
         agg_word = "total"

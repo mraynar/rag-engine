@@ -226,6 +226,9 @@ def resolve_entities(
     indonesian_aliases = {
         "produktivitas": "BCH",
         "produktifitas": "BCH",
+        "pendapatan": "TOTAL ALL REVENUE",
+        "revenue": "TOTAL ALL REVENUE",
+        "penerimaan": "TOTAL ALL REVENUE",
     }
     for alias, canonical_col in indonesian_aliases.items():
         if alias.lower() in question_lower:
@@ -263,6 +266,9 @@ def resolve_entities(
             if "TEUS" in metrics and "TEUS" not in schema_columns and "TOTAL TEUS" in schema_columns:
                 metrics = ["TOTAL TEUS" if m == "TEUS" else m for m in metrics]
         elif dataset == "Komersial Dashboard":
+            if ("pendapatan" in question_lower or "revenue" in question_lower) and "TOTAL ALL REVENUE" in schema_columns:
+                if "TOTAL ALL REVENUE" not in metrics:
+                    metrics.append("TOTAL ALL REVENUE")
             if "TOTAL REVENUE" in metrics and "TOTAL ALL REVENUE" in schema_columns:
                 metrics = ["TOTAL ALL REVENUE" if m == "TOTAL REVENUE" else m for m in metrics]
         elif dataset == "RestNDisc":

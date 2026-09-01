@@ -71,12 +71,14 @@ DATASET_REGISTRY = {
     },
     "Komersial Dashboard": {
         "keywords": {
-            "komersial": 9,
-            "dashboard": 7,
-            "all revenue": 8,
-            "total all revenue": 9,
-            "revenue": 5,
-            "pendapatan": 6,
+            "komersial": 10,
+            "dashboard": 8,
+            "all revenue": 10,
+            "total all revenue": 10,
+            "revenue": 10,
+            "pendapatan": 10,
+            "total pendapatan": 10,
+            "jumlah pendapatan": 10,
         }
     },
     "Vessel Service": {
@@ -160,6 +162,15 @@ COLUMN_ALIASES = {
     "nominal persetujuan": "NOMINAL PERSETUJUAN KERINGANAN",
     "nominal persetujuan keringanan": "NOMINAL PERSETUJUAN KERINGANAN",
     "keringanan": "NOMINAL PERSETUJUAN KERINGANAN",
+    # Revenue & Pendapatan aliases
+    "pendapatan": "TOTAL ALL REVENUE",
+    "total pendapatan": "TOTAL ALL REVENUE",
+    "jumlah pendapatan": "TOTAL ALL REVENUE",
+    "jumlah total pendapatan": "TOTAL ALL REVENUE",
+    "revenue": "TOTAL ALL REVENUE",
+    "total revenue": "TOTAL ALL REVENUE",
+    "total all revenue": "TOTAL ALL REVENUE",
+    "all revenue": "TOTAL ALL REVENUE",
     # Explicit container sizes for Transhipment & Realisasi UC
     "20'": "20'",
     "20’": "20'",

@@ -105,9 +105,27 @@ def classify_query(
                     col = "TEUS"
                 aggregation = AggregationSpec(func="sum", column=col)
         else:
-            aggregation = _create_aggregation_spec("sum", resolved)
-            if not aggregation and "jumlah" in question_lower:
-                aggregation = AggregationSpec(func="count")
+            aggregation = _create_aggregation_spec("sum", resolved, question_lower)
+            if not aggregation:
+                # Determine default numeric column by dataset
+                default_col = None
+                if dataset == "Komersial Dashboard":
+                    default_col = "TOTAL ALL REVENUE"
+                elif dataset == "RestNDisc":
+                    default_col = "NOMINAL PERSETUJUAN KERINGANAN"
+                elif dataset in ["Overview Vessel", "Container Throughput", "Overview Box"]:
+                    default_col = "TEUS"
+                elif dataset == "Vessel Service":
+                    default_col = "TOTAL CALL"
+                elif dataset == "Realisasi UC":
+                    default_col = "TOTAL TEUS"
+
+                if default_col:
+                    aggregation = AggregationSpec(func="sum", column=default_col)
+                elif "jumlah" in question_lower and any(w in question_lower for w in ["transaksi", "permohonan", "panggilan"]):
+                    aggregation = AggregationSpec(func="count")
+                else:
+                    aggregation = AggregationSpec(func="sum", column="TEUS")
         build_method = BuildMethod.DETERMINISTIC
     elif is_percentage:
         if dataset == "Market Share":

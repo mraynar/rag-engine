@@ -12,7 +12,7 @@ ENABLE_RETRY_ENGINE = True
 ENABLE_OBSERVABILITY = True
 
 # Return debug block in production responses
-RETURN_DEBUG_BLOCK = True
+RETURN_DEBUG_BLOCK = False
 
 # Enable query result caching (disabled in MVP)
 ENABLE_QUERY_CACHE = False

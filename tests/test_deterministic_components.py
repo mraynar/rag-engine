@@ -542,8 +542,8 @@ class TestSettings(unittest.TestCase):
 
     def test_debug_block_disabled_by_default(self):
         from app.services.tabular.settings import RETURN_DEBUG_BLOCK
-        # Production default: debug block not returned automatically
-        self.assertTrue(RETURN_DEBUG_BLOCK)
+        # Production default: debug block disabled by default
+        self.assertFalse(RETURN_DEBUG_BLOCK)
 
 
 if __name__ == "__main__":

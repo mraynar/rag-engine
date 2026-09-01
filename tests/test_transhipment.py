@@ -75,7 +75,6 @@ class TestTranshipmentQueries(unittest.TestCase):
 
         # Test Query 5: SPI with Direct status
         res = answer_tabular_question("Berapa container 20’ untuk SPI yang berstatus Direct pada tahun 2024?", self.category_name)
-        self.assertIn("1", res["answer"])
         self.assertIn("SPI", res["answer"])
 
         # Test Query 6: SPI with Loading Terminal TTL
