@@ -176,10 +176,34 @@ function LoginFormContent() {
     <div className={s.card}>
       {/* Left Pane — Logo & Info */}
       <div className={s.leftPane}>
-        <img src="/images/Logo TPS Monokrom.png" alt="Pelindo Terminal Petikemas TPS Surabaya" className={s.logo} style={{ height: '70px', marginBottom: '24px' }} />
-        <p className={s.leftDesc}>
-          Intelligent Assistant & Tabular Data Q&A Portal for PT Terminal Petikemas Surabaya
-        </p>
+        <div>
+          <div className={s.badge}>
+            <span className={s.badgeDot} />
+            <span>PELINDO AI PORTAL</span>
+          </div>
+
+          <img src="/images/Logo TPS Monokrom.png" alt="Pelindo Terminal Petikemas TPS Surabaya" className={s.logo} />
+
+          <h1 className={s.leftTitle}>
+            Intelligent Assistant &amp; Tabular Data Q&amp;A Portal
+          </h1>
+          <p className={s.leftOrg}>PT Terminal Petikemas Surabaya</p>
+        </div>
+
+        <div className={s.featureList}>
+          <div className={s.featureItem}>
+            <div className={s.featureIcon}>⚡</div>
+            <span>Real-time Tabular Analytics</span>
+          </div>
+          <div className={s.featureItem}>
+            <div className={s.featureIcon}>🔒</div>
+            <span>Secure Corporate RAG Engine</span>
+          </div>
+          <div className={s.featureItem}>
+            <div className={s.featureIcon}>📊</div>
+            <span>Automated Data Insights</span>
+          </div>
+        </div>
       </div>
 
       {/* Right Pane — Login Form */}
@@ -333,6 +357,8 @@ function LoginFormContent() {
 export default function LoginPage() {
   return (
     <div className={s.container}>
+      <div className={s.bgOrb1} aria-hidden="true" />
+      <div className={s.bgOrb2} aria-hidden="true" />
       <Suspense fallback={
         <div className={s.card} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px' }}>
           <div className={s.spinner} style={{ width: '32px', height: '32px' }} />
