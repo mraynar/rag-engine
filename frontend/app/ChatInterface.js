@@ -369,6 +369,22 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
   const router = useRouter();
 
   const [shake, setShake] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target)) {
+        setIsAccountMenuOpen(false);
+      }
+    }
+    if (isAccountMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isAccountMenuOpen]);
 
   const pinned   = conversations.filter(c => c.pinned);
   const unpinned = conversations.filter(c => !c.pinned);
@@ -553,59 +569,169 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
         {authLoading ? (
           <div style={{ height: '36px', background: 'rgba(255,255,255,0.08)', borderRadius: 'var(--r-sm)', animation: 'pulse 1.5s infinite' }} />
         ) : user ? (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '8px 10px',
-            borderRadius: 'var(--r-sm)',
-            background: 'rgba(255, 255, 255, 0.08)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
-            gap: '8px',
-            width: '100%',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-              <div style={{
-                width: '28px', height: '28px', borderRadius: '50%',
-                background: '#fff', color: 'var(--color-brand)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: '700', fontSize: '0.8rem', flexShrink: 0
-              }}>
-                {(user.user_metadata?.display_name || user.email)[0].toUpperCase()}
+          <div ref={accountMenuRef} style={{ position: 'relative', width: '100%' }}>
+            {/* Account Popover Menu */}
+            {isAccountMenuOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 'calc(100% + 8px)',
+                  left: 0,
+                  right: 0,
+                  backgroundColor: '#ffffff',
+                  borderRadius: '10px',
+                  boxShadow: '0 12px 30px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.08)',
+                  border: '1px solid #E2E8F0',
+                  padding: '6px',
+                  zIndex: 1000,
+                }}
+              >
+                {/* Account Details Header */}
+                <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid #F1F5F9' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                    Signed in as
+                  </div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {user.user_metadata?.display_name || user.email.split('@')[0]}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {user.email}
+                  </div>
+                </div>
+
+                {/* Menu Actions */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAccountMenuOpen(false);
+                      logout();
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      width: '100%',
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '0.82rem',
+                      fontWeight: '500',
+                      color: '#1E293B',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'background 0.15s ease',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                    <span>Change Account</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAccountMenuOpen(false);
+                      logout();
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      width: '100%',
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '0.82rem',
+                      fontWeight: '500',
+                      color: '#DC2626',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'background 0.15s ease',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <polyline points="16 17 21 12 16 7" />
+                      <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    <span>Sign Out</span>
+                  </button>
+                </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <span style={{ fontSize: '0.8rem', color: '#fff', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '130px' }}>
-                  {user.user_metadata?.display_name || user.email.split('@')[0]}
-                </span>
-                <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '130px' }}>
-                  {user.email}
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={logout}
-              title="Sign Out"
+            )}
+
+            {/* Profile Card trigger button */}
+            <div
+              onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
               style={{
-                padding: '6px', borderRadius: 'var(--r-sm)',
-                color: 'rgba(255, 255, 255, 0.85)', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 10px',
+                borderRadius: 'var(--r-sm)',
+                background: isAccountMenuOpen ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                gap: '8px',
+                width: '100%',
+                cursor: 'pointer',
                 transition: 'all 0.2s ease',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.3)';
-                e.currentTarget.style.color = '#fff';
+                if (!isAccountMenuOpen) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.14)';
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.85)';
+                if (!isAccountMenuOpen) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
               }}
+              title="Click to manage account"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-            </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                <div style={{
+                  width: '28px', height: '28px', borderRadius: '50%',
+                  background: '#fff', color: 'var(--color-brand)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: '700', fontSize: '0.8rem', flexShrink: 0
+                }}>
+                  {(user.user_metadata?.display_name || user.email)[0].toUpperCase()}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#fff', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '130px' }}>
+                    {user.user_metadata?.display_name || user.email.split('@')[0]}
+                  </span>
+                  <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '130px' }}>
+                    {user.email}
+                  </span>
+                </div>
+              </div>
+
+              {/* Chevron Icon */}
+              <div
+                style={{
+                  padding: '4px',
+                  borderRadius: 'var(--r-sm)',
+                  color: 'rgba(255, 255, 255, 0.85)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transform: isAccountMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s ease',
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="18 15 12 9 6 15" />
+                </svg>
+              </div>
+            </div>
           </div>
         ) : (
           <button
