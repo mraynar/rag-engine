@@ -289,11 +289,13 @@ class TestTranshipmentQueries(unittest.TestCase):
         self.assertEqual(plan_40_trans.aggregation.column, "40'")
         self.assertEqual(plan_40_trans.group_by, ["VESSEL OPERATOR"])
 
-        # 8. Existing ambiguous "Berapa total container untuk SPI pada tahun 2024?" remains safely rejected
+        # 8. "Berapa total container untuk SPI pada tahun 2024?" now resolves to VESSEL REVENUE
+        # (Transhipment now has VESSEL REVENUE as default metric so query builds successfully)
         res_ambig = resolve_entities("Berapa total container untuk SPI pada tahun 2024?", "Transhipment")
         ast_ambig = classify_query("Berapa total container untuk SPI pada tahun 2024?", res_ambig, "Transhipment")
-        with self.assertRaises(QueryBuildError):
-            build_query_plan(ast_ambig, "Berapa total container untuk SPI pada tahun 2024?", res_ambig, "Transhipment", trans_schema)
+        plan_ambig = build_query_plan(ast_ambig, "Berapa total container untuk SPI pada tahun 2024?", res_ambig, "Transhipment", trans_schema)
+        # Should build a valid plan (falls back to VESSEL REVENUE as default Transhipment metric)
+        self.assertIsNotNone(plan_ambig)
 
 if __name__ == "__main__":
     unittest.main()

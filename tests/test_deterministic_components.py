@@ -289,7 +289,7 @@ class TestSheetRegistry(unittest.TestCase):
         self.registry = SHEET_REGISTRY
 
     def test_all_datasets_in_sheet_registry(self):
-        expected = {"Container Throughput", "Overview Vessel", "Market Share", "Transhipment"}
+        expected = {"Container Throughput", "Overview Vessel", "Market Share", "Transhipment", "Overview Box"}
         self.assertEqual(expected, set(self.registry.keys()))
 
     def test_overview_vessel_domestic_maps_to_uppercase(self):

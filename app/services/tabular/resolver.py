@@ -254,6 +254,16 @@ def resolve_entities(
         if dataset == "Overview Vessel":
             if "aktivitas" in question_lower and "TEUS" not in metrics:
                 metrics.append("TEUS")
+        elif dataset == "Transhipment":
+            # Transhipment uses VESSEL REVENUE, not TOTAL ALL REVENUE
+            if "TOTAL ALL REVENUE" in metrics:
+                metrics = [m for m in metrics if m != "TOTAL ALL REVENUE"]
+                if "VESSEL REVENUE" not in metrics:
+                    metrics.append("VESSEL REVENUE")
+            if ("revenue" in question_lower or "vessel revenue" in question_lower) and "VESSEL REVENUE" not in metrics:
+                metrics.append("VESSEL REVENUE")
+            # Handle loading/discharge as KATEGORI filter (not a metric column)
+            # These are applied as filters in classifier, not as metrics here
         elif dataset == "Container Throughput":
             if "actual" in question_lower or "throughput" in question_lower:
                 if "ACTUAL" not in metrics and "ACTUAL" in schema_columns:
@@ -286,7 +296,7 @@ def resolve_entities(
                     valid_metrics.append(m)
                 elif dataset in ["Overview Vessel", "Market Share", "Container Throughput", "Overview Box"] and m in ["TEUS", "ACTUAL"]:
                     valid_metrics.append(m)
-                elif dataset in ["Transhipment", "Realisasi UC"] and m in ["20'", "40'", "45'", "TOTAL TEUS"]:
+                elif dataset in ["Transhipment", "Realisasi UC"] and m in ["20'", "40'", "45'", "TOTAL TEUS", "VESSEL REVENUE"]:
                     valid_metrics.append(m)
             metrics = valid_metrics
     

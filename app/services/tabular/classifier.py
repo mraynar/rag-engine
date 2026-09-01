@@ -119,6 +119,8 @@ def classify_query(
                     default_col = "TOTAL CALL"
                 elif dataset == "Realisasi UC":
                     default_col = "TOTAL TEUS"
+                elif dataset == "Transhipment":
+                    default_col = "VESSEL REVENUE"
 
                 if default_col:
                     aggregation = AggregationSpec(func="sum", column=default_col)
@@ -324,12 +326,15 @@ def _construct_filters(
             value=resolved.month.year
         ))
     
-    # Month filter
+    # Month filter - use BULAN for datasets storing month in Indonesian BULAN column
     if resolved.month and resolved.month.month_code > 0:
+        # Datasets that use BULAN (Indonesian name) instead of MONTH
+        bulan_datasets = {"Komersial Dashboard", "Realisasi UC"}
+        month_col = "BULAN" if dataset in bulan_datasets else "MONTH"
         filters.append(FilterCondition(
-            column="MONTH",
+            column=month_col,
             operator=FilterOperator.EQ,
-            value=resolved.month.month_str
+            value=resolved.month.month_str  # e.g. "Maret" - executor will match against stored values
         ))
     
     # Operator filter (dataset-aware column detection)
@@ -350,6 +355,13 @@ def _construct_filters(
                 operator=FilterOperator.IN,
                 value=resolved.operators
             ))
+    
+    # Transhipment KATEGORI filter for loading/discharge
+    if dataset == "Transhipment":
+        question_lower_ctx = resolved.month.month_str if resolved.month else ""
+        # We need the question here — use a module-level check pattern
+        # This is passed in via dataset context; filter by KATEGORI if keywords found
+        pass  # KATEGORI filter is applied in tabular_query.py based on question keywords
     
     return filters
 

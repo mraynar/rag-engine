@@ -137,8 +137,17 @@ def answer_tabular_question(question: str, category_name: str) -> dict:
     try:
         resolved = resolve_entities(question, route_res.dataset)
         sheets = route_sheet(question, route_res.dataset)
-        if not sheets and route_res.dataset == "Transhipment":
-            sheets = ["Transhipment"]
+        
+        # Transhipment-specific sheet logic:
+        # - 'new vr' sheet contains VESSEL REVENUE and KATEGORI data
+        # - 'Transhipment ' sheet contains 20'/40' container counts
+        if route_res.dataset == "Transhipment":
+            question_lower_trs = question.lower()
+            if any(kw in question_lower_trs for kw in ["vessel revenue", "revenue", "loading", "discharge", "muat", "bongkar"]):
+                sheets = ["new vr"]
+            elif not sheets:
+                sheets = ["Transhipment"]
+        
         sheet = sheets[0] if sheets and len(sheets) == 1 else None
     except Exception as e:
         return {
@@ -148,6 +157,27 @@ def answer_tabular_question(question: str, category_name: str) -> dict:
 
     try:
         ast = classify_query(question, resolved, route_res.dataset)
+        
+        # Inject KATEGORI filter for Transhipment loading/discharge questions
+        if route_res.dataset == "Transhipment":
+            from app.services.tabular.domain_models import FilterCondition, FilterOperator
+            from dataclasses import replace as dc_replace
+            question_lower_trs = question.lower()
+            kategori_val = None
+            if "total loading" in question_lower_trs or " loading" in question_lower_trs:
+                kategori_val = "LOADING"
+            elif "discharge" in question_lower_trs or "bongkar" in question_lower_trs:
+                kategori_val = "DISCHARGE"
+            if kategori_val:
+                existing_cols = [f.column.upper() for f in ast.filters]
+                if "KATEGORI" not in existing_cols:
+                    new_filters = list(ast.filters) + [FilterCondition(
+                        column="KATEGORI",
+                        operator=FilterOperator.EQ,
+                        value=kategori_val
+                    )]
+                    ast = dc_replace(ast, filters=new_filters)
+        
         subqueries = decompose_query(ast, question, resolved, route_res.dataset)
     except Exception as e:
         return {

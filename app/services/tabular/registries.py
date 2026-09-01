@@ -51,11 +51,15 @@ DATASET_REGISTRY = {
     },
     "Transhipment": {
         "keywords": {
-            "transhipment": 5,
-            "transshipment": 5,
+            "transhipment": 10,
+            "transshipment": 10,
+            "vessel revenue": 12,
+            "total loading": 10,
+            "loading": 7,
+            "discharge": 7,
+            "alih muat": 8,
             "alih": 4,
             "muat": 4,
-            "container": 3,
         }
     },
     "RestNDisc": {
@@ -94,9 +98,17 @@ DATASET_REGISTRY = {
     },
     "Overview Box": {
         "keywords": {
-            "overview box": 10,
+            "overview box": 12,
             "box": 6,
             "boxes": 6,
+            "teus domestik": 12,
+            "teus internasional": 12,
+            "teus international": 12,
+            "jumlah teus domestik": 12,
+            "jumlah teus internasional": 12,
+            "kategori domestik": 10,
+            "kategori internasional": 10,
+            "per kategori": 8,
         }
     }
 }
@@ -123,7 +135,13 @@ SHEET_REGISTRY = {
     },
     "Transhipment": {
         "transhipment": "Transhipment",
-    }
+    },
+    "Overview Box": {
+        "domestic": "DOMESTIK",
+        "domestik": "DOMESTIK",
+        "international": "INTERNATIONAL",
+        "internasional": "INTERNATIONAL",
+    },
 }
 
 # Vessel operator codes
@@ -192,7 +210,7 @@ COLUMN_ALIASES = {
 
 # Month normalization map
 MONTH_NORMALIZE_MAP = {
-    # English lowercase
+    # English lowercase (full names - must match DB stored values e.g. 'March', 'January')
     "january": {"id": "Januari", "code": 1},
     "february": {"id": "Februari", "code": 2},
     "march": {"id": "Maret", "code": 3},

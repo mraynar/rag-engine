@@ -168,8 +168,22 @@ def apply_filters(df: pd.DataFrame, filters: List[FilterCondition]) -> pd.DataFr
             from app.services.tabular.registries import MONTH_NORMALIZE_MAP
             if month_key in MONTH_NORMALIZE_MAP:
                 month_code = MONTH_NORMALIZE_MAP[month_key]["code"]
-                month_name = MONTH_NORMALIZE_MAP[month_key]["id"]
-                df = df[df[col].notnull() & df[col].astype(str).str.lower().str.strip().isin([str(month_code), month_name.lower()])]
+                month_name_id = MONTH_NORMALIZE_MAP[month_key]["id"]  # e.g. "Maret"
+                # Build comprehensive match set: code string, ID name (lowercase), EN name (lowercase)
+                # Common English month names for matching DB stored values like 'March', 'January'
+                english_month_map = {
+                    1: "january", 2: "february", 3: "march", 4: "april",
+                    5: "may", 6: "june", 7: "july", 8: "august",
+                    9: "september", 10: "october", 11: "november", 12: "december"
+                }
+                english_name = english_month_map.get(month_code, "")
+                match_values = {
+                    str(month_code),
+                    str(float(month_code)),  # e.g. "3.0" for numeric stored
+                    month_name_id.lower(),  # e.g. "maret"
+                    english_name,  # e.g. "march"
+                }
+                df = df[df[col].notnull() & df[col].astype(str).str.lower().str.strip().isin(match_values)]
                 continue
 
         is_operator_col = col.strip().upper() in ["LOP", "OPERATOR", "VESSEL OPERATOR", "VESSELOPERATOR", "NAMA PERUSAHAAN", "CUSTOMER"]

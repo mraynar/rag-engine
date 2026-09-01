@@ -27,8 +27,14 @@ SCHEMA_REGISTRY = {
         "columns": ["YEAR", "MONTH", "LOP", "%"]
     },
     "Transhipment": {
-        "sheets": ["Transhipment"],
-        "columns": ["YEAR", "MONTH", "20'", "40'", "VESSEL OPERATOR"]
+        # Actual sheets in DB: 'new vr', 'Transhipment ', 'VR', 'YR...' etc.
+        # Main revenue sheet: 'new vr'
+        "sheets": ["new vr", "Transhipment", "VR"],
+        "columns": [
+            "YEAR", "BULAN", "MONTH", "20'", "40'", "VESSEL OPERATOR",
+            "VESSEL REVENUE", "VESSEL REVENUE 2024", "VESSEL REVENUE 2025",
+            "KATEGORI", "BOXES 2024", "BOXES 2025"
+        ]
     },
     "RestNDisc": {
         "sheets": ["Form Responses 1"],
@@ -40,10 +46,11 @@ SCHEMA_REGISTRY = {
         ]
     },
     "Komersial Dashboard": {
-        "sheets": ["Sheet1"],
+        "sheets": ["DATA KOMERSIAL"],
         "columns": [
-            "YEAR", "MONTH", "VESSEL OPERATOR", "TOTAL REVENUE",
-            "TOTAL ALL REVENUE", "TOTAL TEUS", "TEUS FULL", "TEUS EMPTY", "BOX"
+            "YEAR", "MONTH", "BULAN", "VESSEL OPERATOR", "TOTAL REVENUE",
+            "TOTAL ALL REVENUE", "TOTAL TEUS", "TEUS FULL", "TEUS EMPTY",
+            "TOTAL BOX", "BOX", "DN / LN", "EXPORT/IMPORT"
         ]
     },
     "Vessel Service": {
@@ -55,8 +62,8 @@ SCHEMA_REGISTRY = {
         ]
     },
     "Overview Box": {
-        "sheets": ["Sheet1"],
-        "columns": ["YEAR", "MONTH", "VESSEL OPERATOR", "BOX", "TEUS"]
+        "sheets": ["DOMESTIK", "INTERNATIONAL"],
+        "columns": ["YEAR", "MONTH", "VESSEL OPERATOR", "LOP", "BOX", "BOXES", "TEUS", "DATE"]
     }
 }
 
