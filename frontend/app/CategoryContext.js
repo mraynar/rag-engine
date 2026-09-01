@@ -2,6 +2,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from './AuthContext';
 
 const CategoryContext = createContext(null);
 
@@ -9,6 +10,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 const LS_KEY = 'rag_selected_category';
 
 export function CategoryProvider({ children }) {
+  const { session, loading: authLoading } = useAuth();
   const [selectedCategory, _setSelectedCategory] = useState("All Data");
   const initializedRef = useRef(false);
 
@@ -18,7 +20,6 @@ export function CategoryProvider({ children }) {
     initializedRef.current = true;
     try {
       const stored = localStorage.getItem(LS_KEY);
-      console.log('CategoryContext mount. Stored key:', stored);
       if (stored) _setSelectedCategory(stored);
     } catch (e) {
       console.error('CategoryContext mount error:', e);
@@ -27,12 +28,10 @@ export function CategoryProvider({ children }) {
 
   // Wrapped setter to also update localStorage
   const setSelectedCategory = useCallback((category) => {
-    console.log('CategoryContext setSelectedCategory called with:', category);
     _setSelectedCategory(category);
     try {
       if (category) {
         localStorage.setItem(LS_KEY, category);
-        console.log('CategoryContext saved to LS:', category);
       } else {
         localStorage.removeItem(LS_KEY);
       }
@@ -50,9 +49,20 @@ export function CategoryProvider({ children }) {
   const [isDataModalOpen, setIsDataModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
+  const getHeaders = useCallback(() => {
+    const h = {};
+    if (session?.access_token) {
+      h['Authorization'] = `Bearer ${session.access_token}`;
+    }
+    return h;
+  }, [session]);
+
   const refreshCategories = useCallback(async () => {
+    if (authLoading) return;
     try {
-      const res = await fetch(`${API_BASE}/sources`);
+      const res = await fetch(`${API_BASE}/sources`, {
+        headers: getHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         setCategories(data);
@@ -62,11 +72,14 @@ export function CategoryProvider({ children }) {
     } finally {
       setLoadingCategories(false);
     }
-  }, []);
+  }, [authLoading, getHeaders]);
 
   const refreshDocuments = useCallback(async () => {
+    if (authLoading) return;
     try {
-      const res = await fetch(`${API_BASE}/documents`);
+      const res = await fetch(`${API_BASE}/documents`, {
+        headers: getHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         setDocuments(data);
@@ -76,12 +89,12 @@ export function CategoryProvider({ children }) {
     } finally {
       setLoadingDocuments(false);
     }
-  }, []);
+  }, [authLoading, getHeaders]);
 
   useEffect(() => {
     refreshCategories();
     refreshDocuments();
-  }, [refreshCategories, refreshDocuments]);
+  }, [session, refreshCategories, refreshDocuments]);
 
   return (
     <CategoryContext.Provider

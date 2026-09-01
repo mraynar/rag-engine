@@ -38,6 +38,12 @@ async function handler(request, { params }) {
     forwardHeaders.set(key, value);
   }
 
+  // Auto-inject Authorization header from session cookie if not explicitly supplied
+  const token = request.cookies.get('sb-access-token')?.value;
+  if (token && !forwardHeaders.has('authorization')) {
+    forwardHeaders.set('authorization', `Bearer ${token}`);
+  }
+
   // Forward the request body for mutating methods
   let body = undefined;
   const method = request.method.toUpperCase();
