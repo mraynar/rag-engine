@@ -4,9 +4,16 @@ from starlette.testclient import TestClient
 from app.main import app
 
 
+from app.core.auth import require_user, get_current_user
+
 class TestAPIRoutes(unittest.TestCase):
     def setUp(self):
+        app.dependency_overrides[require_user] = lambda: {"id": "00000000-0000-0000-0000-000000000000", "email": "test@tps.co.id", "display_name": "Test User"}
+        app.dependency_overrides[get_current_user] = lambda: {"id": "00000000-0000-0000-0000-000000000000", "email": "test@tps.co.id", "display_name": "Test User"}
         self.client = TestClient(app)
+
+    def tearDown(self):
+        app.dependency_overrides.clear()
 
     def test_health_endpoint(self):
         response = self.client.get("/health")
