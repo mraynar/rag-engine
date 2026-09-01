@@ -39,6 +39,7 @@ def chat(request: ChatRequest, user: Optional[dict] = Depends(get_current_user))
         result = answer_tabular_question(request.message, tabular_category)
         answer = result["answer"]
         sources = result["sources"]
+        debug_info = result.get("debug")
     else:
         # Fall back to ChromaDB semantic vector search pipeline
         chunks, sources = retrieve_relevant_chunks(request.message, request.category)
@@ -49,6 +50,7 @@ def chat(request: ChatRequest, user: Optional[dict] = Depends(get_current_user))
             prompt = build_prompt(request.message, chunks)
             answer = generate_answer(prompt)
             sources = list(dict.fromkeys(sources))
+        debug_info = None
 
     # Persist the message only if user is logged in
     if user:
@@ -65,4 +67,4 @@ def chat(request: ChatRequest, user: Optional[dict] = Depends(get_current_user))
     else:
         print(f"[chat] Guest session chat processed: conversation_id={request.conversation_id}")
 
-    return ChatResponse(answer=answer, sources=sources)
+    return ChatResponse(answer=answer, sources=sources, debug=debug_info)

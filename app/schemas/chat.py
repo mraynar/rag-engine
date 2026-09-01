@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Any
 from pydantic import BaseModel, Field
 
 
@@ -31,4 +31,8 @@ class ChatResponse(BaseModel):
         default_factory=list,
         description="Daftar nama berkas sumber dokumen yang relevan",
         examples=[["OVERVIEW_VESSEL.xlsx"]],
+    )
+    debug: Optional[Any] = Field(
+        default=None,
+        description="Debug info (dataset routing, query plan, filters) untuk collapsible panel di UI",
     )

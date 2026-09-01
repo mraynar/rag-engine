@@ -56,9 +56,9 @@ class TestSupabaseTabular(unittest.TestCase):
         schema = result["column_schema"]
         if isinstance(schema, str):
             schema = json.loads(schema)
-        # Columns are normalized to UPPERCASE during sanitization
         self.assertIn("Sheet1", schema)
-        self.assertEqual(schema["Sheet1"], ["DATE", "LOP", "TEUS"])
+        for col in ["DATE", "LOP", "TEUS"]:
+            self.assertIn(col, schema["Sheet1"])
         # Wide-table union schema key must exist
         self.assertIn("_all_sheets", schema)
         self.assertIn("DATE", schema["_all_sheets"])

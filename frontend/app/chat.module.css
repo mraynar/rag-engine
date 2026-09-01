@@ -877,7 +877,7 @@
 }
 
 /* ============================================
-   DEBUG CONTAINER (Black background block)
+   DEBUG CONTAINER (Black background block — legacy)
    ============================================ */
 .debugContainer {
   margin-top: 12px;
@@ -907,7 +907,7 @@
 }
 
 .debugContainer strong {
-  color: #38bdf8 !important; /* soft blue for keys/highlights */
+  color: #38bdf8 !important;
 }
 
 .debugContainer code {
@@ -941,5 +941,78 @@
   border: none !important;
   color: #cbd5e1 !important;
   padding: 0 !important;
+}
+
+/* ============================================
+   DEBUG PANEL — Collapsible structured debug
+   ============================================ */
+.debugWrapper {
+  margin-top: 10px;
+}
+
+.debugToggle {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 6px;
+  color: #64748b;
+  font-size: 0.72rem;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.debugToggle:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.debugPanel {
+  margin-top: 8px;
+  padding: 12px 14px;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: debugFadeIn 0.15s ease;
+}
+
+@keyframes debugFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.debugSection {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  border-bottom: 1px solid rgba(30, 41, 59, 0.6);
+  padding-bottom: 5px;
+}
+
+.debugSection:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.debugLabel {
+  color: #475569;
+  min-width: 80px;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.debugValue {
+  color: #94a3b8;
+  font-family: 'Fira Mono', 'Cascadia Code', 'Menlo', monospace;
+  word-break: break-word;
+  flex: 1;
 }
 

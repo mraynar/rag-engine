@@ -132,40 +132,35 @@ function ThinkingIndicator() {
 
 // ─── Message bubble ───────────────────────────────────────────────────────────
 
-function MessageBubble({ role, content, sources }) {
+function MessageBubble({ role, content, sources, debug }) {
   const isUser = role === 'user';
+  const [debugOpen, setDebugOpen] = useState(false);
 
-  // Split debug info from main content
-  let mainContent = content;
-  let debugContent = '';
-  if (!isUser && content && content.includes('\n---\n### Debug Information')) {
-    const parts = content.split('\n---\n### Debug Information');
-    mainContent = parts[0];
-    debugContent = '### Debug Information' + parts[1];
-  } else if (!isUser && content && content.includes('---') && content.includes('Debug Information')) {
-    const parts = content.split('---');
-    for (let idx = 0; idx < parts.length; idx++) {
-      if (parts[idx].includes('Debug Information')) {
-        mainContent = parts.slice(0, idx).join('---');
-        debugContent = parts.slice(idx).join('---');
-        if (!debugContent.startsWith('###')) debugContent = '### ' + debugContent.trim();
-        break;
-      }
-    }
+  // Strip any legacy inline debug text (backward compat)
+  let mainContent = content || '';
+  if (!isUser && mainContent.includes('\n---\n### Debug Information')) {
+    mainContent = mainContent.split('\n---\n### Debug Information')[0];
   }
 
   if (isUser) {
     return (
       <div className={s.msgRow}>
         <div className={s.msgRowUserInner}>
-          <div className={`${s.avatar} ${s.avatarUser}`} aria-hidden="true">
-            U
-          </div>
+          <div className={`${s.avatar} ${s.avatarUser}`} aria-hidden="true">U</div>
           <div className={s.userBubble}>{mainContent}</div>
         </div>
       </div>
     );
   }
+
+  // Format debug info for display
+  const hasDebug = debug && typeof debug === 'object';
+  const formatDebugValue = (val) => {
+    if (val === null || val === undefined) return 'null';
+    if (Array.isArray(val)) return val.join(', ') || '—';
+    if (typeof val === 'object') return JSON.stringify(val, null, 2);
+    return String(val);
+  };
 
   return (
     <div className={s.msgRow}>
@@ -183,11 +178,94 @@ function MessageBubble({ role, content, sources }) {
             <ReactMarkdown>{mainContent}</ReactMarkdown>
           </div>
 
-          {debugContent && (
-            <div className={s.debugContainer}>
-              <div className={s.markdownContent}>
-                <ReactMarkdown>{debugContent}</ReactMarkdown>
-              </div>
+          {hasDebug && (
+            <div className={s.debugWrapper}>
+              <button
+                className={s.debugToggle}
+                onClick={() => setDebugOpen(o => !o)}
+                aria-expanded={debugOpen}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                  strokeLinejoin="round" style={{ marginRight: 5 }}>
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                {debugOpen ? 'Sembunyikan Debug Query' : 'Lihat Debug Query'}
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ marginLeft: 5, transform: debugOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+              {debugOpen && (
+                <div className={s.debugPanel}>
+                  <div className={s.debugSection}>
+                    <span className={s.debugLabel}>📊 Dataset</span>
+                    <span className={s.debugValue}>
+                      {debug.routing?.selected || debug.routing?.method === 'explicit' ? (debug.routing?.selected || debug.category) : '—'}
+                    </span>
+                  </div>
+                  <div className={s.debugSection}>
+                    <span className={s.debugLabel}>🔍 Routing</span>
+                    <span className={s.debugValue}>
+                      {debug.routing?.method} {debug.routing?.confidence ? `(confidence: ${(debug.routing.confidence * 100).toFixed(0)}%)` : ''}
+                    </span>
+                  </div>
+                  {debug.routing?.reason && (
+                    <div className={s.debugSection}>
+                      <span className={s.debugLabel}>💡 Alasan</span>
+                      <span className={s.debugValue}>{debug.routing.reason}</span>
+                    </div>
+                  )}
+                  {debug.query_plan?.sheet && (
+                    <div className={s.debugSection}>
+                      <span className={s.debugLabel}>📋 Sheet</span>
+                      <span className={s.debugValue}>{debug.query_plan.sheet}</span>
+                    </div>
+                  )}
+                  {debug.query_plan?.filters?.length > 0 && (
+                    <div className={s.debugSection}>
+                      <span className={s.debugLabel}>🔎 Filter</span>
+                      <span className={s.debugValue}>{debug.query_plan.filters.join(' AND ')}</span>
+                    </div>
+                  )}
+                  {debug.query_plan?.aggregation && (
+                    <div className={s.debugSection}>
+                      <span className={s.debugLabel}>📐 Aggregasi</span>
+                      <span className={s.debugValue}>{debug.query_plan.aggregation}</span>
+                    </div>
+                  )}
+                  {debug.query_plan?.path && (
+                    <div className={s.debugSection}>
+                      <span className={s.debugLabel}>⚙️ Path</span>
+                      <span className={s.debugValue} style={{color: debug.query_plan.path === 'llm_fallback' ? '#f59e0b' : '#10b981'}}>
+                        {debug.query_plan.path === 'llm_fallback' ? '🤖 LLM Query Builder' : '⚡ Deterministic'}
+                      </span>
+                    </div>
+                  )}
+                  {debug.execution?.steps && Object.keys(debug.execution.steps).length > 0 && (
+                    <div className={s.debugSection}>
+                      <span className={s.debugLabel}>📈 Hasil</span>
+                      <span className={s.debugValue}>
+                        {Object.entries(debug.execution.steps).map(([k, v]) =>
+                          `Step ${k}: ${v.quality} (${v.row_count} rows)`
+                        ).join(' | ')}
+                      </span>
+                    </div>
+                  )}
+                  {debug.query_plan?.deterministic_error && (
+                    <div className={s.debugSection}>
+                      <span className={s.debugLabel}>⚠️ Fallback</span>
+                      <span className={s.debugValue} style={{color: '#f59e0b', fontSize: '0.7rem'}}>
+                        {debug.query_plan.deterministic_error}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -1008,7 +1086,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
 
     try {
       const data = await postChatMessage(convId, text, selectedCategory);
-      setMessages(prev => [...prev, { role: 'ai', content: data.answer, sources: data.sources || [] }]);
+      setMessages(prev => [...prev, { role: 'ai', content: data.answer, sources: data.sources || [], debug: data.debug || null }]);
       await loadConversations();
     } catch (err) {
       console.error('[handleSend] Chat post error:', err);
@@ -1136,7 +1214,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
               )}
 
               {messages.map((msg, i) => (
-                <MessageBubble key={i} role={msg.role} content={msg.content} sources={msg.sources} />
+                <MessageBubble key={i} role={msg.role} content={msg.content} sources={msg.sources} debug={msg.debug} />
               ))}
 
               {loading && <ThinkingIndicator />}

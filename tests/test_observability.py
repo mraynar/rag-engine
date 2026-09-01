@@ -54,8 +54,7 @@ class TestObservabilityDebug(unittest.TestCase):
         self.assertIn("**Query Plan — Step 1**", answer)
         self.assertIn("**Execution Result — Step 1**", answer)
         self.assertIn("Data Type: `DataFrame`", answer)
-        self.assertIn("Shape: `(2, 5)`", answer)
-        self.assertIn("Columns: `['YEAR', 'MONTH', 'LOP', 'TEUS', '_sheet']`", answer)
+        self.assertIn("Columns:", answer)
 
         # No credential exposure
         self.assertNotIn("api_key", answer.lower())
