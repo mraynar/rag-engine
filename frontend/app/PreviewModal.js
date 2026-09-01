@@ -82,9 +82,13 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
     ? data.rows.filter(r => r.sheet_name === activeSheet)
     : [];
 
-  const tableHeaders = activeSheetRows.length > 0
+  const rawHeaders = activeSheetRows.length > 0
     ? Object.keys(activeSheetRows[0].row_data)
     : [];
+
+  // Hide internal _-prefixed metadata columns (_YEAR, _MONTH_CODE, _MONTH_EN, _OPERATOR) from preview modal
+  // Keep _sheet but display it cleanly as SUMBER_SHEET
+  const tableHeaders = rawHeaders.filter(h => !h.startsWith('_') || h === '_sheet');
 
   return (
     <div style={{
@@ -248,7 +252,7 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
                           <th style={{ padding: '10px 12px', color: 'var(--color-navy)', fontWeight: '700', width: '60px', textAlign: 'center', borderRight: '1px solid var(--color-border)' }}>Row</th>
                           {tableHeaders.map(h => (
                             <th key={h} style={{ padding: '10px 12px', color: 'var(--color-navy)', fontWeight: '700', borderRight: '1px solid var(--color-border)' }}>
-                              {h}
+                              {h === '_sheet' ? 'SUMBER_SHEET' : h}
                             </th>
                           ))}
                         </tr>
