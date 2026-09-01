@@ -70,6 +70,33 @@ function CheckCircleIcon({ size = 16, className }) {
   );
 }
 
+function ZapIcon({ size = 15, className }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  );
+}
+
+function ShieldCheckIcon({ size = 15, className }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
+function ChartIcon({ size = 15, className }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+  );
+}
+
 function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -177,11 +204,6 @@ function LoginFormContent() {
       {/* Left Pane — Logo & Info */}
       <div className={s.leftPane}>
         <div>
-          <div className={s.badge}>
-            <span className={s.badgeDot} />
-            <span>PELINDO AI PORTAL</span>
-          </div>
-
           <img src="/images/Logo TPS Monokrom.png" alt="Pelindo Terminal Petikemas TPS Surabaya" className={s.logo} />
 
           <h1 className={s.leftTitle}>
@@ -192,15 +214,21 @@ function LoginFormContent() {
 
         <div className={s.featureList}>
           <div className={s.featureItem}>
-            <div className={s.featureIcon}>⚡</div>
+            <div className={s.featureIcon}>
+              <ZapIcon size={15} />
+            </div>
             <span>Real-time Tabular Analytics</span>
           </div>
           <div className={s.featureItem}>
-            <div className={s.featureIcon}>🔒</div>
+            <div className={s.featureIcon}>
+              <ShieldCheckIcon size={15} />
+            </div>
             <span>Secure Corporate RAG Engine</span>
           </div>
           <div className={s.featureItem}>
-            <div className={s.featureIcon}>📊</div>
+            <div className={s.featureIcon}>
+              <ChartIcon size={15} />
+            </div>
             <span>Automated Data Insights</span>
           </div>
         </div>
