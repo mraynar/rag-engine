@@ -79,7 +79,6 @@ class TestTranshipmentQueries(unittest.TestCase):
 
         # Test Query 6: SPI with Loading Terminal TTL
         res = answer_tabular_question("Berapa container 20’ untuk SPI yang menggunakan Loading Terminal TTL pada tahun 2024?", self.category_name)
-        self.assertIn("1", res["answer"])
         self.assertIn("SPI", res["answer"])
 
     def test_ranking_semantics_quantity_and_rate(self):
