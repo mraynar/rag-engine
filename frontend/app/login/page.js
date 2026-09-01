@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '../AuthContext';
+import { useAuth, setCookie } from '../AuthContext';
 import s from './login.module.css';
 
 // SVG Icons
@@ -93,7 +93,8 @@ function LoginFormContent() {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!email || !password) {
+    const cleanEmail = (email || '').trim();
+    if (!cleanEmail || !password) {
       setErrorMsg('Email and password are required.');
       return;
     }
@@ -111,31 +112,55 @@ function LoginFormContent() {
 
     setLoading(true);
 
-    if (mode === 'login') {
-      const { error } = await login(email, password);
-      if (error) {
-        setErrorMsg(error.message || 'Failed to sign in. Please verify your email and password.');
-        setLoading(false);
+    try {
+      if (mode === 'login') {
+        const { data, error } = await login(cleanEmail, password);
+        if (error) {
+          let msg = error.message || 'Failed to sign in. Please verify your email and password.';
+          const lowerMsg = (error.message || '').toLowerCase();
+          if (lowerMsg.includes('invalid login credentials') || lowerMsg.includes('invalid_grant')) {
+            msg = 'Invalid email or password. Please verify your credentials.';
+          } else if (lowerMsg.includes('email not confirmed')) {
+            msg = 'Email address not confirmed. Please click the confirmation link sent to your email inbox.';
+          }
+          setErrorMsg(msg);
+          setLoading(false);
+        } else if (data?.session) {
+          setCookie('sb-access-token', data.session.access_token, 7);
+          // Hard navigation to trigger clean Next.js server-side cookie evaluation
+          window.location.href = redirect;
+        } else if (data?.user && !data?.session) {
+          setErrorMsg('Account requires email confirmation before signing in. Please check your inbox.');
+          setLoading(false);
+        } else {
+          setErrorMsg('Unable to retrieve session. Please try again.');
+          setLoading(false);
+        }
       } else {
-        router.replace(redirect);
+        // Register
+        const name = (displayName || '').trim();
+        const { data, error } = await register(cleanEmail, password, name || cleanEmail.split('@')[0]);
+        if (error) {
+          setErrorMsg(error.message || 'Registration failed. Please try again.');
+          setLoading(false);
+        } else if (data?.session) {
+          setCookie('sb-access-token', data.session.access_token, 7);
+          window.location.href = redirect;
+        } else {
+          setLoading(false);
+          setSuccessMsg('Registration successful! Please check your email inbox to confirm your account before signing in.');
+          setTimeout(() => {
+            setMode('login');
+            setSuccessMsg('');
+            setPassword('');
+            setConfirmPassword('');
+          }, 3000);
+        }
       }
-    } else {
-      // Register
-      const name = displayName.trim();
-      const { error } = await register(email, password, name || email.split('@')[0]);
-      if (error) {
-        setErrorMsg(error.message || 'Registration failed. Please try again.');
-        setLoading(false);
-      } else {
-        setLoading(false);
-        setSuccessMsg('Registration successful! Please check your email for confirmation or sign in directly.');
-        setTimeout(() => {
-          setMode('login');
-          setSuccessMsg('');
-          setPassword('');
-          setConfirmPassword('');
-        }, 3000);
-      }
+    } catch (err) {
+      console.error('[Login Error]', err);
+      setErrorMsg(err.message || 'An unexpected error occurred. Please try again.');
+      setLoading(false);
     }
   };
 

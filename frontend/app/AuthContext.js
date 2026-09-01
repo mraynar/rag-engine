@@ -5,7 +5,7 @@ import { supabase } from './supabase';
 
 const AuthContext = createContext(null);
 
-function setCookie(name, value, days) {
+export function setCookie(name, value, days) {
   let expires = "";
   if (days) {
     const date = new Date();
@@ -15,7 +15,7 @@ function setCookie(name, value, days) {
   document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax; Secure";
 }
 
-function deleteCookie(name) {
+export function deleteCookie(name) {
   document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax; Secure';
 }
 
@@ -65,10 +65,16 @@ export function AuthProvider({ children }) {
   // Login handler
   const login = async (email, password) => {
     try {
+      const cleanEmail = (email || '').trim();
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: cleanEmail,
         password,
       });
+      if (data?.session) {
+        setSession(data.session);
+        setUser(data.session.user ?? null);
+        setCookie('sb-access-token', data.session.access_token, 7);
+      }
       return { data, error };
     } catch (err) {
       return { data: null, error: err };
@@ -78,8 +84,9 @@ export function AuthProvider({ children }) {
   // Register handler
   const register = async (email, password, displayName) => {
     try {
+      const cleanEmail = (email || '').trim();
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: cleanEmail,
         password,
         options: {
           data: {
@@ -87,6 +94,11 @@ export function AuthProvider({ children }) {
           },
         },
       });
+      if (data?.session) {
+        setSession(data.session);
+        setUser(data.session.user ?? null);
+        setCookie('sb-access-token', data.session.access_token, 7);
+      }
       return { data, error };
     } catch (err) {
       return { data: null, error: err };
