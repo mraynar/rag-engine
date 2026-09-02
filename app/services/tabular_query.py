@@ -358,9 +358,12 @@ def answer_tabular_question(question: str, category_name: str = "All Data") -> d
     except Exception as e:
         return {"answer": f"Gagal menganalisis pertanyaan: {str(e)}", "sources": [f"Supabase Table: {target_dataset}"], "debug": debug_info}
 
-    # 5. Deterministic classify + build plan
+    # 5. Deterministic classify + build plan with dynamic schema sampling
     try:
-        ast = classify_query(question, resolved, target_dataset)
+        from app.services.tabular.executor import load_dataframe
+        full_df = load_dataframe(str(source_id))
+
+        ast = classify_query(question, resolved, target_dataset, df=full_df)
 
         # Inject KATEGORI filter for Transhipment when loading/discharge mentioned
         if target_dataset == "Transhipment":
@@ -401,7 +404,7 @@ def answer_tabular_question(question: str, category_name: str = "All Data") -> d
     for sub_q in subqueries:
         try:
             sub_resolved = resolve_entities(sub_q.question, target_dataset)
-            sub_ast = classify_query(sub_q.question, sub_resolved, target_dataset)
+            sub_ast = classify_query(sub_q.question, sub_resolved, target_dataset, df=full_df)
             plan = build_query_plan(sub_ast, sub_q.question, resolved, target_dataset, schema=column_schema, subquery=sub_q)
 
             sub_sheets = route_sheet(sub_q.question, target_dataset)

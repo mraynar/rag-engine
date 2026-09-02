@@ -21,17 +21,11 @@ def classify_query(
     question: str,
     resolved: ResolvedEntities,
     dataset: Optional[str] = None,
+    df: Optional[Any] = None
 ) -> QueryAST:
     """
-    Classify question into QueryAST using resolved entities.
-    
-    Args:
-        question: User's natural language question
-        resolved: Entities resolved by resolver (operators, metrics, columns, month)
-        dataset: Dataset context for schema-aware classification
-    
-    Returns:
-        QueryAST with query_type, intent, filters, aggregation, build_method
+    Classify query type, intent, filters, and aggregations deterministically.
+    Supports dynamic categorical value sampling when DataFrame df is provided.
     """
     from app.services.tabular.resolver import sanitize_leading_number
     question = sanitize_leading_number(question)
@@ -133,7 +127,7 @@ def classify_query(
         build_method = BuildMethod.DETERMINISTIC
     
     # Construct filters
-    filters = _construct_filters(resolved, dataset, question_lower)
+    filters = _construct_filters(resolved, dataset, question_lower, df=df)
     
     return QueryAST(
         query_type=query_type,
@@ -296,22 +290,14 @@ def _create_aggregation_spec(
         return AggregationSpec(func=func, column=column)
     
     return None
-
-
 def _construct_filters(
     resolved: ResolvedEntities,
     dataset: Optional[str] = None,
-    question_lower: str = ""
+    question_lower: str = "",
+    df: Optional[Any] = None
 ) -> list:
     """
-    Construct filter conditions from resolved entities.
-    
-    Args:
-        resolved: ResolvedEntities with operators, month, etc.
-        dataset: Dataset name for schema-aware operator column detection
-    
-    Returns:
-        List of FilterCondition objects
+    Construct filter conditions from resolved entities and dynamic categorical value sampling.
     """
     filters = []
     
@@ -356,6 +342,24 @@ def _construct_filters(
                 operator=FilterOperator.IN,
                 value=resolved.operators
             ))
+            
+    # Dynamic Categorical Value Filter Sampling (Hardcode-Free for ALL datasets)
+    if df is not None and hasattr(df, "columns") and not df.empty and question_lower:
+        from app.services.tabular.schema_sampler import get_dataset_schema_and_samples
+        schema_samples = get_dataset_schema_and_samples(df)
+
+        for col, samples in schema_samples.items():
+            # Skip columns already handled by temporal or operator
+            if col.upper() in ["YEAR", "TAHUN", "MONTH", "BULAN", "OPERATOR", "VESSEL OPERATOR", "LOP", "_SHEET"]:
+                continue
+
+            for val in samples:
+                val_str = str(val).strip()
+                val_lower = val_str.lower()
+                if len(val_lower) >= 3 and re.search(r'\b' + re.escape(val_lower) + r'\b', question_lower):
+                    if not any(f.column.upper() == col.upper() for f in filters):
+                        filters.append(FilterCondition(column=col, operator=FilterOperator.EQ, value=val_str))
+                    break
     
     # Transhipment KATEGORI filter for loading/discharge
     if dataset == "Transhipment":

@@ -213,8 +213,13 @@ def apply_filters(df: pd.DataFrame, filters: List[FilterCondition]) -> pd.DataFr
                     id_month_map.get(m_code, ""),
                     en_month_map.get(m_code, "")
                 }
-                match_values.discard("")
-                df = df[df[col].notnull() & df[col].astype(str).str.lower().str.strip().isin(match_values)]
+                month_cols = [c for c in df.columns if c.upper() in ["MONTH", "BULAN", "_MONTH_CODE", "_MONTH_EN"]]
+                if not month_cols:
+                    month_cols = [col]
+                month_mask = pd.Series(False, index=df.index)
+                for mc in month_cols:
+                    month_mask = month_mask | (df[mc].notnull() & df[mc].astype(str).str.lower().str.strip().isin(match_values))
+                df = df[month_mask]
                 continue
 
         is_operator_col = col.strip().upper() in ["LOP", "OPERATOR", "VESSEL OPERATOR", "VESSELOPERATOR", "NAMA PERUSAHAAN", "CUSTOMER"]
