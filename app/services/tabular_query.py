@@ -264,7 +264,8 @@ def answer_tabular_question(question: str, category_name: str = "All Data") -> d
     Returns: {"answer": str, "sources": list[str], "debug": dict}
     The 'debug' field contains routing + query plan info for the collapsible UI.
     """
-    from app.services.tabular.resolver import sanitize_leading_number
+    # 1. Input Guard Security & Greeting check
+    from app.services.tabular.resolver import sanitize_leading_number, check_input_security
     question = sanitize_leading_number(question)
 
     debug_info = {
@@ -275,7 +276,11 @@ def answer_tabular_question(question: str, category_name: str = "All Data") -> d
         "execution": {},
     }
 
-    # 1. Guard
+    sec_error = check_input_security(question)
+    if sec_error:
+        debug_info["security_blocked"] = True
+        return {"answer": sec_error, "sources": [], "debug": debug_info}
+
     greeting_resp = check_data_query_and_respond(question, category_name)
     if greeting_resp:
         return {"answer": greeting_resp, "sources": [f"Category: {category_name}"], "debug": debug_info}

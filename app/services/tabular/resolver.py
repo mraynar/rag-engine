@@ -20,6 +20,40 @@ from app.services.tabular.registries import (
 from app.services.tabular.registries import get_schema, validate_column
 
 
+FORBIDDEN_SQL_KEYWORDS = [
+    r'\bINSERT\b', r'\bUPDATE\b', r'\bDELETE\b', r'\bDROP\b', 
+    r'\bALTER\b', r'\bCREATE\b', r'\bTRUNCATE\b', r'\bGRANT\b', 
+    r'\bREVOKE\b', r'\bMERGE\b', r'\bEXEC\b', r'\bEXECUTE\b'
+]
+
+
+def check_input_security(question: str) -> Optional[str]:
+    """
+    Input Guard: Validate user input for SQL injection, comment stripping, and semicolon chaining.
+    Returns error message string if blocked, or None if safe.
+    """
+    if not question:
+        return None
+    
+    q_str = question.strip()
+    
+    # 1. Semicolon check (statement chaining)
+    if ";" in q_str.rstrip(";"):
+        return "Pertanyaan Anda terdeteksi mengandung karakter yang tidak diizinkan (;). Silakan ajukan pertanyaan dalam bentuk kalimat biasa."
+
+    # 2. SQL Comment stripping check (-- or /* */)
+    if "--" in q_str or "/*" in q_str or "*/" in q_str:
+        return "Pertanyaan Anda terdeteksi mengandung simbol komentar SQL yang tidak diizinkan. Silakan ajukan pertanyaan dalam bentuk kalimat biasa."
+
+    # 3. Forbidden DDL/DML Keywords check
+    for pattern in FORBIDDEN_SQL_KEYWORDS:
+        if re.search(pattern, q_str, re.IGNORECASE):
+            match = re.search(pattern, q_str, re.IGNORECASE).group(0)
+            return f"Pertanyaan Anda mengandung kata kunci terlarang ({match.upper()}). Pertanyaan hanya boleh berupa pencarian data (SELECT)."
+
+    return None
+
+
 def sanitize_leading_number(q: str) -> str:
     if not q:
         return q
