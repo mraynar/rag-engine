@@ -1,18 +1,5 @@
 """
-Query Builder: Deterministic QueryPlan construction.
-
-Responsibilities:
-- Convert QueryAST + Template + ResolvedEntities + Schema → QueryPlan
-- Resolve abstract dimensions to physical columns
-- Validate all columns against schema
-- Preserve entities through SubQuery decomposition
-- Handle multi-hop query plan building
-
-Does NOT:
-- Execute queries
-- Access database
-- Perform pandas operations
-- Calculate final answers
+Konstruksi QueryPlan deterministik dari QueryAST dan skema database.
 """
 import re
 from typing import Optional, List, Dict, Any

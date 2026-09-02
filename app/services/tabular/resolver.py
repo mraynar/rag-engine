@@ -1,17 +1,5 @@
 """
-Resolver: Deterministic entity resolution and routing logic.
-
-Responsibilities:
-- Route question to dataset (P1: explicit → P2: literal → P3: unique → P4: keywords → P5: ambiguous)
-- Route to sheets within dataset
-- Resolve entities (operators, metrics, columns, months, years)
-- Normalize month references
-- Resolve canonical column names from aliases
-
-Does NOT determine:
-- Aggregation functions (SUM/MAX/MIN/COUNT)
-- Query intent (TOP_N/RANKING/COMPARISON)
-- QueryAST or QueryPlan construction
+Ekstraksi entitas semantik (metrik, operator, bulan, tahun) dari teks pertanyaan.
 """
 import re
 from typing import Optional, List, Union

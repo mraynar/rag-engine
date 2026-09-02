@@ -1,17 +1,5 @@
 """
-Tabular Query Orchestrator — RAG-First Architecture
-
-Flow:
-  1. Guard: reject greetings / out-of-scope
-  2. Route dataset:
-       - If specific category → use that category
-       - If "All Data" → LLM semantic routing (reads all datasets from DB)
-  3. Load schema from DB (already synced with _YEAR, _MONTH_CODE normalization)
-  4. Deterministic query plan via resolver + classifier + query_builder
-  5. If deterministic fails → LLM query plan (reads schema + sample from DB)
-  6. Execute plan via pandas executor
-  7. Format + Groq narrative polish
-  8. Return {answer, sources, debug} — debug is separate field for collapsible UI
+Orkestrator query tabular untuk memproses pertanyaan data pelabuhan.
 """
 import json
 from dataclasses import replace
@@ -36,7 +24,7 @@ from app.services.tabular.settings import RETURN_DEBUG_BLOCK
 from app.core.config import get_generation_model
 
 
-# ── Guard: reject greetings ───────────────────────────────────────────────────
+# Validasi salam dan pertanyaan di luar konteks
 
 def check_data_query_and_respond(question: str, category: str) -> Optional[str]:
     """Return a friendly non-data response if question is a greeting/off-topic, else None."""
@@ -66,8 +54,7 @@ def check_data_query_and_respond(question: str, category: str) -> Optional[str]:
         return None
 
 
-# ── LLM-based routing (for All Data mode) ────────────────────────────────────
-
+# Routing dataset berbasis LLM untuk mode All Data
 def _llm_route_all_data(question: str) -> tuple:
     """
     Use LLM to pick the best dataset + sheet from all available sources in DB.
@@ -107,8 +94,7 @@ def _llm_route_all_data(question: str) -> tuple:
     return result.get("dataset"), result.get("sheet"), routing_debug
 
 
-# ── LLM query plan executor ───────────────────────────────────────────────────
-
+# Eksekusi query plan berbasis LLM
 def _execute_llm_query_plan(
     question: str,
     dataset: str,
@@ -270,9 +256,8 @@ def _execute_llm_query_plan(
         return f"Gagal mengeksekusi query plan: {str(e)}", plan_debug
 
 
-# ── Main entry point ──────────────────────────────────────────────────────────
-
-def answer_tabular_question(question: str, category_name: str) -> dict:
+# query tabular
+def answer_tabular_question(question: str, category: str = "All Data") -> dict:
     """
     Answer a tabular question using the RAG-first pipeline.
 

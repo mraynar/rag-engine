@@ -1,19 +1,5 @@
 """
-Classifier: Semantic query classification logic.
-
-Responsibilities:
-- Classify QueryType (SIMPLE, AGGREGATION, RANKING, COMPARISON, TREND, MULTI_HOP)
-- Determine UserIntent (VALUE_LOOKUP, TOP_N, BOTTOM_N, COMPARISON, TREND_ANALYSIS, TOTAL_AGGREGATION, PERCENTAGE_LOOKUP, MULTI_HOP)
-- Construct safe filters from resolved entities (YEAR, MONTH, operator)
-- Determine aggregation functions from keywords (tertinggi → max, terendah → min, total → sum)
-- Mark queries as DETERMINISTIC or LLM_FALLBACK
-
-Does NOT:
-- Execute queries
-- Call Gemini API
-- Build QueryPlan
-- Access database
-- Perform pandas operations
+Klasifikasi semantik pertanyaan menjadi QueryAST (tipe query, intent, filter, dan agregasi).
 """
 import re
 from typing import Optional

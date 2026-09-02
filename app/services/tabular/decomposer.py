@@ -1,18 +1,5 @@
 """
-Decomposer: Query decomposition logic.
-
-Responsibilities:
-- Convert QueryAST → list[SubQuery]
-- Detect true multi-hop queries requiring decomposition
-- Distinguish single-query comparisons from multi-step comparisons
-- Extract temporal/entity dimensions for SubQuery generation
-
-Does NOT:
-- Execute queries
-- Call Gemini API
-- Perform pandas operations
-- Calculate final answers
-- Perform arithmetic
+Dekomposisi query kompleks (multi-hop / perbandingan) menjadi SubQuery.
 """
 import re
 from typing import List, Optional

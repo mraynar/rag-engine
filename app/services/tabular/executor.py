@@ -1,6 +1,5 @@
 """
-Executor module for executing Tabular QueryPlans against database-loaded DataFrames.
-Part of the Phase 2F implementation (TDD Green Phase).
+Eksekusi QueryPlan tabular pada DataFrame pandas.
 """
 import json
 import math
