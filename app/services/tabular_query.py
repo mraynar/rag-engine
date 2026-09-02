@@ -331,18 +331,20 @@ def answer_tabular_question(question: str, category_name: str = "All Data") -> d
     # 4. Resolve entities + route sheet
     try:
         resolved = resolve_entities(question, target_dataset)
-        sheets = route_sheet(question, target_dataset)
+        rule_sheets = route_sheet(question, target_dataset)
 
-        # If LLM routing already suggested a sheet, prioritize it
-        if llm_suggested_sheet:
+        if rule_sheets:
+            sheets = rule_sheets
+        elif llm_suggested_sheet:
             sheets = [llm_suggested_sheet]
-        elif not sheets and target_dataset == "Transhipment":
-            # Transhipment default: revenue/loading → new vr, else Transhipment sheet
+        elif target_dataset == "Transhipment":
             ql = question.lower()
             if any(kw in ql for kw in ["revenue", "loading", "discharge", "muat", "bongkar"]):
                 sheets = ["new vr"]
             else:
                 sheets = ["Transhipment"]
+        else:
+            sheets = None
 
         sheet = sheets[0] if sheets and len(sheets) == 1 else None
         debug_info["query_plan"]["sheet"] = sheet

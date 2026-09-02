@@ -142,6 +142,14 @@ SHEET_REGISTRY = {
         "international": "INTERNATIONAL",
         "internasional": "INTERNATIONAL",
     },
+    "Realisasi UC": {
+        "oh ow ol": "OH OW OL",
+        "oh": "OH OW OL",
+        "ow": "OH OW OL",
+        "ol": "OH OW OL",
+        "trend uc": "TREND UC",
+        "summary": "SUMMARY",
+    },
 }
 
 # Vessel operator codes
@@ -157,6 +165,12 @@ OPERATORS = [
 COLUMN_ALIASES = {
     "throughput": "TEUS",
     "teus": "TEUS",
+    "total teus": "TOTAL TEUS",
+    "total box": "TOTAL BOX",
+    "box": "TOTAL BOX",
+    "boxes": "TOTAL BOX",
+    "perusahaan": "NAMA PERUSAHAAN",
+    "nama perusahaan": "NAMA PERUSAHAAN",
     "market share": "%",
     "market share percentage": "%",
     "realisasi uc": "TOTAL",

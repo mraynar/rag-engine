@@ -243,10 +243,19 @@ def format_response(
             lines.append(f"{idx}: {format_value_with_metric(val, raw_metric, is_percentage)}")
         return "\n".join(lines)
 
-    # Formatting pandas.DataFrame result
-    if isinstance(data, pd.DataFrame):
-        if data.empty:
-            return "Data tidak ditemukan untuk kriteria pencarian tersebut."
+        # Formatting text column / company entity listing
+        text_cols = [c for c in data.columns if c.upper() in ["NAMA PERUSAHAAN", "OPERATOR", "VESSEL OPERATOR", "CUSTOMER", "_OPERATOR", "NAMA PELANGGAN"]]
+        if text_cols:
+            is_pure_text_query = not any(
+                c.upper() in ["TEUS", "BOXES", "TOTAL BOX", "TOTAL TEUS", "TOTAL ALL REVENUE", "VESSEL REVENUE", "NOMINAL PERSETUJUAN KERINGANAN"]
+                for c in data.columns
+            ) or ast.query_type == QueryType.SIMPLE
+            if is_pure_text_query:
+                col_name = text_cols[0]
+                items = [str(x).strip() for x in data[col_name].dropna().unique() if str(x).strip()]
+                if items:
+                    formatted_items = "\n".join([f"{i+1}. {item}" for i, item in enumerate(items)])
+                    return f"Berikut daftar {col_name.lower()} yang ditemukan:\n{formatted_items}"
 
         if ast.query_type == QueryType.SIMPLE or ast.intent in [UserIntent.VALUE_LOOKUP, UserIntent.PERCENTAGE_LOOKUP]:
             metric_cols = [c for c in data.columns if resolved.metrics and any(m.lower() == c.lower() for m in resolved.metrics)]

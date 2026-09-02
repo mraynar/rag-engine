@@ -133,7 +133,7 @@ def classify_query(
         build_method = BuildMethod.DETERMINISTIC
     
     # Construct filters
-    filters = _construct_filters(resolved, dataset)
+    filters = _construct_filters(resolved, dataset, question_lower)
     
     return QueryAST(
         query_type=query_type,
@@ -300,7 +300,8 @@ def _create_aggregation_spec(
 
 def _construct_filters(
     resolved: ResolvedEntities,
-    dataset: Optional[str] = None
+    dataset: Optional[str] = None,
+    question_lower: str = ""
 ) -> list:
     """
     Construct filter conditions from resolved entities.
@@ -322,17 +323,21 @@ def _construct_filters(
             value=resolved.month.year
         ))
     
-    # Month filter - use BULAN for datasets storing month in Indonesian BULAN column
+    # Month filter - pass month_code (1-12) so executor can match integer codes, English, or Indonesian month names
     if resolved.month and resolved.month.month_code > 0:
-        # Datasets that use BULAN (Indonesian name) instead of MONTH
-        bulan_datasets = {"Komersial Dashboard", "Realisasi UC"}
-        month_col = "BULAN" if dataset in bulan_datasets else "MONTH"
         filters.append(FilterCondition(
-            column=month_col,
+            column="MONTH",
             operator=FilterOperator.EQ,
-            value=resolved.month.month_str  # e.g. "Maret" - executor will match against stored values
+            value=resolved.month.month_code
         ))
     
+    # Status filter for RestNDisc
+    if dataset == "RestNDisc" and question_lower:
+        if any(w in question_lower for w in ["diterima", "disetujui", "approved", "setuju", "terima"]):
+            filters.append(FilterCondition(column="STATUS", operator=FilterOperator.EQ, value="Diterima"))
+        elif any(w in question_lower for w in ["ditolak", "rejected", "tolak"]):
+            filters.append(FilterCondition(column="STATUS", operator=FilterOperator.EQ, value="Ditolak"))
+
     # Operator filter (dataset-aware column detection)
     if resolved.operators:
         operator_column = _get_operator_column(dataset)

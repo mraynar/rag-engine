@@ -223,6 +223,10 @@ def route_sheet(
             if canonical_name not in matched_sheets:
                 matched_sheets.append(canonical_name)
     
+    if dataset == "Realisasi UC" and not matched_sheets:
+        if any(w in question_lower for w in ["box", "boxes", "total box", "teus", "total teus", "oh", "ow", "ol"]):
+            return ["OH OW OL"]
+
     # If no sheet keywords found, return None (query all sheets)
     return matched_sheets if matched_sheets else None
 
@@ -445,10 +449,25 @@ def _resolve_month_and_year(question: str) -> Optional[MonthContext]:
     
     # Extract month
     month_context = None
-    
+
+    # Check explicit numeric month phrases (e.g. "dibulan 5", "bulan 5", "dibulan 3", "bulan 3")
+    num_month_match = re.search(r'\b(?:bulan|dibulan|bln|month)\s*(\d{1,2})\b', question_lower)
+    if num_month_match:
+        m_code = int(num_month_match.group(1))
+        if 1 <= m_code <= 12:
+            code_to_id = {
+                1: "Januari", 2: "Februari", 3: "Maret", 4: "April",
+                5: "Mei", 6: "Juni", 7: "Juli", 8: "Agustus",
+                9: "September", 10: "Oktober", 11: "November", 12: "Desember"
+            }
+            return MonthContext(
+                month_str=code_to_id[m_code],
+                month_code=m_code,
+                year=year
+            )
+
     # Try to find month names/codes in question
     for month_key, month_data in MONTH_NORMALIZE_MAP.items():
-        # Check for month mention (word boundary to avoid partial matches)
         pattern = r'\b' + re.escape(month_key) + r'\b'
         if re.search(pattern, question_lower):
             month_context = MonthContext(
@@ -456,7 +475,7 @@ def _resolve_month_and_year(question: str) -> Optional[MonthContext]:
                 month_code=month_data["code"],
                 year=year
             )
-            break  # Take first match
+            break
     
     # If we found a year but no month, still return context with year
     if year > 0 and not month_context:

@@ -183,27 +183,37 @@ def apply_filters(df: pd.DataFrame, filters: List[FilterCondition]) -> pd.DataFr
                 df = df[df[col].astype(str).str.lower().str.strip().isin(["ditolak", "rejected", "reject", "tolak"])]
                 continue
 
-        # Map month names in natural language to their numeric code dynamically
-        if col.upper() in ["MONTH", "BULAN"] and isinstance(val, str):
-            month_key = val.lower().strip()
-            from app.services.tabular.registries import MONTH_NORMALIZE_MAP
-            if month_key in MONTH_NORMALIZE_MAP:
-                month_code = MONTH_NORMALIZE_MAP[month_key]["code"]
-                month_name_id = MONTH_NORMALIZE_MAP[month_key]["id"]  # e.g. "Maret"
-                # Build comprehensive match set: code string, ID name (lowercase), EN name (lowercase)
-                # Common English month names for matching DB stored values like 'March', 'January'
-                english_month_map = {
+        # Map month names or numeric codes to comprehensive match set
+        if col.upper() in ["MONTH", "BULAN", "_MONTH_CODE"]:
+            m_code = None
+            if isinstance(val, (int, float)):
+                m_code = int(val)
+            elif isinstance(val, str) and val.isdigit():
+                m_code = int(val)
+            elif isinstance(val, str):
+                from app.services.tabular.registries import MONTH_NORMALIZE_MAP
+                m_key = val.lower().strip()
+                if m_key in MONTH_NORMALIZE_MAP:
+                    m_code = MONTH_NORMALIZE_MAP[m_key]["code"]
+
+            if m_code and 1 <= m_code <= 12:
+                id_month_map = {
+                    1: "januari", 2: "februari", 3: "maret", 4: "april",
+                    5: "mei", 6: "juni", 7: "juli", 8: "agustus",
+                    9: "september", 10: "oktober", 11: "november", 12: "desember"
+                }
+                en_month_map = {
                     1: "january", 2: "february", 3: "march", 4: "april",
                     5: "may", 6: "june", 7: "july", 8: "august",
                     9: "september", 10: "october", 11: "november", 12: "december"
                 }
-                english_name = english_month_map.get(month_code, "")
                 match_values = {
-                    str(month_code),
-                    str(float(month_code)),  # e.g. "3.0" for numeric stored
-                    month_name_id.lower(),  # e.g. "maret"
-                    english_name,  # e.g. "march"
+                    str(m_code),
+                    f"{m_code}.0",
+                    id_month_map.get(m_code, ""),
+                    en_month_map.get(m_code, "")
                 }
+                match_values.discard("")
                 df = df[df[col].notnull() & df[col].astype(str).str.lower().str.strip().isin(match_values)]
                 continue
 
