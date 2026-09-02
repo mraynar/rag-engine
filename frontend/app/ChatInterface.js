@@ -942,8 +942,36 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
 
   const loadedConvRef = useRef(null);
   const bottomRef     = useRef(null);
+  const messagesContainerRef = useRef(null);
   const inputRef      = useRef(null);
   const recognitionRef = useRef(null);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const isUserScrolledUpRef = useRef(false);
+
+  const handleMessagesScroll = () => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const isScrolledUp = distanceFromBottom > 120;
+    isUserScrolledUpRef.current = isScrolledUp;
+    setShowScrollBottom(isScrolledUp);
+  };
+
+  const scrollToBottom = (smooth = true) => {
+    bottomRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+  };
+
+  // Auto-scroll only on new message sent/received (never fighting manual scroll)
+  const prevMsgCountRef = useRef(0);
+  useEffect(() => {
+    if (activeView === 'chat') {
+      const isNewMsg = messages.length > prevMsgCountRef.current;
+      if (isNewMsg || !isUserScrolledUpRef.current) {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+    prevMsgCountRef.current = messages.length;
+  }, [messages.length, activeView]);
 
   // Bootstrap active conversation
   useEffect(() => {
@@ -1207,6 +1235,8 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
           <>
             {/* Message list */}
             <div
+              ref={messagesContainerRef}
+              onScroll={handleMessagesScroll}
               className={s.chatMessages}
               role="log"
               aria-live="polite"
@@ -1247,6 +1277,33 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
 
               <div ref={bottomRef} aria-hidden="true" />
             </div>
+
+            {showScrollBottom && (
+              <button
+                onClick={() => scrollToBottom(true)}
+                style={{
+                  position: 'absolute',
+                  bottom: '105px',
+                  right: '24px',
+                  zIndex: 25,
+                  background: 'var(--color-brand)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '20px',
+                  padding: '7px 15px',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  align-items: 'center',
+                  gap: '6px',
+                  transition: 'transform 0.15s ease, background 0.15s ease',
+                }}
+              >
+                ↓ Ke bawah
+              </button>
+            )}
 
             {/* Input area */}
             <div className={s.inputArea}>

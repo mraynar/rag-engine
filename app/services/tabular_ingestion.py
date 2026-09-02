@@ -153,6 +153,9 @@ def sync_tabular_source(category_name: str, source_url: str, source_type: str) -
                         conn.execute(insert_stmt, batch)
                 print("[sync_tabular_source] All rows inserted successfully.")
 
+                from app.services.tabular.executor import clear_dataframe_cache
+                clear_dataframe_cache(source_id)
+
                 actual_count = conn.execute(
                     text("SELECT COUNT(*) FROM data_rows WHERE source_id = :source_id"),
                     {"source_id": source_id}

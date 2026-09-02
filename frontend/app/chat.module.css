@@ -306,12 +306,14 @@
    ============================================ */
 .chatMessages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 28px 0 200px;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 28px 0 220px;
   display: flex;
   flex-direction: column;
   gap: 0;
-  scroll-behavior: smooth;
   background: var(--color-surface-2);
   /* subtle diagonal texture */
   background-image:
