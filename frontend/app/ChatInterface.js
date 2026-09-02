@@ -1255,7 +1255,9 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                 <MessageBubble key={i} role={msg.role} content={msg.content} sources={msg.sources} debug={msg.debug} />
               ))}
 
-              {loading && <ThinkingIndicator />}
+              {loading && (messages.length === 0 || messages[messages.length - 1]?.role === 'user') && (
+                <ThinkingIndicator />
+              )}
 
               {error && (
                 <div className={s.errorBanner} role="alert">
