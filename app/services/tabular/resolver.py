@@ -54,6 +54,39 @@ def check_input_security(question: str) -> Optional[str]:
     return None
 
 
+def validate_output_sql(sql_query: str, valid_tables: set) -> Optional[str]:
+    """
+    Output Guard: Validate generated SQL query against valid database tables and CTE aliases.
+    Returns error message if illegal tables/DDL found, or None if valid.
+    """
+    if not sql_query:
+        return None
+        
+    upper_sql = sql_query.upper()
+    
+    # 1. Single statement & SELECT only
+    if ";" in sql_query.rstrip(";"):
+        return "SQL rakitan mengandung titik koma (;) yang dilarang."
+        
+    for kw in FORBIDDEN_SQL_KEYWORDS:
+        if re.search(kw, upper_sql):
+            clean_kw = kw.replace(r'\b', '')
+            return f"Dilarang menggunakan keyword modifikasi data '{clean_kw}'."
+            
+    # 2. Extract CTE aliases (WITH table_name AS ...)
+    cte_matches = {m.lower() for m in re.findall(r'\b(?:WITH|,)\s*([a-zA-Z0-9_]+)\s+AS\s*\(', sql_query, re.IGNORECASE)}
+    allowed_tables = {t.lower() for t in valid_tables} | cte_matches
+    
+    # 3. Extract FROM and JOIN tables
+    table_matches = re.findall(r'\b(?:FROM|JOIN)\s+([a-zA-Z0-9_]+)', upper_sql, re.IGNORECASE)
+    for tbl in table_matches:
+        tbl_clean = tbl.lower()
+        if tbl_clean not in allowed_tables and tbl_clean not in ("data_rows", "data_sources"):
+            return f"Tabel '{tbl}' tidak ditemukan pada database."
+            
+    return None
+
+
 def sanitize_leading_number(q: str) -> str:
     if not q:
         return q

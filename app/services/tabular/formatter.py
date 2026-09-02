@@ -24,6 +24,24 @@ def get_metric_label(col: str) -> str:
     return "market share" if col == "%" else col
 
 
+def format_data_compact(query_result: list[dict], max_rows: int = 25) -> str:
+    """Convert list of dicts to compact CSV string representation (80% token savings)."""
+    if not query_result:
+        return "Tidak ada data"
+    
+    headers = list(query_result[0].keys())
+    lines = [",".join(headers)]
+    
+    for row in query_result[:max_rows]:
+        vals = [str(row.get(h, '')).replace(',', ';') for h in headers]
+        lines.append(",".join(vals))
+        
+    if len(query_result) > max_rows:
+        lines.append(f"... (dan {len(query_result) - max_rows} baris data lainnya dipotong)")
+        
+    return "\n".join(lines)
+
+
 def format_number(val: Any) -> str:
     """
     Format numeric values to Indonesian standard representation (dot for thousands, comma for decimals).
