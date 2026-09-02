@@ -125,6 +125,14 @@ def format_value_with_metric(val: Any, metric_name: str, is_percentage: bool = F
     return format_number(val)
 
 
+EMPTY_SUGGESTION_RESPONSE = (
+    "Data yang Anda cari tidak ditemukan pada database untuk periode/kriteria tersebut.\n\n"
+    "Saran:\n"
+    "• Periksa kembali penulisan nama operator/layanan.\n"
+    "• Perjelas atau perlebar rentang tahun/bulan yang dianalisis."
+)
+
+
 def format_response(
     question: str,
     results: Dict[int, ExecutionResult],
@@ -137,7 +145,7 @@ def format_response(
     Generate natural-language response based on query execution results and semantic context.
     """
     if not results:
-        return "Data tidak ditemukan untuk kriteria pencarian tersebut."
+        return EMPTY_SUGGESTION_RESPONSE
 
     if original_plan and original_plan.aggregation and original_plan.aggregation.column:
         raw_metric = original_plan.aggregation.column
@@ -152,7 +160,7 @@ def format_response(
     # 1. Quality-based early exit handlers (prioritizing worst-quality signal first)
     qualities = [r.quality for r in results.values()]
     if ResultQuality.EMPTY in qualities:
-        return "Data tidak ditemukan untuk kriteria pencarian tersebut."
+        return EMPTY_SUGGESTION_RESPONSE
     if ResultQuality.NAN in qualities:
         return "Data tersedia, tetapi nilai yang diminta tidak dapat dihitung."
     if ResultQuality.ALL_ZERO in qualities:

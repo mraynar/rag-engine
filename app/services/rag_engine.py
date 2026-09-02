@@ -169,7 +169,8 @@ Use this information to interpret relative time references in the user's questio
 MANDATORY RULES:
 1. Use ONLY the data from the "Context" below — do not invent information or use external knowledge.
 2. If the data is not in the context, respond with "I cannot find this information in the document."
-3. Response format: use **bold** for key terms/names, bullet lists for enumeration, and standard paragraphs for explanation.
+3. Format numbers & monetary values cleanly using dots for thousand separators (e.g. Rp 168.136.527.278 or 134.129 TEUs).
+4. Response format: use **bold** for key terms/names, bullet lists for enumeration, and standard paragraphs for explanation.
 
 Context:
 {context}
