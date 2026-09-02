@@ -103,7 +103,7 @@ class TestRankingTemplateTop(unittest.TestCase):
         from app.services.tabular.query_templates import get_template
         
         template = get_template(QueryType.RANKING, UserIntent.TOP_N)
-        self.assertEqual(template.get("default_agg_func"), "max")
+        self.assertEqual(template.get("default_agg_func"), "sum")
     
     def test_ranking_top_sort_order(self):
         """RANKING TOP_N should sort descending"""
@@ -129,7 +129,7 @@ class TestRankingTemplateBottom(unittest.TestCase):
         from app.services.tabular.query_templates import get_template
         
         template = get_template(QueryType.RANKING, UserIntent.BOTTOM_N)
-        self.assertEqual(template.get("default_agg_func"), "min")
+        self.assertEqual(template.get("default_agg_func"), "sum")
     
     def test_ranking_bottom_sort_order(self):
         """RANKING BOTTOM_N should sort ascending"""

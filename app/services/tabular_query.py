@@ -81,7 +81,7 @@ def _llm_route_all_data(question: str) -> tuple:
     try:
         with get_db_conn() as conn:
             rows = conn.execute(
-                text("SELECT category_name, column_schema FROM data_sources WHERE sync_status = 'synced'")
+                text("SELECT category_name, column_schema FROM data_sources WHERE sync_status IN ('synced', 'success')")
             ).fetchall()
             for row in rows:
                 cat = row[0]

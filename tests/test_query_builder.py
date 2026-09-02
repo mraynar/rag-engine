@@ -84,7 +84,7 @@ class TestBasicQueryBuilding(unittest.TestCase):
             query_type=QueryType.RANKING,
             intent=UserIntent.TOP_N,
             filters=[FilterCondition("YEAR", FilterOperator.EQ, 2024)],
-            aggregation=AggregationSpec(func="max", column="BCH")
+            aggregation=AggregationSpec(func="sum", column="BCH")
         )
         
         resolved = ResolvedEntities(
@@ -99,10 +99,10 @@ class TestBasicQueryBuilding(unittest.TestCase):
             dataset="Overview Vessel"
         )
         
-        self.assertEqual(plan.aggregation.func, "max")
+        self.assertEqual(plan.aggregation.func, "sum")
         self.assertIsNotNone(plan.group_by)
         self.assertEqual(plan.sort, "desc")
-        self.assertEqual(plan.limit, 1)
+        self.assertEqual(plan.limit, 5)
     
     def test_bottom_ranking(self):
         """BOTTOM_N ranking should have min aggregation, asc sort"""
@@ -112,7 +112,7 @@ class TestBasicQueryBuilding(unittest.TestCase):
             query_type=QueryType.RANKING,
             intent=UserIntent.BOTTOM_N,
             filters=[FilterCondition("YEAR", FilterOperator.EQ, 2024)],
-            aggregation=AggregationSpec(func="min", column="BCH")
+            aggregation=AggregationSpec(func="sum", column="BCH")
         )
         
         resolved = ResolvedEntities(metrics=["BCH"], columns=["BCH"])
@@ -124,7 +124,7 @@ class TestBasicQueryBuilding(unittest.TestCase):
             dataset="Overview Vessel"
         )
         
-        self.assertEqual(plan.aggregation.func, "min")
+        self.assertEqual(plan.aggregation.func, "sum")
         self.assertEqual(plan.sort, "asc")
 
 

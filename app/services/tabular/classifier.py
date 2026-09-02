@@ -285,10 +285,15 @@ def _create_aggregation_spec(
             break
     
     if column:
-        # Quantity ranking semantics: use sum instead of max/min for operator/entity queries
-        if func in ["max", "min"] and column.upper() in ["TEUS", "BOXES", "20'", "40'", "ACTUAL", "BUDGET"]:
+        # Quantity & Revenue ranking semantics: use sum instead of max/min for operator/entity queries
+        volume_revenue_cols = {
+            "TEUS", "BOXES", "20'", "40'", "ACTUAL", "BUDGET",
+            "TOTAL ALL REVENUE", "VESSEL REVENUE", "REVENUE", "TOTAL REVENUE",
+            "TOTAL BOX", "TOTAL TEUS"
+        }
+        if func in ["max", "min"] and column.upper().strip() in volume_revenue_cols:
             if question_lower:
-                is_operator_query = any(w in question_lower for w in ["operator", "vessel operator", "pelayaran", "pemilik kapal", "lop"])
+                is_operator_query = any(w in question_lower for w in ["operator", "vessel operator", "pelayaran", "pemilik kapal", "lop", "line operator"])
                 if is_operator_query:
                     return AggregationSpec(func="sum", column=column)
         

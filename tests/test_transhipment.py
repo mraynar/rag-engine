@@ -93,7 +93,7 @@ class TestTranshipmentQueries(unittest.TestCase):
         self.assertEqual(plan_20.aggregation.column, "20'")
         self.assertEqual(plan_20.group_by, ["VESSEL OPERATOR"])
         self.assertEqual(plan_20.sort, "desc")
-        self.assertEqual(plan_20.limit, 1)
+        self.assertEqual(plan_20.limit, 5)
 
         # 2. Transhipment 40' ranking uses SUM
         res_40 = resolve_entities("Vessel operator mana yang memiliki container 40' terbanyak pada tahun 2024?", "Transhipment")

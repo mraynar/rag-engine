@@ -53,21 +53,21 @@ TEMPLATE_REGISTRY: Dict[QueryType, Dict[UserIntent, Dict[str, Any]]] = {
             "requires_aggregation": True,
             "requires_grouping": True,
             "requires_sorting": True,
-            "default_agg_func": "max",
+            "default_agg_func": "sum",  # sum per group for true ranking by total contribution
             "grouping_dimension": "operator",  # Abstract: resolved by query builder
             "sort_order": "desc",
-            "default_limit": 1,
-            "description": "Ranking query for highest/maximum values"
+            "default_limit": 5,  # default to top 5
+            "description": "Ranking query for highest values per entity (operator/category)"
         },
         UserIntent.BOTTOM_N: {
             "requires_aggregation": True,
             "requires_grouping": True,
             "requires_sorting": True,
-            "default_agg_func": "min",
+            "default_agg_func": "sum",  # sum per group for true ranking by total contribution
             "grouping_dimension": "operator",  # Abstract: resolved by query builder
             "sort_order": "asc",
-            "default_limit": 1,
-            "description": "Ranking query for lowest/minimum values"
+            "default_limit": 5,  # default to bottom 5
+            "description": "Ranking query for lowest values per entity (operator/category)"
         }
     },
     
