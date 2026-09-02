@@ -180,6 +180,37 @@ Question: {question}
 Answer:"""
 
 
+def format_user_friendly_error(err: Exception | str) -> str:
+    """Converts technical LLM/API exceptions (e.g. 429 Quota Exceeded) into friendly Indonesian user messages."""
+    err_str = str(err).lower()
+    
+    if any(k in err_str for k in [
+        "429", "resourceexhausted", "quota", "rate_limit", "rate limit", 
+        "too many requests", "limit exceeded", "exhausted"
+    ]):
+        return (
+            "Mohon maaf, batas penggunaan AI (kuota / rate limit) telah tercapai sementara waktu. "
+            "Silakan tunggu beberapa saat lagi sebelum mencoba kembali."
+        )
+    elif any(k in err_str for k in ["401", "invalid_api_key", "api_key", "unauthorized", "authentication"]):
+        return (
+            "Mohon maaf, terjadi kendala otentikasi pada layanan AI (API Key tidak valid atau kedaluwarsa). "
+            "Silakan hubungi administrator sistem."
+        )
+    elif any(k in err_str for k in ["503", "502", "504", "unavailable", "overloaded", "timeout", "deadline_exceeded"]):
+        return (
+            "Layanan AI saat ini sedang mengalami kepadatan lalu lintas atau kendala koneksi sementara. "
+            "Silakan coba beberapa saat lagi."
+        )
+    elif any(k in err_str for k in ["context_length_exceeded", "max_tokens", "prompt is too long"]):
+        return (
+            "Pertanyaan atau konteks dokumen terlalu panjang untuk diproses. "
+            "Silakan persingkat pertanyaan Anda."
+        )
+    else:
+        return "Mohon maaf, terjadi kendala saat memproses jawaban dengan AI. Silakan coba beberapa saat lagi."
+
+
 def generate_answer(prompt: str) -> str:
     try:
         return groq_generate(
@@ -188,8 +219,12 @@ def generate_answer(prompt: str) -> str:
         )
     except Exception as groq_err:
         logging.getLogger(__name__).warning(f"[generation] Groq failed ({groq_err}), falling back to Gemini.")
-        client = get_gemini_client()
-        response = client.models.generate_content(
-            model=get_generation_model(), contents=prompt
-        )
-        return response.text
+        try:
+            client = get_gemini_client()
+            response = client.models.generate_content(
+                model=get_generation_model(), contents=prompt
+            )
+            return response.text
+        except Exception as gemini_err:
+            logging.getLogger(__name__).error(f"[generation] Gemini also failed: {gemini_err}")
+            return format_user_friendly_error(gemini_err)

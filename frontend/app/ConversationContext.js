@@ -353,7 +353,15 @@ export function ConversationProvider({ children }) {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || `Server error (${res.status})`);
+      let friendlyMsg = "Mohon maaf, terjadi kendala saat memproses jawaban. Silakan coba beberapa saat lagi.";
+      if (res.status === 429) {
+        friendlyMsg = "Mohon maaf, batas penggunaan AI (kuota / rate limit) telah tercapai sementara waktu. Silakan tunggu beberapa saat lagi sebelum mencoba kembali.";
+      } else if (res.status === 503 || res.status === 502 || res.status === 504) {
+        friendlyMsg = "Layanan AI sedang mengalami kepadatan lalu lintas atau kendala koneksi sementara. Silakan coba beberapa saat lagi.";
+      } else if (err.detail && typeof err.detail === 'string') {
+        friendlyMsg = err.detail;
+      }
+      return { answer: friendlyMsg, sources: [], debug: null };
     }
 
     const data = await res.json();
