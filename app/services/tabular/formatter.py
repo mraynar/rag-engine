@@ -381,12 +381,30 @@ def format_response(
                 agg_word = "jumlah"
         
         op_str = f" untuk {operator}" if operator else ""
-        period_str = f" pada tahun {year}" if year else ""
+        month_str = resolved.month.month_str if resolved.month and resolved.month.month_str else ""
+        if month_str and year:
+            period_str = f" pada bulan {month_str} {year}"
+        elif month_str:
+            period_str = f" pada bulan {month_str}"
+        elif year:
+            period_str = f" pada tahun {year}"
+        else:
+            period_str = ""
+
         metric_name = get_metric_label(raw_metric)
         return f"{agg_word.capitalize()} {metric_name}{op_str}{period_str} adalah {formatted_val}."
 
     # Simple lookup default
     op_str = f" {operator}" if operator else ""
-    period_str = f" pada tahun {year}" if year else ""
+    month_str = resolved.month.month_str if resolved.month and resolved.month.month_str else ""
+    if month_str and year:
+        period_str = f" pada bulan {month_str} {year}"
+    elif month_str:
+        period_str = f" pada bulan {month_str}"
+    elif year:
+        period_str = f" pada tahun {year}"
+    else:
+        period_str = ""
+
     metric_name = get_metric_label(raw_metric)
     return f"{metric_name}{op_str}{period_str} adalah {formatted_val}."
