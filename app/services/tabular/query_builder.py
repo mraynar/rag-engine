@@ -16,7 +16,7 @@ from app.services.tabular.domain_models import (
     ResolvedEntities,
     SubQuery,
 )
-from app.services.tabular.schema_registry import get_schema, validate_column
+from app.services.tabular.registries import get_schema, validate_column
 from app.services.tabular.query_templates import get_template, get_grouping_dimension_column
 
 

@@ -183,7 +183,7 @@ def execute_with_retry(
     Returns:
         ExecutionResult (either VALID or latest fallback result)
     """
-    from app.services.tabular.schema_registry import get_schema
+    from app.services.tabular.registries import get_schema
     schema = get_schema(dataset, db_schema)
 
     df_cache = {}

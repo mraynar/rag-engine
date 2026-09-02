@@ -9,8 +9,7 @@ import pandas as pd
 from sqlalchemy import text
 
 from app.services.db import get_db_conn
-from app.services.googledrive_fetcher import download_googledrive_file
-from app.services.sharepoint_fetcher import download_sharepoint_file
+from app.services.cloud_fetchers import download_googledrive_file, download_sharepoint_file
 from app.services.tabular_sanitize import sanitize_and_combine, dataframe_to_clean_records
 
 

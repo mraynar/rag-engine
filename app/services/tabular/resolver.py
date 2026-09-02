@@ -17,7 +17,7 @@ from app.services.tabular.registries import (
     COLUMN_ALIASES,
     MONTH_NORMALIZE_MAP,
 )
-from app.services.tabular.schema_registry import get_schema, validate_column
+from app.services.tabular.registries import get_schema, validate_column
 
 
 def sanitize_leading_number(q: str) -> str:

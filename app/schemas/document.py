@@ -1,9 +1,3 @@
-from pydantic import BaseModel, Field
+from app.schemas.schemas import DocumentToggleRequest
 
-
-class DocumentToggleRequest(BaseModel):
-    is_active: bool = Field(
-        ...,
-        description="Status keaktifan dokumen manual untuk pencarian RAG",
-        examples=[True],
-    )
+__all__ = ["DocumentToggleRequest"]

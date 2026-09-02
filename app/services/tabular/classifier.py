@@ -14,7 +14,7 @@ from app.services.tabular.domain_models import (
     AggregationSpec,
     ResolvedEntities,
 )
-from app.services.tabular.schema_registry import get_schema
+from app.services.tabular.registries import get_schema
 
 
 def classify_query(

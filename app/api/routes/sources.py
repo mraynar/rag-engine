@@ -17,8 +17,7 @@ from app.services.sources_store import (
     mark_synced,
     mark_failed,
 )
-from app.services.sharepoint_fetcher import download_sharepoint_file
-from app.services.googledrive_fetcher import download_googledrive_file
+from app.services.cloud_fetchers import download_googledrive_file, download_sharepoint_file
 from app.services.ingestion import ingest_document
 
 router = APIRouter(prefix="/sources", tags=["sources"])
