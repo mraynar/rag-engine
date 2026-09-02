@@ -1,15 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertCircleIcon, CheckCircleIcon, SpinnerIcon, TrashIcon, EyeIcon } from './icons';
-import { useUpload } from './UploadContext';
+import { useCallback, useEffect, useState } from 'react';
+import { AlertCircleIcon, SpinnerIcon, TrashIcon, EyeIcon } from './icons';
 import PreviewModal from './PreviewModal';
 import s from './documents/documents.module.css';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
-
-const SUPPORTED_ACCEPT = '.txt,.csv,.xlsx,.xls,.docx,.pdf,.pptx,.jpg,.jpeg,.png,.webp';
-const SUPPORTED_LABEL  = '.txt, .csv, .xlsx, .xls, .docx, .pdf, .pptx, .jpg, .jpeg, .png, .webp';
 
 function TypeBadge({ type }) {
   const classMap = {
@@ -27,18 +23,6 @@ function TypeBadge({ type }) {
   };
   const cls = classMap[type?.toLowerCase()] || s.typeDefault;
   return <span className={`${s.typeBadge} ${cls}`}>{type || '—'}</span>;
-}
-
-function UploadCloudIcon() {
-  return (
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
-      strokeLinejoin="round" className={s.dropZoneIcon} aria-hidden="true">
-      <polyline points="16 16 12 12 8 16" />
-      <line x1="12" y1="12" x2="12" y2="21" />
-      <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
-    </svg>
-  );
 }
 
 function FileIcon() {
@@ -91,8 +75,7 @@ function ConfirmDialog({ filename, onConfirm, onCancel, isDeleting }) {
   );
 }
 
-function DocumentRow({ doc, onToggle, onDelete, onPreview, togglingFilename, deletingFilename, isSelected, onSelectToggle }) {
-  const isToggling = togglingFilename === doc.filename;
+function DocumentRow({ doc, onToggle, onDelete, onPreview, isToggling, deletingFilename, isSelected, onSelectToggle }) {
   const date = doc.uploaded_at
     ? new Date(doc.uploaded_at + 'Z').toLocaleDateString('en-US', {
         day: '2-digit', month: 'short', year: 'numeric',
@@ -100,127 +83,80 @@ function DocumentRow({ doc, onToggle, onDelete, onPreview, togglingFilename, del
     : '—';
 
   return (
-    <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-      {/* Checkbox column */}
-      <td style={{ padding: '12px', textAlign: 'center' }}>
+    <div className={`${s.row} ${isSelected ? s.rowSelected : ''}`}>
+      <div className={s.colCheck}>
         <input
           type="checkbox"
           checked={isSelected}
-          onChange={onSelectToggle}
-          style={{ cursor: 'pointer' }}
+          onChange={() => onSelectToggle(doc.filename)}
+          aria-label={`Select ${doc.filename}`}
         />
-      </td>
-      <td>
-        <span className={s.filename} title={doc.filename}>{doc.filename}</span>
-        {doc.label && doc.label !== doc.filename && (
-          <span className={s.labelText}>{doc.label}</span>
-        )}
-      </td>
-      <td><TypeBadge type={doc.file_type} /></td>
-      <td><span className={s.chunkCount}>{doc.chunk_count?.toLocaleString('en-US')}</span></td>
-      <td><span className={s.dateText}>{date}</span></td>
-      <td className={s.toggleCell}>
-        <label className={s.toggleLabel}>
-          <input
-            type="checkbox"
-            className={s.toggleCheckbox}
-            checked={doc.is_active}
-            disabled={true}
-            id={`toggle-${doc.filename}`}
-            aria-label={`Activate ${doc.filename}`}
-          />
-          {isToggling && <SpinnerIcon size={13} className={s.spin} />}
-        </label>
-      </td>
-      <td>
-        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-start', alignItems: 'center' }}>
-          <button
-            onClick={() => onPreview(doc.filename)}
-            style={{
-              padding: '6px',
-              backgroundColor: '#EDF2F7',
-              border: 'none',
-              borderRadius: '4px',
-              color: 'var(--color-text)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-            title="Preview extracted chunks"
-          >
-            <EyeIcon size={15} />
-          </button>
-          <button
-            className={s.deleteBtn}
-            onClick={() => onDelete(doc.filename)}
-            disabled={!!deletingFilename}
-            aria-label={`Delete ${doc.filename}`}
-            title="Delete document"
-            id={`delete-${doc.filename.replace(/\./g, '-')}`}
-          >
-            <TrashIcon size={15} />
-          </button>
-        </div>
-      </td>
-    </tr>
+      </div>
+
+      <div className={s.colName}>
+        <span className={s.filename}>{doc.filename}</span>
+        <span className={s.fileLabel}>{doc.label || '—'}</span>
+      </div>
+
+      <div className={s.colType}>
+        <TypeBadge type={doc.file_type} />
+      </div>
+
+      <div className={s.colChunks}>
+        {doc.chunk_count?.toLocaleString() ?? '—'}
+      </div>
+
+      <div className={s.colDate}>{date}</div>
+
+      <div className={s.colActive}>
+        <button
+          className={`${s.toggleTrack} ${doc.is_active ? s.toggleTrackActive : ''}`}
+          onClick={() => onToggle(doc.filename, !doc.is_active)}
+          disabled={isToggling}
+          aria-label={`Toggle active state for ${doc.filename}`}
+          aria-checked={doc.is_active}
+          role="switch"
+        >
+          <span className={s.toggleThumb} />
+        </button>
+      </div>
+
+      <div className={s.colActions}>
+        <button
+          className={s.previewBtn}
+          onClick={() => onPreview(doc.filename)}
+          aria-label={`Preview document ${doc.filename}`}
+          title="Preview chunks"
+        >
+          <EyeIcon size={15} />
+        </button>
+
+        <button
+          className={s.deleteBtn}
+          onClick={() => onDelete(doc.filename)}
+          disabled={deletingFilename === doc.filename}
+          aria-label={`Delete ${doc.filename}`}
+          title="Delete document"
+        >
+          <TrashIcon size={15} />
+        </button>
+      </div>
+    </div>
   );
 }
 
 export default function DocumentManager() {
-  const [documents, setDocuments]         = useState([]);
-  const [loadingDocs, setLoadingDocs]     = useState(true);
-  const [fetchError, setFetchError]       = useState('');
+  const [documents, setDocuments]                 = useState([]);
+  const [loadingDocs, setLoadingDocs]             = useState(true);
+  const [fetchError, setFetchError]               = useState('');
+  const [previewFilename, setPreviewFilename]     = useState(null);
+
   const [selectedFilenames, setSelectedFilenames] = useState([]);
-  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  const [previewFilename, setPreviewFilename] = useState(null);
-
-  const toggleSelect = (filename) => {
-    setSelectedFilenames(prev =>
-      prev.includes(filename) ? prev.filter(x => x !== filename) : [...prev, filename]
-    );
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedFilenames.length === documents.length) {
-      setSelectedFilenames([]);
-    } else {
-      setSelectedFilenames(documents.map(d => d.filename));
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (!confirm(`Are you sure you want to delete ${selectedFilenames.length} selected documents and all of their indexed data?`)) return;
-    setIsBulkDeleting(true);
-    try {
-      for (const filename of selectedFilenames) {
-        const res = await fetch(`${API_BASE}/documents/${encodeURIComponent(filename)}`, { method: 'DELETE' });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.detail || `Failed to delete document ${filename}`);
-        }
-      }
-      alert('Successfully deleted selected documents.');
-      setSelectedFilenames([]);
-      fetchDocuments();
-    } catch (err) {
-      alert(err.message);
-      fetchDocuments();
-    } finally {
-      setIsBulkDeleting(false);
-    }
-  };
-
-  const [selectedFile, setSelectedFile]   = useState(null);
-  const [label, setLabel]                 = useState('');
-  const [isDragOver, setIsDragOver]       = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting]       = useState(false);
 
   const [togglingFilename, setTogglingFilename] = useState(null);
   const [pendingDelete, setPendingDelete]       = useState(null);
   const [deletingFilename, setDeletingFilename] = useState(null);
-
-  const fileInputRef = useRef(null);
-  const { startUpload, registerRefreshCallback, unregisterRefreshCallback } = useUpload();
 
   const fetchDocuments = useCallback(async () => {
     setLoadingDocs(true);
@@ -239,44 +175,6 @@ export default function DocumentManager() {
   useEffect(() => {
     fetchDocuments();
   }, [fetchDocuments]);
-
-  useEffect(() => {
-    registerRefreshCallback(fetchDocuments);
-    return () => unregisterRefreshCallback();
-  }, [fetchDocuments, registerRefreshCallback, unregisterRefreshCallback]);
-
-  function handleFileSelect(file) {
-    if (!file) return;
-    setSelectedFile(file);
-  }
-
-  function handleInputChange(e) {
-    handleFileSelect(e.target.files?.[0] || null);
-  }
-
-  function handleDragOver(e) {
-    e.preventDefault();
-    setIsDragOver(true);
-  }
-
-  function handleDragLeave() {
-    setIsDragOver(false);
-  }
-
-  function handleDrop(e) {
-    e.preventDefault();
-    setIsDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    handleFileSelect(file || null);
-  }
-
-  function handleUpload() {
-    if (!selectedFile) return;
-    startUpload(selectedFile, label);
-    setSelectedFile(null);
-    setLabel('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  }
 
   async function handleToggle(filename, isActive) {
     setTogglingFilename(filename);
@@ -329,81 +227,40 @@ export default function DocumentManager() {
     if (!deletingFilename) setPendingDelete(null);
   }
 
+  const handleSelectAllToggle = () => {
+    if (selectedFilenames.length === documents.length) {
+      setSelectedFilenames([]);
+    } else {
+      setSelectedFilenames(documents.map(d => d.filename));
+    }
+  };
+
+  const handleSelectToggle = (fn) => {
+    setSelectedFilenames(prev =>
+      prev.includes(fn) ? prev.filter(x => x !== fn) : [...prev, fn]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedFilenames.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedFilenames.length} selected document(s)?`)) return;
+
+    setIsBulkDeleting(true);
+    try {
+      for (const fn of selectedFilenames) {
+        await fetch(`${API_BASE}/documents/${encodeURIComponent(fn)}`, { method: 'DELETE' });
+      }
+      setDocuments(prev => prev.filter(d => !selectedFilenames.includes(d.filename)));
+      setSelectedFilenames([]);
+    } catch (err) {
+      alert('Bulk delete encountered an error: ' + err.message);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   return (
     <div style={{ marginTop: '20px' }}>
-      {/* Upload Box */}
-      <div className={s.uploadCard}>
-        <p className={s.uploadCardTitle}>Upload New Manual Document</p>
-        <div
-          className={`${s.dropZone} ${isDragOver ? s.dropZoneActive : ''}`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
-          aria-label="Click or drag file here to select"
-          id="upload-drop-zone"
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={SUPPORTED_ACCEPT}
-            className={s.fileInput}
-            onChange={handleInputChange}
-            onClick={(e) => e.stopPropagation()}
-            id="file-input"
-            tabIndex={-1}
-            aria-hidden="true"
-          />
-          <UploadCloudIcon />
-          {selectedFile ? (
-            <span className={s.selectedFile}>
-              <FileIcon />
-              {selectedFile.name}
-            </span>
-          ) : (
-            <>
-              <span className={s.dropZoneText}>Click or drag file here</span>
-              <span className={s.dropZoneTextSub}>Supports multiple document formats</span>
-            </>
-          )}
-        </div>
-
-        <p className={s.formatsHint}>
-          <strong>Supported formats:</strong> {SUPPORTED_LABEL}
-        </p>
-
-        <div className={s.formRow}>
-          <label htmlFor="label-input" className={s.formLabel}>
-            Label (optional) - e.g. division name
-          </label>
-          <input
-            id="label-input"
-            type="text"
-            className={s.textInput}
-            placeholder="Example: Commercial - Vessel Service"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-          />
-        </div>
-
-        <button
-          className={s.uploadBtn}
-          onClick={handleUpload}
-          disabled={!selectedFile}
-          id="upload-btn"
-        >
-          Upload &amp; Index
-        </button>
-
-        <p className={s.uploadNote}>
-          Upload status is shown in the top bar. You can navigate away while the upload is in progress.
-        </p>
-      </div>
-
-      {/* Table Section */}
       <div className={s.listSection}>
         <div className={s.listHeader} style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '10px' }}>
           <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-navy)' }}>Registered Documents (Manual)</h3>
