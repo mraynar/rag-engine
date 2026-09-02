@@ -257,7 +257,7 @@ def _execute_llm_query_plan(
 
 
 # query tabular
-def answer_tabular_question(question: str, category: str = "All Data") -> dict:
+def answer_tabular_question(question: str, category_name: str = "All Data") -> dict:
     """
     Answer a tabular question using the RAG-first pipeline.
 

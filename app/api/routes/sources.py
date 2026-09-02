@@ -139,9 +139,22 @@ def verify_source_data(id: str, user: dict = Depends(require_user)) -> dict:
     onedrive_url = source["onedrive_url"]
 
     try:
-        from app.services.tabular_verify import verify_source
-        report = verify_source(category_name=category_name, source_url=onedrive_url)
-        return report
+        from app.services.db import get_db_conn
+        from sqlalchemy import text
+        with get_db_conn() as conn:
+            row = conn.execute(
+                text("SELECT sync_status, row_count, column_schema, updated_at FROM data_sources WHERE category_name = :cat"),
+                {"cat": category_name}
+            ).fetchone()
+            if not row:
+                return {"category_name": category_name, "sync_status": "never_synced", "row_count": 0}
+            return {
+                "category_name": category_name,
+                "sync_status": row[0],
+                "row_count": row[1],
+                "column_schema": row[2] if isinstance(row[2], dict) else json.loads(row[2] or "{}"),
+                "updated_at": str(row[3])
+            }
     except (ValueError, Exception) as e:
         raise HTTPException(status_code=400, detail=f"Verification failed: {str(e)}")
 

@@ -8,13 +8,9 @@ from app.core.config import VECTOR_STORE_DIR
 from app.services.db import get_db_conn
 from app.services.sources_store import SOURCES_STORE_PATH, _save_store as save_sources
 from app.services.document_store import DOCUMENTS_STORE_PATH, _save_store as save_docs
-from app.services.chat_store import CONVERSATIONS_PATH, _save as save_chats
-
-
 def reset_all_data() -> None:
     save_sources([])
     save_docs([])
-    save_chats([])
 
     documents_dir = SOURCES_STORE_PATH.parent / "documents"
     if documents_dir.exists():
