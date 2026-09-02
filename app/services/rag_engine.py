@@ -17,7 +17,7 @@ from app.core.config import (
     get_generation_model,
     get_gemini_client,
 )
-from app.services.config_store import get_active_value
+from app.services.stores import get_active_value
 from app.services.stores import get_active_filenames, list_sources
 
 _DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -177,4 +177,4 @@ Context:
 
 Question: {question}
 
-
+Answer:"""

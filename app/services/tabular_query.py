@@ -20,7 +20,7 @@ from app.services.tabular.decomposer import decompose_query
 from app.services.tabular.query_builder import build_query_plan, QueryBuildError
 from app.services.tabular.retry_engine import execute_with_retry
 from app.services.tabular.formatter import format_response
-from app.services.tabular.settings import RETURN_DEBUG_BLOCK
+RETURN_DEBUG_BLOCK = False
 from app.core.config import get_generation_model
 
 
@@ -463,7 +463,7 @@ def answer_tabular_question(question: str, category_name: str = "All Data") -> d
 
         # Groq narrative polish
         try:
-            from app.services.groq_client import groq_generate
+            from app.services.rag_engine import groq_generate
             polished = groq_generate(prompt=(
                 f"Berikut hasil faktual dari query data:\n{llm_answer}\n\n"
                 "Ubah menjadi kalimat natural, ringkas, dan profesional dalam Bahasa Indonesia. "
@@ -505,7 +505,7 @@ def answer_tabular_question(question: str, category_name: str = "All Data") -> d
     # Groq narrative polish
     raw_answer = answer
     try:
-        from app.services.groq_client import groq_generate
+        from app.services.rag_engine import groq_generate
         answer = groq_generate(prompt=(
             f"Berikut hasil faktual dari query data:\n{raw_answer}\n\n"
             "Ubah menjadi kalimat natural, ringkas, dan profesional dalam Bahasa Indonesia. "

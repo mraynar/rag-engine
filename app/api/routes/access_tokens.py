@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
 from app.core.auth import get_current_user, require_user
-from app.services.access_tokens_store import (
+from app.services.stores import (
     create_token,
     list_tokens,
     revoke_token,

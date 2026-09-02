@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 
 from app.schemas.config import ConfigCreateRequest, ConfigUpdateRequest
 from app.core.auth import require_user
-from app.services.config_store import (
+from app.services.stores import (
     create_config,
     delete_config,
     list_config,

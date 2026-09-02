@@ -4,8 +4,7 @@ from typing import Optional
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.core.auth import get_current_user
 from app.services.db_chat_store import append_user_messages
-from app.services.generation import build_prompt, generate_answer, format_user_friendly_error
-from app.services.retrieval import retrieve_relevant_chunks
+from app.services.rag_engine import build_prompt, generate_answer, format_user_friendly_error, retrieve_relevant_chunks
 
 router = APIRouter()
 

@@ -2,7 +2,7 @@ from pathlib import Path
 
 from google import genai
 
-from app.services.config_store import get_active_value
+from app.services.stores import get_active_value
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 VECTOR_STORE_DIR = BASE_DIR / "data" / "vector_store"

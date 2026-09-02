@@ -4,7 +4,7 @@ from fastapi import APIRouter
 import chromadb
 
 from app.core.config import VECTOR_STORE_DIR, get_embedding_model, get_generation_model
-from app.services.config_store import list_config
+from app.services.stores import list_config
 
 router = APIRouter(tags=["health"])
 

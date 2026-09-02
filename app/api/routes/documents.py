@@ -4,7 +4,7 @@ from fastapi import APIRouter, Form, HTTPException, UploadFile, Depends
 from app.core.config import VECTOR_STORE_DIR
 from app.core.auth import require_user
 from app.schemas.document import DocumentToggleRequest
-from app.services.document_store import (
+from app.services.stores import (
     delete_document,
     list_documents,
     register_document,

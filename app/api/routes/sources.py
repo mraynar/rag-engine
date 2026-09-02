@@ -8,7 +8,7 @@ _sync_lock = Lock()
 
 from app.schemas.source import SourceCreateRequest, SourceUpdateRequest
 from app.core.auth import require_user
-from app.services.sources_store import (
+from app.services.stores import (
     list_sources,
     get_source,
     create_source,

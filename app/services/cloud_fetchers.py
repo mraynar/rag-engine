@@ -8,7 +8,7 @@ from pathlib import Path
 import requests
 import pandas as pd
 
-from app.services.config_store import get_active_value
+from app.services.stores import get_active_value
 
 
 # ── Google Drive & Google Sheets Fetcher ──────────────────────────────────────
