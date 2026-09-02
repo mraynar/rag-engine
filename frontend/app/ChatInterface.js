@@ -1026,14 +1026,6 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
     };
   }, [activeConvId, getConversation, getCachedConversation]);
 
-  // Auto-scroll only on new message sent/received (prevent fighting manual scroll)
-  const prevMsgCountRef = useRef(0);
-  useEffect(() => {
-    if (activeView === 'chat' && messages.length > prevMsgCountRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-    prevMsgCountRef.current = messages.length;
-  }, [messages.length, activeView]);
 
   // Auto-resize textarea height as content changes (max ~40% of viewport)
   useEffect(() => {
@@ -1296,7 +1288,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                   boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
                   cursor: 'pointer',
                   display: 'flex',
-                  align-items: 'center',
+                  alignItems: 'center',
                   gap: '6px',
                   transition: 'transform 0.15s ease, background 0.15s ease',
                 }}
