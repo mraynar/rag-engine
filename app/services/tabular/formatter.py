@@ -121,7 +121,12 @@ def format_response(
     if not results:
         return "Data tidak ditemukan untuk kriteria pencarian tersebut."
 
-    raw_metric = resolved.metrics[0] if resolved.metrics else "nilai"
+    if original_plan and original_plan.aggregation and original_plan.aggregation.column:
+        raw_metric = original_plan.aggregation.column
+    else:
+        filtered_metrics = [m for m in (resolved.metrics or []) if m.upper().strip() not in ["BULAN", "MONTH", "YEAR", "TAHUN", "_MONTH_CODE", "_YEAR"]]
+        raw_metric = filtered_metrics[0] if filtered_metrics else (resolved.metrics[0] if resolved.metrics else "nilai")
+
     metric_label = get_metric_label(raw_metric).lower()
     year = resolved.month.year if resolved.month else None
     year_str = f"pada tahun {year}" if year else ""
@@ -332,11 +337,11 @@ def format_response(
         
         op_str = f" untuk {operator}" if operator else ""
         period_str = f" pada tahun {year}" if year else ""
-        metric_name = get_metric_label(resolved.metrics[0]) if resolved.metrics else "nilai"
+        metric_name = get_metric_label(raw_metric)
         return f"{agg_word.capitalize()} {metric_name}{op_str}{period_str} adalah {formatted_val}."
 
     # Simple lookup default
     op_str = f" {operator}" if operator else ""
     period_str = f" pada tahun {year}" if year else ""
-    metric_name = get_metric_label(resolved.metrics[0]) if resolved.metrics else "nilai"
+    metric_name = get_metric_label(raw_metric)
     return f"{metric_name}{op_str}{period_str} adalah {formatted_val}."
