@@ -6,8 +6,13 @@ from sqlalchemy import text
 
 from app.core.config import VECTOR_STORE_DIR
 from app.services.db import get_db_conn
-from app.services.sources_store import SOURCES_STORE_PATH, _save_store as save_sources
-from app.services.document_store import DOCUMENTS_STORE_PATH, _save_store as save_docs
+from app.services.stores import (
+    SOURCES_STORE_PATH,
+    _save_sources_store as save_sources,
+    _save_doc_store as save_docs,
+)
+
+
 def reset_all_data() -> None:
     save_sources([])
     save_docs([])

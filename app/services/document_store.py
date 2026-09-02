@@ -5,6 +5,7 @@ from app.services.stores import (
     toggle_active,
     delete_document,
     get_active_filenames,
+    _save_doc_store as _save_store,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "toggle_active",
     "delete_document",
     "get_active_filenames",
+    "_save_store",
 ]

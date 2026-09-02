@@ -7,6 +7,7 @@ from app.services.stores import (
     delete_source,
     mark_synced,
     mark_failed,
+    _save_sources_store as _save_store,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "delete_source",
     "mark_synced",
     "mark_failed",
+    "_save_store",
 ]
