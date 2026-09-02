@@ -20,8 +20,8 @@ def _migrate_legacy_documents() -> None:
     from pathlib import Path
 
     from app.core.config import VECTOR_STORE_DIR
-    from app.services.document_store import (
-        _load_store,
+    from app.services.stores import (
+        _load_doc_store as _load_store,
         get_active_filenames,
         register_document,
     )
