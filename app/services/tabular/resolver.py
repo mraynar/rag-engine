@@ -450,8 +450,8 @@ def _resolve_month_and_year(question: str) -> Optional[MonthContext]:
     # Extract month
     month_context = None
 
-    # Check explicit numeric month phrases (e.g. "dibulan 5", "bulan 5", "dibulan 3", "bulan 3")
-    num_month_match = re.search(r'\b(?:bulan|dibulan|bln|month)\s*(\d{1,2})\b', question_lower)
+    # Check explicit numeric month phrases (e.g. "dibulan 5", "di bulan 3", "bulan 5", "bln 03", "month 3")
+    num_month_match = re.search(r'\b(?:di\s*)?(?:bulan|bln|month)\s*(\d{1,2})\b', question_lower)
     if num_month_match:
         m_code = int(num_month_match.group(1))
         if 1 <= m_code <= 12:

@@ -243,6 +243,11 @@ def format_response(
             lines.append(f"{idx}: {format_value_with_metric(val, raw_metric, is_percentage)}")
         return "\n".join(lines)
 
+    # Formatting pandas.DataFrame result
+    if isinstance(data, pd.DataFrame):
+        if data.empty:
+            return "Data tidak ditemukan untuk kriteria pencarian tersebut."
+
         # Formatting text column / company entity listing
         text_cols = [c for c in data.columns if c.upper() in ["NAMA PERUSAHAAN", "OPERATOR", "VESSEL OPERATOR", "CUSTOMER", "_OPERATOR", "NAMA PELANGGAN"]]
         if text_cols:
@@ -254,8 +259,13 @@ def format_response(
                 col_name = text_cols[0]
                 items = [str(x).strip() for x in data[col_name].dropna().unique() if str(x).strip()]
                 if items:
-                    formatted_items = "\n".join([f"{i+1}. {item}" for i, item in enumerate(items)])
-                    return f"Berikut daftar {col_name.lower()} yang ditemukan:\n{formatted_items}"
+                    formatted_items = "\n".join([f"{i+1}. **{item}**" for i, item in enumerate(items)])
+                    status_str = ""
+                    if original_plan and original_plan.filters:
+                        status_filter = next((f for f in original_plan.filters if f.column.upper() == "STATUS"), None)
+                        if status_filter:
+                            status_str = f" yang memiliki status **{status_filter.value}**"
+                    return f"Berdasarkan data {dataset}, berikut adalah {col_name.lower()}{status_str}:\n\n{formatted_items}"
 
         if ast.query_type == QueryType.SIMPLE or ast.intent in [UserIntent.VALUE_LOOKUP, UserIntent.PERCENTAGE_LOOKUP]:
             metric_cols = [c for c in data.columns if resolved.metrics and any(m.lower() == c.lower() for m in resolved.metrics)]
@@ -276,7 +286,7 @@ def format_response(
                 op_str = f" {operator}" if operator else ""
                 month_str = resolved.month.month_str if resolved.month and resolved.month.month_str else ""
                 if month_str and year:
-                    period_str = f" pada {month_str} {year}"
+                    period_str = f" pada bulan {month_str} {year}"
                 elif year:
                     period_str = f" pada tahun {year}"
                 else:
