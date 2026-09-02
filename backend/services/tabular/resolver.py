@@ -1,0 +1,488 @@
+"""
+Ekstraksi entitas semantik (metrik, operator, bulan, tahun) dari teks pertanyaan.
+"""
+import re
+from typing import Optional, List, Union
+
+from backend.services.tabular.domain_models import (
+    DatasetRouteResult,
+    RoutingMethod,
+    ResolvedEntities,
+    MonthContext,
+)
+from backend.services.tabular.registries import (
+    DATASET_REGISTRY,
+    SHEET_REGISTRY,
+    OPERATORS,
+    COLUMN_ALIASES,
+    MONTH_NORMALIZE_MAP,
+)
+from backend.services.tabular.registries import get_schema, validate_column
+
+
+FORBIDDEN_SQL_KEYWORDS = [
+    r'\bINSERT\b', r'\bUPDATE\b', r'\bDELETE\b', r'\bDROP\b', 
+    r'\bALTER\b', r'\bCREATE\b', r'\bTRUNCATE\b', r'\bGRANT\b', 
+    r'\bREVOKE\b', r'\bMERGE\b', r'\bEXEC\b', r'\bEXECUTE\b'
+]
+
+
+def check_input_security(question: str) -> Optional[str]:
+    """
+    Input Guard: Validate user input for SQL injection, comment stripping, and semicolon chaining.
+    Returns error message string if blocked, or None if safe.
+    """
+    if not question:
+        return None
+    
+    q_str = question.strip()
+    
+    # 1. Semicolon check (statement chaining)
+    if ";" in q_str.rstrip(";"):
+        return "Pertanyaan Anda terdeteksi mengandung karakter yang tidak diizinkan (;). Silakan ajukan pertanyaan dalam bentuk kalimat biasa."
+
+    # 2. SQL Comment stripping check (-- or /* */)
+    if "--" in q_str or "/*" in q_str or "*/" in q_str:
+        return "Pertanyaan Anda terdeteksi mengandung simbol komentar SQL yang tidak diizinkan. Silakan ajukan pertanyaan dalam bentuk kalimat biasa."
+
+    # 3. Forbidden DDL/DML Keywords check
+    for pattern in FORBIDDEN_SQL_KEYWORDS:
+        if re.search(pattern, q_str, re.IGNORECASE):
+            match = re.search(pattern, q_str, re.IGNORECASE).group(0)
+            return f"Pertanyaan Anda mengandung kata kunci terlarang ({match.upper()}). Pertanyaan hanya boleh berupa pencarian data (SELECT)."
+
+    return None
+
+
+def validate_output_sql(sql_query: str, valid_tables: set) -> Optional[str]:
+    """
+    Output Guard: Validate generated SQL query against valid database tables and CTE aliases.
+    Returns error message if illegal tables/DDL found, or None if valid.
+    """
+    if not sql_query:
+        return None
+        
+    upper_sql = sql_query.upper()
+    
+    # 1. Single statement & SELECT only
+    if ";" in sql_query.rstrip(";"):
+        return "SQL rakitan mengandung titik koma (;) yang dilarang."
+        
+    for kw in FORBIDDEN_SQL_KEYWORDS:
+        if re.search(kw, upper_sql):
+            clean_kw = kw.replace(r'\b', '')
+            return f"Dilarang menggunakan keyword modifikasi data '{clean_kw}'."
+            
+    # 2. Extract CTE aliases (WITH table_name AS ...)
+    cte_matches = {m.lower() for m in re.findall(r'\b(?:WITH|,)\s*([a-zA-Z0-9_]+)\s+AS\s*\(', sql_query, re.IGNORECASE)}
+    allowed_tables = {t.lower() for t in valid_tables} | cte_matches
+    
+    # 3. Extract FROM and JOIN tables
+    table_matches = re.findall(r'\b(?:FROM|JOIN)\s+([a-zA-Z0-9_]+)', upper_sql, re.IGNORECASE)
+    for tbl in table_matches:
+        tbl_clean = tbl.lower()
+        if tbl_clean not in allowed_tables and tbl_clean not in ("data_rows", "data_sources"):
+            return f"Tabel '{tbl}' tidak ditemukan pada database."
+            
+    return None
+
+
+def sanitize_leading_number(q: str) -> str:
+    if not q:
+        return q
+    match = re.match(r'^\s*(\d+)\s*([\.\)\-]?)\s+(\w+)', q)
+    if match:
+        num_str, separator, next_word = match.groups()
+        next_word_lower = next_word.lower()
+        query_starters = {
+            "bagaimana", "berapa", "apakah", "siapa", "mana", "vessel", "operator",
+            "tunjukkan", "tampilkan", "cari", "temukan", "hitung", "list", "daftar",
+            "what", "how", "who", "which", "show", "find", "get", "coba", "tolong",
+            "sebutkan", "jelaskan", "adakah"
+        }
+        if separator or next_word_lower in query_starters:
+            word_idx = q.find(next_word)
+            if word_idx != -1:
+                return q[word_idx:]
+    return q
+
+
+def route_dataset(
+    question: str,
+    category_name: Optional[str] = None,
+) -> DatasetRouteResult:
+    """
+    Route question to appropriate dataset using priority chain.
+    
+    Priority:
+    P1: Explicit category_name parameter (always wins)
+    P2: Literal dataset name in question
+    P3: Unique entity match (not implemented - risky)
+    P4: Weighted keyword scoring
+    P5: Ambiguous (multiple candidates with similar scores)
+    
+    Args:
+        question: User's natural language question
+        category_name: Explicitly provided category/dataset name
+    
+    Returns:
+        DatasetRouteResult with dataset, method, candidates, and score
+    """
+    question = sanitize_leading_number(question)
+    question_lower = question.lower()
+    
+    # P1: Explicit category_name always wins
+    if category_name and category_name in DATASET_REGISTRY:
+        return DatasetRouteResult(
+            dataset=category_name,
+            method=RoutingMethod.EXPLICIT_PARAM,
+            candidates=[],
+            score=1.0
+        )
+    
+    # P2: Literal dataset name in question
+    for dataset_name in DATASET_REGISTRY.keys():
+        if dataset_name.lower() in question_lower:
+            return DatasetRouteResult(
+                dataset=dataset_name,
+                method=RoutingMethod.EXPLICIT_PARAM,  # Treating literal mention as explicit
+                candidates=[],
+                score=1.0
+            )
+    
+    # P4: Weighted keyword scoring
+    dataset_scores = {}
+    for dataset_name, config in DATASET_REGISTRY.items():
+        score = 0
+        keywords = config.get("keywords", {})
+        for keyword, weight in keywords.items():
+            if keyword.lower() in question_lower:
+                score += weight
+        dataset_scores[dataset_name] = score
+    
+    # Find maximum score
+    max_score = max(dataset_scores.values()) if dataset_scores else 0
+    
+    if max_score == 0:
+        # P5: No evidence - ambiguous
+        return DatasetRouteResult(
+            dataset=list(DATASET_REGISTRY.keys())[0],  # Default to first dataset
+            method=RoutingMethod.AMBIGUOUS,
+            candidates=list(DATASET_REGISTRY.keys()),
+            score=0.0
+        )
+    
+    # Check if multiple datasets have similar high scores (ambiguity)
+    top_datasets = [name for name, score in dataset_scores.items() if score == max_score]
+    
+    if len(top_datasets) > 1:
+        # P5: Ambiguous - multiple datasets with equal evidence
+        return DatasetRouteResult(
+            dataset=top_datasets[0],  # Pick first as default
+            method=RoutingMethod.AMBIGUOUS,
+            candidates=top_datasets,
+            score=max_score
+        )
+    
+    # Single winner
+    winner = top_datasets[0]
+    return DatasetRouteResult(
+        dataset=winner,
+        method=RoutingMethod.EXPLICIT_PARAM,  # Using EXPLICIT_PARAM for keyword match
+        candidates=[],
+        score=max_score
+    )
+
+
+def route_sheet(
+    question: str,
+    dataset: str,
+) -> Optional[List[str]]:
+    """
+    Route to sheets within a dataset using SHEET_REGISTRY.
+    
+    Returns:
+        List of canonical sheet names, or None if no sheet restriction
+    
+    Examples:
+        "data domestic" + Overview Vessel → ["DOMESTIC"]
+        "data international" + Container Throughput → ["Internasional"]
+        No sheet keyword → None (all sheets)
+    """
+    question = sanitize_leading_number(question)
+    question_lower = question.lower()
+    
+    if dataset not in SHEET_REGISTRY:
+        return None
+    
+    sheet_map = SHEET_REGISTRY[dataset]
+    matched_sheets = []
+    
+    for alias, canonical_name in sheet_map.items():
+        if alias.lower() in question_lower:
+            if canonical_name not in matched_sheets:
+                matched_sheets.append(canonical_name)
+    
+    if dataset == "Realisasi UC" and not matched_sheets:
+        if any(w in question_lower for w in ["box", "boxes", "total box", "teus", "total teus", "oh", "ow", "ol"]):
+            return ["OH OW OL"]
+
+    # If no sheet keywords found, return None (query all sheets)
+    return matched_sheets if matched_sheets else None
+
+
+def resolve_entities(
+    question: str,
+    dataset: Optional[str] = None,
+) -> ResolvedEntities:
+    """
+    Resolve entities from question: operators, metrics, columns, month, year.
+    
+    Does NOT interpret:
+    - Aggregation functions (tertinggi → MAX)
+    - Query intent (comparison, ranking, etc.)
+    
+    Args:
+        question: User's natural language question
+        dataset: Dataset context for schema-aware resolution
+    
+    Returns:
+        ResolvedEntities with operators, metrics, columns, month
+    """
+    question = sanitize_leading_number(question)
+    question_lower = question.lower()
+    
+    # Resolve operators with word boundaries
+    operators = []
+    for op in OPERATORS:
+        if op.upper() == "YANG":
+            has_yang = (
+                re.search(r'\b(YANG|Yang)\b', question) is not None or
+                re.search(r'\byang\s+ming\b', question_lower) is not None or
+                re.search(r'\b(operator|pelayaran)\s+yang\b', question_lower) is not None
+            )
+            if not has_yang:
+                continue
+
+        pattern = r'\b' + re.escape(op.lower()) + r'\b'
+        if re.search(pattern, question_lower):
+            operators.append(op)
+    
+    # Resolve metrics and columns
+    metrics = []
+    columns = []
+    
+    # Check aliases first
+    for alias, canonical_col in COLUMN_ALIASES.items():
+        # Match alias as whole word or part of word (e.g., "productivity" matches "produktivitas")
+        if alias.lower() in question_lower:
+            if canonical_col not in metrics:
+                metrics.append(canonical_col)
+            if canonical_col not in columns:
+                columns.append(canonical_col)
+    
+    # Also check for Indonesian variants
+    indonesian_aliases = {
+        "produktivitas": "BCH",
+        "produktifitas": "BCH",
+        "pendapatan": "TOTAL ALL REVENUE",
+        "revenue": "TOTAL ALL REVENUE",
+        "penerimaan": "TOTAL ALL REVENUE",
+    }
+    for alias, canonical_col in indonesian_aliases.items():
+        if alias.lower() in question_lower:
+            if canonical_col not in metrics:
+                metrics.append(canonical_col)
+            if canonical_col not in columns:
+                columns.append(canonical_col)
+    
+    # Check direct column mentions from schema
+    if dataset:
+        schema = get_schema(dataset, db_schema=None)
+        schema_columns = schema.get("columns", [])
+        for col in schema_columns:
+            # Check for direct column mention (case-insensitive, word boundary)
+            pattern = r'\b' + re.escape(col.lower()) + r'\b'
+            if re.search(pattern, question_lower):
+                if col not in metrics:
+                    metrics.append(col)
+                if col not in columns:
+                    columns.append(col)
+                    
+        # Context-aware refinement
+        if dataset == "Overview Vessel":
+            if "aktivitas" in question_lower and "TEUS" not in metrics:
+                metrics.append("TEUS")
+        elif dataset == "Transhipment":
+            # Transhipment uses VESSEL REVENUE, not TOTAL ALL REVENUE
+            if "TOTAL ALL REVENUE" in metrics:
+                metrics = [m for m in metrics if m != "TOTAL ALL REVENUE"]
+                if "VESSEL REVENUE" not in metrics:
+                    metrics.append("VESSEL REVENUE")
+            if ("revenue" in question_lower or "vessel revenue" in question_lower) and "VESSEL REVENUE" not in metrics:
+                metrics.append("VESSEL REVENUE")
+            # Handle loading/discharge as KATEGORI filter (not a metric column)
+            # These are applied as filters in classifier, not as metrics here
+        elif dataset == "Container Throughput":
+            if "actual" in question_lower or "throughput" in question_lower:
+                if "ACTUAL" not in metrics and "ACTUAL" in schema_columns:
+                    metrics.append("ACTUAL")
+            if "TEUS" in metrics and "TEUS" not in schema_columns and "ACTUAL" in schema_columns:
+                metrics = [m for m in metrics if m != "TEUS"]
+                if "ACTUAL" not in metrics:
+                    metrics.append("ACTUAL")
+        elif dataset == "Realisasi UC":
+            if "TEUS" in metrics and "TEUS" not in schema_columns and "TOTAL TEUS" in schema_columns:
+                metrics = ["TOTAL TEUS" if m == "TEUS" else m for m in metrics]
+        elif dataset == "Komersial Dashboard":
+            if ("pendapatan" in question_lower or "revenue" in question_lower) and "TOTAL ALL REVENUE" in schema_columns:
+                if "TOTAL ALL REVENUE" not in metrics:
+                    metrics.append("TOTAL ALL REVENUE")
+            if "TOTAL REVENUE" in metrics and "TOTAL ALL REVENUE" in schema_columns:
+                metrics = ["TOTAL ALL REVENUE" if m == "TOTAL REVENUE" else m for m in metrics]
+        elif dataset == "RestNDisc":
+            # For RestNDisc, avoid defaulting to TEUS
+            metrics = [m for m in metrics if m != "TEUS"]
+            if ("nominal" in question_lower or "keringanan" in question_lower or "persetujuan" in question_lower) and "NOMINAL PERSETUJUAN KERINGANAN" in schema_columns:
+                if "NOMINAL PERSETUJUAN KERINGANAN" not in metrics:
+                    metrics.append("NOMINAL PERSETUJUAN KERINGANAN")
+
+        # Strict schema column validation: prune metrics not present in target dataset schema
+        if schema_columns:
+            valid_metrics = []
+            for m in metrics:
+                if m in schema_columns:
+                    valid_metrics.append(m)
+                elif dataset in ["Overview Vessel", "Market Share", "Container Throughput", "Overview Box"] and m in ["TEUS", "ACTUAL"]:
+                    valid_metrics.append(m)
+                elif dataset in ["Transhipment", "Realisasi UC"] and m in ["20'", "40'", "45'", "TOTAL TEUS", "VESSEL REVENUE"]:
+                    valid_metrics.append(m)
+            metrics = valid_metrics
+    
+    # Resolve month and year
+    month_context = _resolve_month_and_year(question)
+    
+    return ResolvedEntities(
+        operators=operators,
+        metrics=metrics,
+        columns=columns,
+        month=month_context
+    )
+
+
+def resolve_columns(
+    metrics: List[str],
+    dataset: str,
+    schema: Optional[dict] = None,
+) -> List[str]:
+    """
+    Resolve metric names to canonical column names using aliases and schema validation.
+    
+    Args:
+        metrics: List of metric names (may include aliases)
+        dataset: Dataset name for schema validation
+        schema: Optional DB schema (if None, uses static registry)
+    
+    Returns:
+        List of validated canonical column names
+    """
+    columns = []
+    
+    for metric in metrics:
+        # Check if it's an alias
+        canonical = COLUMN_ALIASES.get(metric.lower())
+        if canonical:
+            metric = canonical
+        
+        # Validate against schema
+        if validate_column(metric, dataset, db_schema=schema):
+            if metric not in columns:
+                columns.append(metric)
+    
+    return columns
+
+
+def normalize_month(month_text: Optional[str]) -> Optional[MonthContext]:
+    """
+    Normalize month reference to MonthContext.
+    
+    Supports:
+    - English: January, February, ..., December
+    - Indonesian: Januari, Februari, ..., Desember
+    - Abbreviated: Jan, Feb, Mar, ..., Dec
+    - Numeric: 1, 2, 3, ..., 12
+    
+    Args:
+        month_text: Month string in various formats
+    
+    Returns:
+        MonthContext with normalized Indonesian name and code, or None if invalid
+    """
+    if not month_text:
+        return None
+    
+    month_key = month_text.lower().strip()
+    
+    if month_key in MONTH_NORMALIZE_MAP:
+        normalized = MONTH_NORMALIZE_MAP[month_key]
+        return MonthContext(
+            month_str=normalized["id"],
+            month_code=normalized["code"],
+            year=0  # Year must be provided separately
+        )
+    
+    return None
+
+
+def _resolve_month_and_year(question: str) -> Optional[MonthContext]:
+    """
+    Internal helper to resolve both month and year from question.
+    
+    Returns:
+        MonthContext with month, code, and year, or None if not found
+    """
+    question_lower = question.lower()
+    
+    # Extract year (4-digit number)
+    year_match = re.search(r'\b(20\d{2})\b', question)
+    year = int(year_match.group(1)) if year_match else 0
+    
+    # Extract month
+    month_context = None
+
+    # Check explicit numeric month phrases (e.g. "dibulan 5", "di bulan 3", "bulan 5", "bln 03", "month 3")
+    num_month_match = re.search(r'\b(?:di\s*)?(?:bulan|bln|month)\s*(\d{1,2})\b', question_lower)
+    if num_month_match:
+        m_code = int(num_month_match.group(1))
+        if 1 <= m_code <= 12:
+            code_to_id = {
+                1: "Januari", 2: "Februari", 3: "Maret", 4: "April",
+                5: "Mei", 6: "Juni", 7: "Juli", 8: "Agustus",
+                9: "September", 10: "Oktober", 11: "November", 12: "Desember"
+            }
+            return MonthContext(
+                month_str=code_to_id[m_code],
+                month_code=m_code,
+                year=year
+            )
+
+    # Try to find month names/codes in question
+    for month_key, month_data in MONTH_NORMALIZE_MAP.items():
+        pattern = r'\b' + re.escape(month_key) + r'\b'
+        if re.search(pattern, question_lower):
+            month_context = MonthContext(
+                month_str=month_data["id"],
+                month_code=month_data["code"],
+                year=year
+            )
+            break
+    
+    # If we found a year but no month, still return context with year
+    if year > 0 and not month_context:
+        month_context = MonthContext(
+            month_str="",
+            month_code=0,
+            year=year
+        )
+    
+    return month_context

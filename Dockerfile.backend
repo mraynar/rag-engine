@@ -6,10 +6,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app/ app/
+COPY backend/ backend/
 COPY data/config_store.json.example data/config_store.json.example
 RUN mkdir -p data/documents data/vector_store
 
 EXPOSE 8001
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8001"]
