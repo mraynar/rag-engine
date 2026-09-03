@@ -222,9 +222,11 @@ def apply_filters(df: pd.DataFrame, filters: List[FilterCondition]) -> pd.DataFr
                 df = df[month_mask]
                 continue
 
+        if col in df.columns and df[col].dropna().empty:
+            continue
+
         is_operator_col = col.strip().upper() in ["LOP", "OPERATOR", "VESSEL OPERATOR", "VESSELOPERATOR", "NAMA PERUSAHAAN", "CUSTOMER"]
 
-        # Operator translation to pandas query operations
         if is_operator_col and (op == FilterOperator.EQ or op.value == "=="):
             syns = get_operator_synonyms(val)
             df = df[df[col].notnull() & df[col].astype(str).str.upper().str.strip().isin([s.upper() for s in syns])]
@@ -235,7 +237,20 @@ def apply_filters(df: pd.DataFrame, filters: List[FilterCondition]) -> pd.DataFr
             syns = get_all_operator_synonyms(val)
             df = df[df[col].notnull() & df[col].astype(str).str.upper().str.strip().isin([s.upper() for s in syns])]
         elif op == FilterOperator.EQ or op.value == "==":
-            df = df[df[col] == val]
+            if isinstance(val, str):
+                v_clean = val.strip().lower()
+                syn_set = {v_clean}
+                if v_clean in ["domestik", "domestic", "dn"]:
+                    syn_set.update(["domestik", "domestic", "dn"])
+                elif v_clean in ["internasional", "international", "ln", "inter"]:
+                    syn_set.update(["internasional", "international", "ln", "inter"])
+                elif v_clean in ["diterima", "accepted", "approved"]:
+                    syn_set.update(["diterima", "accepted", "approved"])
+                elif v_clean in ["ditolak", "rejected", "denied"]:
+                    syn_set.update(["ditolak", "rejected", "denied"])
+                df = df[df[col].notnull() & df[col].astype(str).str.strip().str.lower().isin(syn_set)]
+            else:
+                df = df[df[col] == val]
         elif op == FilterOperator.NEQ or op.value == "!=":
             df = df[df[col] != val]
         elif op == FilterOperator.GT or op.value == ">":

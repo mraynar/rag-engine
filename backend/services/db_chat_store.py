@@ -1,6 +1,7 @@
 import json
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 from sqlalchemy import text
 from backend.services.db import get_db_conn
 from backend.core.config import get_gemini_client, get_generation_model
@@ -81,6 +82,30 @@ def get_user_conversation(conv_id: str, user_id: str) -> dict:
         "category_name": conv[6],
         "messages": messages
     }
+
+
+def get_recent_chat_history(conv_id: str, limit: int = 6) -> list[dict]:
+    """Fetch recent messages for a conversation ID to pass into LLM context."""
+    if not conv_id:
+        return []
+    try:
+        with get_db_conn() as conn:
+            rows = conn.execute(
+                text("""
+                    SELECT role, content
+                    FROM public.messages
+                    WHERE conversation_id = :conv_id
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT :limit
+                """),
+                {"conv_id": conv_id, "limit": limit}
+            ).fetchall()
+            history = [{"role": r[0], "content": r[1]} for r in reversed(rows)]
+            return history
+    except Exception as e:
+        print(f"[db_chat_store] Failed to fetch chat history for {conv_id}: {e}")
+        return []
+
 
 def create_user_conversation(user_id: str) -> dict:
     """Creates a new empty conversation for a user in the Supabase database."""

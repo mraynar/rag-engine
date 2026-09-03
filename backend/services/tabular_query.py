@@ -2,6 +2,7 @@
 Orkestrator query tabular untuk memproses pertanyaan data pelabuhan.
 """
 import json
+import time
 from dataclasses import replace
 from typing import Optional, Dict, List
 
@@ -54,219 +55,267 @@ def check_data_query_and_respond(question: str, category: str) -> Optional[str]:
         return None
 
 
-# Routing dataset berbasis LLM untuk mode All Data
-def _llm_route_all_data(question: str) -> tuple:
-    """
-    Use LLM to pick the best dataset + sheet from all available sources in DB.
-    Returns (dataset_name, sheet_name, routing_debug_info).
-    """
-    from backend.services.tabular.llm_router import llm_route_dataset
-
-    # Load all datasets + schemas from DB
-    available = []
-    db_schemas = {}
-    try:
-        with get_db_conn() as conn:
-            rows = conn.execute(
-                text("SELECT category_name, column_schema FROM data_sources WHERE sync_status IN ('synced', 'success')")
-            ).fetchall()
-            for row in rows:
-                cat = row[0]
-                schema_raw = row[1]
-                available.append(cat)
-                db_schemas[cat] = schema_raw if isinstance(schema_raw, dict) else json.loads(schema_raw or "{}")
-    except Exception as e:
-        print(f"[tabular_query] Failed to load datasets for LLM routing: {e}")
-        return None, None, {"error": str(e)}
-
-    if not available:
-        return None, None, {"error": "No synced datasets found"}
-
-    result = llm_route_dataset(question, available, db_schemas)
-    routing_debug = {
-        "method": "llm_semantic",
-        "candidates": available,
-        "selected": result.get("dataset"),
-        "sheet": result.get("sheet"),
-        "confidence": result.get("confidence"),
-        "reason": result.get("reason"),
-    }
-    return result.get("dataset"), result.get("sheet"), routing_debug
+MONTH_ALIASES = {
+    1: ["1", "01", "january", "januari", "jan"],
+    2: ["2", "02", "february", "februari", "feb"],
+    3: ["3", "03", "march", "maret", "mar"],
+    4: ["4", "04", "april", "apr"],
+    5: ["5", "05", "may", "mei"],
+    6: ["6", "06", "june", "juni", "jun"],
+    7: ["7", "07", "july", "juli", "jul"],
+    8: ["8", "08", "august", "agustus", "agu", "aug"],
+    9: ["9", "09", "september", "sep"],
+    10: ["10", "october", "oktober", "okt", "oct"],
+    11: ["11", "november", "nov"],
+    12: ["12", "december", "desember", "des", "dec"]
+}
 
 
-# Eksekusi query plan berbasis LLM
-def _execute_llm_query_plan(
+def _execute_llm_text_to_sql_pipeline(
     question: str,
     dataset: str,
-    sheet: Optional[str],
+    preferred_sheet: Optional[str],
     source_id: str,
     column_schema: dict,
+    chat_history: Optional[list] = None,
 ) -> tuple:
     """
-    Build and execute a query plan via LLM when deterministic path fails.
-    Returns (answer_text, debug_dict).
+    AI-First LLM Text-to-SQL Execution Pipeline.
+    Combines Dynamic Value Profiling, Multi-Metric Aggregation, Universal Month Matching,
+    and Derived Market Share Calculation.
     """
-    from backend.services.tabular.llm_router import llm_build_query_plan
-    from backend.services.tabular.executor import load_dataframe, apply_filters
+    from backend.services.tabular.executor import load_dataframe, OPERATOR_SYNONYM_GROUPS
+    from backend.services.tabular.schema_sampler import get_dataset_schema_and_samples
+    from backend.services.tabular.sql_generator import generate_llm_text_to_sql_plan
 
-    # Get sample data from DB
-    sample_data = []
-    try:
-        with get_db_conn() as conn:
-            sample_rows = conn.execute(
-                text("SELECT row_data FROM data_rows WHERE source_id = :sid LIMIT 5"),
-                {"sid": source_id}
-            ).fetchall()
-            for row in sample_rows:
-                d = row[0]
-                if isinstance(d, dict):
-                    sample_data.append(d)
-                elif isinstance(d, str):
-                    sample_data.append(json.loads(d))
-    except Exception as e:
-        print(f"[tabular_query] Could not load sample data: {e}")
+    df_full = load_dataframe(source_id=source_id)
+    if df_full.empty:
+        return f"Dataset '{dataset}' tidak memiliki data.", {}
 
-    llm_plan = llm_build_query_plan(
+    value_samples = get_dataset_schema_and_samples(df_full, source_id=source_id)
+
+    llm_plan = generate_llm_text_to_sql_plan(
         question=question,
         dataset=dataset,
-        sheet=sheet,
-        schema=column_schema,
-        sample_data=sample_data,
+        column_schema=column_schema,
+        value_samples=value_samples,
+        chat_history=chat_history,
+        preferred_sheet=preferred_sheet,
     )
 
-    plan_debug = {"llm_plan": llm_plan}
-
-    if llm_plan.get("not_found"):
-        return (
-            f"Maaf, data yang Anda cari tidak ditemukan di dataset '{dataset}'. "
-            f"{llm_plan.get('explanation', '')}",
-            plan_debug,
-        )
-
-    # Execute plan using pandas
-    try:
-        df = load_dataframe(source_id=source_id, sheet=sheet)
-        if df is None or df.empty:
-            return f"Tidak ada data yang ditemukan di sheet '{sheet}' dataset '{dataset}'.", plan_debug
-
-        # Apply filters from LLM plan
-        filters_raw = llm_plan.get("filters", [])
-        for f in filters_raw:
-            col = f.get("column", "")
-            op = f.get("op", "==")
-            val = f.get("value")
-            if col not in df.columns:
-                continue
-            if op == "==" or op == "eq":
-                if isinstance(val, str):
-                    df = df[df[col].astype(str).str.upper().str.strip() == str(val).upper().strip()]
-                else:
-                    df = df[df[col] == val]
-            elif op == ">" :
-                df = df[pd.to_numeric(df[col], errors="coerce") > val]
-            elif op == "<":
-                df = df[pd.to_numeric(df[col], errors="coerce") < val]
-            elif op == ">=":
-                df = df[pd.to_numeric(df[col], errors="coerce") >= val]
-            elif op == "<=":
-                df = df[pd.to_numeric(df[col], errors="coerce") <= val]
-
-        metric = llm_plan.get("metric")
-        agg = llm_plan.get("aggregation")
-        group_by = llm_plan.get("group_by")
-        sort_by = llm_plan.get("sort_by")
-        limit = llm_plan.get("limit")
-        explanation = llm_plan.get("explanation", "")
-
-        plan_debug["rows_after_filter"] = len(df)
-
+    sheet_choice = llm_plan.get("sheet") or preferred_sheet
+    if sheet_choice and "_sheet" in df_full.columns:
+        df = df_full[df_full["_sheet"].astype(str).str.lower() == str(sheet_choice).lower()].copy()
         if df.empty:
-            return (
-                f"Data tidak ditemukan untuk filter yang diminta di dataset '{dataset}'.\n"
-                f"_{explanation}_",
-                plan_debug,
-            )
+            df = df_full.copy()
+    else:
+        df = df_full.copy()
 
-        # Aggregate
-        if metric and metric in df.columns:
-            df[metric] = pd.to_numeric(df[metric], errors="coerce")
-            if group_by and group_by in df.columns:
-                grouped = df.groupby(group_by)[metric]
-                if agg == "sum":
-                    result_series = grouped.sum()
-                elif agg == "mean":
-                    result_series = grouped.mean()
-                elif agg == "max":
-                    result_series = grouped.max()
-                elif agg == "min":
-                    result_series = grouped.min()
-                elif agg == "count":
-                    result_series = grouped.count()
+    # Apply LLM Filters with Universal Month, Clean .0, & Case-Insensitive Matching
+    filters = llm_plan.get("filters", [])
+    for f in filters:
+        col = f.get("column")
+        val = f.get("value")
+        if not col or col not in df.columns or val is None:
+            continue
+
+        val_clean = str(val).replace(".0", "").strip()
+        col_series = df[col].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+
+        col_upper = col.upper()
+        # Operator Synonym Matching
+        if col_upper in ("LOP", "VESSEL OPERATOR", "OPERATOR", "VESSEL_OPERATOR"):
+            synonym_set = {val_clean.upper()}
+            for grp in OPERATOR_SYNONYM_GROUPS:
+                if any(syn in grp for syn in synonym_set):
+                    synonym_set.update(grp)
+            df = df[col_series.str.upper().isin(synonym_set)]
+        # Check if filter is Month filter
+        elif col_upper in ("MONTH", "BULAN", "MONTH_CODE", "_MONTH_CODE"):
+            month_num = None
+            try:
+                val_int = int(float(str(val)))
+                if 1 <= val_int <= 12:
+                    month_num = val_int
+            except ValueError:
+                val_str = val_clean.lower()
+                for m_code, m_aliases in MONTH_ALIASES.items():
+                    if val_str in m_aliases:
+                        month_num = m_code
+                        break
+
+            if month_num and month_num in MONTH_ALIASES:
+                aliases = MONTH_ALIASES[month_num]
+                month_cols = [c for c in df.columns if c.upper() in ("MONTH", "BULAN", "MONTH_CODE", "_MONTH_CODE")]
+                if month_cols:
+                    mask = pd.Series(False, index=df.index)
+                    for m_col in month_cols:
+                        s_clean = df[m_col].astype(str).str.replace(r'\.0$', '', regex=True).str.strip().str.lower()
+                        mask = mask | s_clean.isin(aliases)
+                    df = df[mask]
                 else:
-                    result_series = grouped.sum()
-
-                result_df = result_series.reset_index()
-                result_df.columns = [group_by, metric]
-                if sort_by == "desc" or agg in ("sum", "max"):
-                    result_df = result_df.sort_values(metric, ascending=False)
-                if limit:
-                    result_df = result_df.head(int(limit))
-
-                # Format as table
-                rows_text = []
-                for idx, row in enumerate(result_df.itertuples(), 1):
-                    val_raw = getattr(row, metric.replace(" ", "_").replace("'", ""), None) or getattr(row, f"_{idx}", None)
-                    try:
-                        val_raw = float(str(getattr(row, 2)).replace(",", ""))
-                        val_fmt = f"{val_raw:,.0f}"
-                    except Exception:
-                        val_fmt = str(getattr(row, 2))
-                    rows_text.append(f"{idx}. {getattr(row, 1)} : {val_fmt}")
-                answer_text = f"Berikut hasil faktual query data:\n" + "\n".join(rows_text)
-                return answer_text, plan_debug
+                    df = df[col_series.str.lower().isin(aliases)]
             else:
-                # Single value aggregation
-                if agg == "sum":
-                    val = df[metric].sum()
-                elif agg == "mean":
-                    val = df[metric].mean()
-                elif agg == "max":
-                    val = df[metric].max()
-                elif agg == "min":
-                    val = df[metric].min()
-                elif agg == "count":
-                    val = df[metric].count()
-                else:
-                    val = df[metric].sum()
-                try:
-                    val_fmt = f"{float(val):,.0f}"
-                except Exception:
-                    val_fmt = str(val)
-                return f"Berikut hasil faktual query data: {metric} = {val_fmt}", plan_debug
-
-        elif agg == "count":
-            return f"Berikut hasil faktual query data: jumlah baris = {len(df):,}", plan_debug
+                df = df[col_series.str.upper() == val_clean.upper()]
+        elif col_upper in ("YEAR", "TAHUN", "_YEAR"):
+            df = df[col_series.str.upper() == val_clean.upper()]
         else:
-            # No metric/agg — return top rows
-            top = df.head(limit or 5).to_dict(orient="records")
-            return f"Berikut hasil faktual query data (top rows):\n{json.dumps(top[:5], default=str, ensure_ascii=False)}", plan_debug
+            if isinstance(val, str):
+                df = df[col_series.str.upper().str.contains(val_clean.upper(), regex=False, na=False)]
+            else:
+                df = df[df[col] == val]
 
-    except Exception as e:
-        print(f"[tabular_query] LLM plan execution failed: {e}")
-        return f"Gagal mengeksekusi query plan: {str(e)}", plan_debug
+    if df.empty:
+        return f"Data tidak ditemukan untuk filter yang diminta di dataset '{dataset}'.", {"llm_plan": llm_plan}
+
+    start_ts = time.time()
+
+    raw_metrics = llm_plan.get("metrics", [])
+    group_by = llm_plan.get("group_by")
+    sort_by = llm_plan.get("sort_by", "desc")
+    limit = llm_plan.get("limit", 10)
+    derived_mode = llm_plan.get("derived_mode")
+
+    # Map requested metric names to actual column names case-insensitively
+    valid_metrics = []
+    df_cols_upper = {c.upper(): c for c in df.columns}
+    for m in raw_metrics:
+        m_up = str(m).upper()
+        if m_up in df_cols_upper:
+            valid_metrics.append(df_cols_upper[m_up])
+        elif m in df.columns:
+            valid_metrics.append(m)
+    if not valid_metrics:
+        common_metrics = ["TOTAL TEUS", "TEUS", "TOTAL REVENUE", "TOTAL ALL REVENUE", "VESSEL REVENUE", "TOTAL BOX", "BOX", "ACTUAL"]
+        valid_metrics = [m for m in common_metrics if m in df.columns][:2]
+
+    for m in valid_metrics:
+        df[m] = pd.to_numeric(df[m], errors="coerce").fillna(0)
+
+    # Build SQL string representation for Debugger UI
+    select_clause = ", ".join([f'SUM("{m}") AS "{m.lower().replace(" ", "_")}"' for m in valid_metrics]) if valid_metrics else '*'
+    where_parts = []
+    applied_filters_dict = {}
+    for f in filters:
+        col_f = f.get("column")
+        val_f = f.get("value")
+        if col_f and val_f is not None:
+            where_parts.append(f'"{col_f}" = \'{val_f}\'')
+            applied_filters_dict[col_f] = val_f
+
+    where_clause = f" WHERE {' AND '.join(where_parts)}" if where_parts else ""
+    group_clause = f' GROUP BY "{group_by}"' if group_by else ""
+    sheet_table = sheet_choice or "data_rows"
+    generated_sql = f'SELECT {select_clause} FROM "{sheet_table}"{where_clause}{group_clause};'
+
+    elapsed_ms = round((time.time() - start_ts) * 1000, 2)
+
+    plan_debug = {
+        "target_dataset": dataset,
+        "target_sheet": sheet_choice or "All Sheets",
+        "generated_sql": generated_sql,
+        "execution_time_ms": elapsed_ms,
+        "metrics_used": valid_metrics,
+        "applied_filters": applied_filters_dict,
+        "llm_plan": llm_plan
+    }
+
+    # Special Derived Market Share Calculation if % column is missing/null
+    if derived_mode == "market_share_ratio" or (dataset == "Market Share" and any("MARKET SHARE" in q.upper() or "%" in q or "TIL" in q.upper() for q in [question])):
+        op_col = next((c for c in df_full.columns if c.upper() in ("LOP", "VESSEL OPERATOR", "OPERATOR")), None)
+        vol_col = next((c for c in df_full.columns if c.upper() in ("TEUS", "TEUS 2024", "BOX", "BOXES")), None)
+        if op_col and vol_col:
+            df_ms = df_full[df_full["_sheet"].astype(str).str.upper().str.contains("DOM", na=False)].copy() if "_sheet" in df_full.columns else df_full.copy()
+            
+            # Apply year/month filters first
+            yr_filter = next((f.get("value") for f in filters if f.get("column", "").upper() in ("YEAR", "TAHUN", "_YEAR")), None)
+            if yr_filter and "YEAR" in df_ms.columns:
+                yr_clean = str(yr_filter).replace(".0", "").strip()
+                df_ms = df_ms[df_ms["YEAR"].astype(str).str.replace(r'\.0$', '', regex=True).str.strip() == yr_clean]
+
+            df_ms[vol_col] = pd.to_numeric(df_ms[vol_col], errors="coerce").fillna(0)
+            total_overall_teus = df_ms[vol_col].sum()
+            
+            # Check if user asked for a specific operator (e.g. TIL)
+            op_filter = next((f.get("value") for f in filters if f.get("column", "").upper() in ("LOP", "VESSEL OPERATOR", "OPERATOR")), None)
+            if op_filter:
+                op_clean = str(op_filter).replace(".0", "").strip().upper()
+                synonym_set = {op_clean}
+                for grp in OPERATOR_SYNONYM_GROUPS:
+                    if any(syn in grp for syn in synonym_set):
+                        synonym_set.update(grp)
+                op_series = df_ms[op_col].astype(str).str.upper().str.strip()
+                df_op = df_ms[op_series.isin(synonym_set)]
+                op_teus = df_op[vol_col].sum()
+                pct = (op_teus * 100.0 / total_overall_teus) if total_overall_teus > 0 else 0.0
+                return f"Berikut hasil market share faktual:\nTotal volume operator {op_clean} ({', '.join(sorted(synonym_set))}) mencapai {op_teus:,.0f} TEUS dengan Market Share sebesar {pct:.2f}% (dari total market volume {total_overall_teus:,.0f} TEUS).", plan_debug
+            elif total_overall_teus > 0:
+                grouped = df_ms.groupby(op_col)[vol_col].sum().reset_index()
+                grouped["MARKET SHARE %"] = (grouped[vol_col] * 100.0 / total_overall_teus).round(2)
+                grouped = grouped.sort_values(vol_col, ascending=False)
+                if limit:
+                    grouped = grouped.head(int(limit))
+                
+                rows_text = []
+                for idx, r in enumerate(grouped.itertuples(), 1):
+                    op_val = getattr(r, op_col.replace(" ", "_"), "") or getattr(r, f"_{idx}", "")
+                    teus_val = getattr(r, vol_col.replace(" ", "_"), 0)
+                    pct_val = getattr(r, "MARKET_SHARE_%", 0)
+                    rows_text.append(f"{idx}. {op_val}: {pct_val}% ({teus_val:,.0f} TEUS)")
+                return f"Berikut hasil market share faktual (Total Overall Volume: {total_overall_teus:,.0f} TEUS):\n" + "\n".join(rows_text), plan_debug
+
+    if group_by and group_by in df.columns and valid_metrics:
+        grouped = df.groupby(group_by)[valid_metrics].sum().reset_index()
+        primary_metric = valid_metrics[0]
+        if sort_by == "desc":
+            grouped = grouped.sort_values(primary_metric, ascending=False)
+        if limit:
+            grouped = grouped.head(int(limit))
+
+        rows_text = []
+        for idx, row in enumerate(grouped.itertuples(), 1):
+            key_val = getattr(row, group_by.replace(" ", "_"), None) or getattr(row, f"_{idx}", None)
+            metrics_str_parts = []
+            for m in valid_metrics:
+                val_raw = getattr(row, m.replace(" ", "_").replace("'", ""), 0)
+                if "REVENUE" in m.upper() or "RUPIAH" in m.upper() or "DPP" in m.upper():
+                    metrics_str_parts.append(f"{m}: Rp {val_raw:,.0f}")
+                else:
+                    metrics_str_parts.append(f"{m}: {val_raw:,.0f}")
+            rows_text.append(f"{idx}. {key_val} : {', '.join(metrics_str_parts)}")
+        return f"Berikut hasil faktual query data:\n" + "\n".join(rows_text), plan_debug
+
+    elif valid_metrics:
+        # Single row Multi-Metric Aggregation (e.g. TEUS + REVENUE)
+        metric_results = []
+        for m in valid_metrics:
+            val_sum = df[m].sum()
+            if "REVENUE" in m.upper() or "RUPIAH" in m.upper() or "DPP" in m.upper():
+                metric_results.append(f"Total {m} sebesar Rp {val_sum:,.0f}")
+            else:
+                metric_results.append(f"Total {m} sebanyak {val_sum:,.0f}")
+        return " dan ".join(metric_results) + ".", plan_debug
+
+    else:
+        top_rows = df.head(limit or 5).to_dict(orient="records")
+        return f"Berikut hasil faktual query data (top rows):\n{json.dumps(top_rows[:5], default=str, ensure_ascii=False)}", plan_debug
 
 
-# query tabular
-def answer_tabular_question(question: str, category_name: str = "All Data") -> dict:
+def answer_tabular_question(
+    question: str,
+    category_name: str = "All Data",
+    conversation_id: Optional[str] = None
+) -> dict:
     """
-    Answer a tabular question using the RAG-first pipeline.
+    Answer a tabular question using the AI-First LLM RAG Text-to-SQL architecture.
 
     Returns: {"answer": str, "sources": list[str], "debug": dict}
-    The 'debug' field contains routing + query plan info for the collapsible UI.
     """
-    # 1. Input Guard Security & Greeting check
     from backend.services.tabular.resolver import sanitize_leading_number, check_input_security
+    from backend.services.db_chat_store import get_recent_chat_history
+    
     question = sanitize_leading_number(question)
+    chat_history = get_recent_chat_history(conversation_id) if conversation_id else []
 
     debug_info = {
         "question": question,
@@ -285,7 +334,7 @@ def answer_tabular_question(question: str, category_name: str = "All Data") -> d
     if greeting_resp:
         return {"answer": greeting_resp, "sources": [f"Category: {category_name}"], "debug": debug_info}
 
-    # 2. Route dataset
+    # 2. Route dataset with chat_history for context inheritance
     is_all_data = not category_name or str(category_name).strip().lower() in [
         "all data", "all datasource", "all datasources", "all", ""
     ]
@@ -294,8 +343,7 @@ def answer_tabular_question(question: str, category_name: str = "All Data") -> d
     llm_suggested_sheet = None
 
     if is_all_data:
-        # LLM semantic routing
-        target_dataset, llm_suggested_sheet, routing_debug = _llm_route_all_data(question)
+        target_dataset, llm_suggested_sheet, routing_debug = _llm_route_all_data(question, chat_history=chat_history)
         debug_info["routing"] = routing_debug
         if not target_dataset:
             return {
@@ -328,232 +376,31 @@ def answer_tabular_question(question: str, category_name: str = "All Data") -> d
     column_schema = schema_raw if isinstance(schema_raw, dict) else json.loads(schema_raw or "{}")
     debug_info["query_plan"]["schema_keys"] = list(column_schema.keys())[:8]
 
-    # 4. Resolve entities + route sheet
-    try:
-        resolved = resolve_entities(question, target_dataset)
-        rule_sheets = route_sheet(question, target_dataset)
+    # 4. Execute AI-First Text-to-SQL Pipeline
+    answer_text, plan_debug = _execute_llm_text_to_sql_pipeline(
+        question=question,
+        dataset=target_dataset,
+        preferred_sheet=llm_suggested_sheet,
+        source_id=str(source_id),
+        column_schema=column_schema,
+        chat_history=chat_history,
+    )
+    debug_info["execution"] = plan_debug
 
-        if rule_sheets:
-            sheets = rule_sheets
-        elif llm_suggested_sheet:
-            sheets = [llm_suggested_sheet]
-        elif target_dataset == "Transhipment":
-            ql = question.lower()
-            if any(kw in ql for kw in ["revenue", "loading", "discharge", "muat", "bongkar"]):
-                sheets = ["new vr"]
-            else:
-                sheets = ["Transhipment"]
-        else:
-            sheets = None
-
-        sheet = sheets[0] if sheets and len(sheets) == 1 else None
-        debug_info["query_plan"]["sheet"] = sheet
-        debug_info["query_plan"]["resolved_operators"] = resolved.operators
-        debug_info["query_plan"]["resolved_metrics"] = resolved.metrics
-        debug_info["query_plan"]["resolved_month"] = {
-            "month_str": resolved.month.month_str if resolved.month else None,
-            "month_code": resolved.month.month_code if resolved.month else None,
-            "year": resolved.month.year if resolved.month else None,
-        }
-    except Exception as e:
-        return {"answer": f"Gagal menganalisis pertanyaan: {str(e)}", "sources": [f"Supabase Table: {target_dataset}"], "debug": debug_info}
-
-    # 5. Deterministic classify + build plan with dynamic schema sampling
-    try:
-        from backend.services.tabular.executor import load_dataframe
-        full_df = load_dataframe(str(source_id))
-
-        ast = classify_query(question, resolved, target_dataset, df=full_df)
-
-        # Inject KATEGORI filter for Transhipment when loading/discharge mentioned
-        if target_dataset == "Transhipment":
-            from dataclasses import replace as dc_replace
-            ql = question.lower()
-            kat = None
-            if "total loading" in ql or " loading" in ql:
-                kat = "LOADING"
-            elif "discharge" in ql or "bongkar" in ql:
-                kat = "DISCHARGE"
-            if kat:
-                existing = [f.column.upper() for f in ast.filters]
-                if "KATEGORI" not in existing:
-                    ast = dc_replace(ast, filters=list(ast.filters) + [
-                        FilterCondition(column="KATEGORI", operator=FilterOperator.EQ, value=kat)
-                    ])
-
-        subqueries = decompose_query(ast, question, resolved, target_dataset)
-        debug_info["query_plan"]["query_type"] = ast.query_type.value
-        debug_info["query_plan"]["intent"] = ast.intent.value
-        debug_info["query_plan"]["filters"] = [
-            f"{f.column} {f.operator.value} {f.value}" for f in ast.filters
-        ]
-        debug_info["query_plan"]["aggregation"] = (
-            f"{ast.aggregation.func}({ast.aggregation.column})" if ast.aggregation else None
-        )
-        debug_info["query_plan"]["build_method"] = ast.build_method.value
-
-    except Exception as e:
-        return {"answer": f"Gagal mengklasifikasikan pertanyaan: {str(e)}", "sources": [f"Supabase Table: {target_dataset}"], "debug": debug_info}
-
-    # 6. Execute deterministic plan
-    results = {}
-    last_plan = None
-    steps_debug = {}
-    deterministic_failed = False
-
-    for sub_q in subqueries:
-        try:
-            sub_resolved = resolve_entities(sub_q.question, target_dataset)
-            sub_ast = classify_query(sub_q.question, sub_resolved, target_dataset, df=full_df)
-            plan = build_query_plan(sub_ast, sub_q.question, resolved, target_dataset, schema=column_schema, subquery=sub_q)
-
-            sub_sheets = route_sheet(sub_q.question, target_dataset)
-            sub_sheet = sub_sheets[0] if sub_sheets and len(sub_sheets) == 1 else None
-            if not sub_sheet and sheet:
-                sub_sheet = sheet
-            if sub_sheet and not plan.sheet:
-                plan = replace(plan, sheet=sub_sheet)
-
-            last_plan = plan
-            exec_res = execute_with_retry(
-                source_id=str(source_id), plan=plan, question=sub_q.question,
-                resolved=resolved, dataset=target_dataset, db_schema=column_schema
-            )
-            results[sub_q.step] = exec_res
-            steps_debug[sub_q.step] = {"plan": plan, "exec_res": exec_res}
-
-        except QueryBuildError as qbe:
-            qbe_str = str(qbe)
-            print(f"[tabular_query] Deterministic build error: {qbe_str}")
-            if "tidak tersedia" in qbe_str or "bukan" in qbe_str or "tidak valid" in qbe_str:
-                # Safe rejection error
-                return {
-                    "answer": qbe_str,
-                    "sources": [f"Supabase Table: {target_dataset}"],
-                    "debug": debug_info
-                }
-            deterministic_failed = True
-            debug_info["query_plan"]["deterministic_error"] = qbe_str
-            break
-        except Exception as e:
-            print(f"[tabular_query] Deterministic exec failed: {e} — falling back to LLM")
-            deterministic_failed = True
-            debug_info["query_plan"]["deterministic_error"] = str(e)
-            break
-
-    # 7. LLM fallback if deterministic failed or produced empty/low-quality results
-    use_llm_fallback = deterministic_failed
-    if not use_llm_fallback and results:
-        primary = results.get(1)
-        if primary and primary.quality.value in ["empty", "low_quality"]:
-            print(f"[tabular_query] Deterministic returned {primary.quality.value} — trying LLM fallback")
-            use_llm_fallback = True
-            debug_info["query_plan"]["llm_fallback_reason"] = f"deterministic quality: {primary.quality.value}"
-
-    if use_llm_fallback:
-        debug_info["query_plan"]["path"] = "llm_fallback"
-        llm_answer, llm_debug = _execute_llm_query_plan(
-            question=question,
-            dataset=target_dataset,
-            sheet=sheet,
-            source_id=str(source_id),
-            column_schema=column_schema,
-        )
-        debug_info["execution"] = llm_debug
-
-        # Groq narrative polish
-        try:
-            from backend.services.rag_engine import groq_generate
-            polished = groq_generate(prompt=(
-                f"Berikut hasil faktual dari query data:\n{llm_answer}\n\n"
-                "Ubah menjadi kalimat natural, ringkas, dan profesional dalam Bahasa Indonesia. "
-                "JANGAN ubah angka atau fakta. Jika ada daftar, pertahankan formatnya."
-            ))
-            llm_answer = polished
-        except Exception:
-            pass
-
-        if RETURN_DEBUG_BLOCK:
-            llm_answer += f"\n\n---\n### Debug Information\n\n**Input**\n- Question: `{question}`\n- Category: `{category_name}`\n\n**Dataset Routing**\n- Dataset: `{target_dataset}`\n\n**Sheet Routing**\n- Resolved: `{sheet}`\n\n**Entities**\n- Year: `{debug_info['query_plan'].get('resolved_month', {}).get('year')}`\n\n**Classification**\n- Path: `llm_fallback`\n"
-
-        return {
-            "answer": llm_answer,
-            "sources": [f"Supabase Table: {target_dataset}"],
-            "debug": debug_info,
-        }
-
-    # 8. Format deterministic results
-    debug_info["query_plan"]["path"] = "deterministic"
-    debug_info["execution"]["steps"] = {
-        k: {
-            "quality": v["exec_res"].quality.value,
-            "row_count": v["exec_res"].row_count,
-            "plan_sheet": v["plan"].sheet,
-            "plan_agg": f"{v['plan'].aggregation.func}({v['plan'].aggregation.column})" if v["plan"].aggregation else None,
-        }
-        for k, v in steps_debug.items()
-    }
-
-    try:
-        answer = format_response(
-            question=question, results=results, ast=ast,
-            resolved=resolved, dataset=target_dataset, original_plan=last_plan
-        )
-    except Exception as e:
-        answer = f"Gagal merumuskan jawaban: {str(e)}."
-
-    # Groq narrative polish
-    raw_answer = answer
+    # 5. Narrative Polish using Groq / Gemini
     try:
         from backend.services.rag_engine import groq_generate
-        answer = groq_generate(prompt=(
-            f"Berikut hasil faktual dari query data:\n{raw_answer}\n\n"
-            "Ubah menjadi kalimat natural, ringkas, dan profesional dalam Bahasa Indonesia. "
-            "JANGAN ubah angka atau fakta. Jika ada daftar/tabel, pertahankan formatnya."
+        polished = groq_generate(prompt=(
+            f"Berikut hasil faktual dari query data:\n{answer_text}\n\n"
+            "Ubah menjadi kalimat narasi eksekutif yang natural, ringkas, dan profesional dalam Bahasa Indonesia. "
+            "JANGAN ubah angka atau fakta. Pertahankan format ribuan dengan titik (contoh: Rp 1.239.652.922,02 atau 370 TEUS)."
         ))
+        answer_text = polished
     except Exception as groq_err:
-        print(f"[tabular_query] Groq polish skipped: {groq_err}")
-        answer = raw_answer
-
-    if RETURN_DEBUG_BLOCK:
-        debug_lines = [
-            "\n",
-            "---",
-            "### Debug Information",
-            "",
-            "**Input**",
-            f"- Question: `{question}`",
-            f"- Category: `{category_name}`",
-            "",
-            "**Dataset Routing**",
-            f"- Dataset: `{target_dataset}`",
-            "",
-            "**Sheet Routing**",
-            f"- Resolved: `{sheet}` | Plan Sheet: `{sheet}`",
-            "",
-            "**Entities**",
-            f"- Year: `{resolved.month.year if resolved.month else 'None'}`",
-            "",
-            "**Classification**",
-            f"- Query Type: `{ast.query_type.value}` | Intent: `{ast.intent.value}` | Build Method: `{ast.build_method.value}`",
-            "",
-        ]
-        for step, step_info in sorted(steps_debug.items()):
-            sub_ast = classify_query(question, resolved, target_dataset)
-            plan = step_info["plan"]
-            exec_res = step_info["exec_res"]
-            debug_lines.extend([
-                f"**AST — Step {step}**",
-                f"**Query Plan — Step {step}**",
-                f"**Execution Result — Step {step}**",
-                f"- Quality: `{exec_res.quality.value}` | Row Count: `{exec_res.row_count}`",
-                f"- Data Type: `DataFrame` | Shape: `({exec_res.row_count}, {len(column_schema.get(sheet or '_all_sheets', []))})`",
-                f"- Columns: `{list(column_schema.get(sheet or '_all_sheets', []))}`",
-            ])
-        answer += "\n".join(debug_lines)
+        print(f"[tabular_query] Groq narrative polish skipped: {groq_err}")
 
     return {
-        "answer": answer,
+        "answer": answer_text,
         "sources": [f"Supabase Table: {target_dataset}"],
         "debug": debug_info,
     }

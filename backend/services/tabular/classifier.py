@@ -2,7 +2,7 @@
 Klasifikasi semantik pertanyaan menjadi QueryAST (tipe query, intent, filter, dan agregasi).
 """
 import re
-from typing import Optional
+from typing import Optional, Any
 
 from backend.services.tabular.domain_models import (
     QueryAST,
@@ -212,6 +212,12 @@ def _is_total_aggregation_query(question_lower: str) -> bool:
         "jumlah",
         "keseluruhan",
         "semua",
+        "how many",
+        "how much",
+        "amount of",
+        "number of",
+        "count of",
+        "sum of",
     ]
     
     return any(kw in question_lower for kw in total_keywords)
@@ -350,13 +356,30 @@ def _construct_filters(
 
         for col, samples in schema_samples.items():
             # Skip columns already handled by temporal or operator
-            if col.upper() in ["YEAR", "TAHUN", "MONTH", "BULAN", "OPERATOR", "VESSEL OPERATOR", "LOP", "_SHEET"]:
+            if col.upper() in [
+                "YEAR", "_YEAR", "TAHUN", "MONTH", "_MONTH_CODE", "_MONTH_EN", "BULAN", 
+                "OPERATOR", "VESSEL OPERATOR", "LOP", "_SHEET", "DATE", "TANGGAL"
+            ]:
                 continue
 
             for val in samples:
                 val_str = str(val).strip()
                 val_lower = val_str.lower()
-                if len(val_lower) >= 3 and re.search(r'\b' + re.escape(val_lower) + r'\b', question_lower):
+                search_terms = {val_lower}
+                if val_lower in ["domestik", "domestic", "dn"]:
+                    search_terms.update(["domestik", "domestic", "dn"])
+                elif val_lower in ["internasional", "international", "ln", "inter"]:
+                    search_terms.update(["internasional", "international", "ln", "inter"])
+                elif val_lower in ["diterima", "accepted", "approved"]:
+                    search_terms.update(["diterima", "accepted", "approved", "disetujui", "setuju"])
+                elif val_lower in ["ditolak", "rejected", "denied"]:
+                    search_terms.update(["ditolak", "rejected", "denied", "tolak"])
+
+                match_found = any(
+                    len(st) >= 3 and re.search(r'\b' + re.escape(st) + r'\b', question_lower)
+                    for st in search_terms
+                )
+                if match_found:
                     if not any(f.column.upper() == col.upper() for f in filters):
                         filters.append(FilterCondition(column=col, operator=FilterOperator.EQ, value=val_str))
                     break

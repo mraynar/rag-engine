@@ -99,19 +99,32 @@ ROUTING_PROMPT_TEMPLATE = """Anda adalah router cerdas untuk sistem RAG analitik
 """
 
 
-def llm_route_dataset(question: str, available_datasets: list, db_schemas: dict) -> dict:
+def llm_route_dataset(question: str, available_datasets: list, db_schemas: dict, chat_history: Optional[list] = None) -> dict:
     """
     Use LLM to semantically select the best dataset for the question.
+    Accepts chat_history to handle multi-turn context inheritance ("sebutkan rinciannya", "bagaimana trennya").
     
     Args:
         question: User's natural language question
         available_datasets: List of dataset names from DB
         db_schemas: Dict of {dataset_name: column_schema_dict}
+        chat_history: Optional list of recent chat turn dicts
     
     Returns:
         {"dataset": str, "sheet": str|None, "confidence": float, "reason": str}
         or {"dataset": None} if no match
     """
+    # Check if question is a follow-up query requiring context inheritance
+    history_formatted = "Tidak ada riwayat percakapan sebelumnya."
+    if chat_history:
+        recent = chat_history[-3:]
+        history_lines = []
+        for h in recent:
+            role = h.get("role", "user")
+            content = h.get("content", "")
+            history_lines.append(f"{role.upper()}: {content}")
+        history_formatted = "\n".join(history_lines)
+
     # Build dataset list string
     dataset_list_parts = []
     for i, ds in enumerate(available_datasets, 1):
@@ -134,11 +147,34 @@ def llm_route_dataset(question: str, available_datasets: list, db_schemas: dict)
         )
     schema_context = "\n".join(schema_parts) if schema_parts else "Schema tidak tersedia"
 
-    prompt = ROUTING_PROMPT_TEMPLATE.format(
-        dataset_list=dataset_list,
-        schema_context=schema_context,
-        question=question,
-    )
+    prompt = f"""Anda adalah router cerdas & context inheritance agent untuk sistem RAG analitik data pelabuhan TPS.
+
+## Dataset yang tersedia:
+{dataset_list}
+
+## Skema kolom aktual per dataset (dari database):
+{schema_context}
+
+## Riwayat Percakapan (3 Turn Terakhir):
+{history_formatted}
+
+## Pertanyaan user saat ini:
+"{question}"
+
+## Tugas:
+1. Analisis apakah pertanyaan saat ini adalah pertanyaan lanjutan / follow-up (seperti "sebutkan rinciannya", "bagaimana rinciannya", "bagaimana trennya", "siapa yang tertinggi?"). Jika YA, warisi nama dataset dari percakapan sebelumnya.
+2. Jika pertanyaan baru, pilih SATU dataset yang paling relevan untuk menjawab pertanyaan di atas.
+3. Jika ada petunjuk sheet (domestik/internasional/loading/discharge/summary), sebutkan sheet yang relevan.
+4. Jika pertanyaan sama sekali tidak relevan dengan data TPS/pelabuhan → jawab dengan "NONE".
+
+## Response format (JSON only, no markdown):
+{{
+  "dataset": "<nama dataset persis>",
+  "sheet": "<nama sheet atau null>",
+  "confidence": 0.9,
+  "reason": "<1 kalimat alasan singkat>"
+}}
+"""
 
     try:
         client = get_gemini_client()
@@ -160,6 +196,7 @@ def llm_route_dataset(question: str, available_datasets: list, db_schemas: dict)
     except Exception as e:
         print(f"[llm_router] LLM routing failed: {e}")
         return {"dataset": None, "sheet": None, "confidence": 0.0, "reason": str(e)}
+
 
 
 LLM_QUERY_PLAN_PROMPT = """Anda adalah query planner untuk sistem analitik data pelabuhan TPS.

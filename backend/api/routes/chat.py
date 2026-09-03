@@ -33,10 +33,14 @@ def chat(request: ChatRequest, user: Optional[dict] = Depends(get_current_user))
             except Exception as e:
                 print(f"[chat] Warning: failed to check data_sources: {e}")
 
-        if is_supabase_category:
-            # Use Supabase + pandas + Gemini function calling query pipeline
+        if is_supabase_category or not tabular_category:
+            # Use AI-First LLM Multi-Agent Tabular Pipeline
             from backend.services.tabular_query import answer_tabular_question
-            result = answer_tabular_question(request.message, tabular_category)
+            result = answer_tabular_question(
+                question=request.message,
+                category_name=tabular_category or "All Data",
+                conversation_id=request.conversation_id
+            )
             answer = result["answer"]
             sources = result["sources"]
             debug_info = result.get("debug")

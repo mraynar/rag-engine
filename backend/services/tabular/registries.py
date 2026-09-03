@@ -134,7 +134,12 @@ SHEET_REGISTRY = {
         "internasional": "V.OPR INT",
     },
     "Transhipment": {
-        "transhipment": "Transhipment",
+        "new vr": "new vr",
+        "vr": "new vr",
+        "vessel revenue": "new vr",
+        "discharge": "new vr",
+        "loading": "new vr",
+        "yard revenue": "Transhipment",
     },
     "Overview Box": {
         "domestic": "DOMESTIK",
@@ -177,9 +182,6 @@ COLUMN_ALIASES = {
     "total realisasi": "TOTAL",
     "uc": "TOTAL",
     "productivity": "BCH",
-    "performance": "ACTUAL VS BUDGET",
-    "boxes": "Boxes",
-    "box": "Boxes",
     "crane hours": "BCH",
     "ship hours": "BSH",
     "bch": "BCH",
@@ -343,7 +345,25 @@ SCHEMA_REGISTRY = {
 
 
 def get_schema(dataset_name: str, db_schema: dict = None) -> dict:
-    """Ambil skema dataset dari DB atau static fallback."""
+    """Ambil skema dataset dari DB atau static fallback.
+
+    Priority:
+    1. Jika db_schema tersedia, gunakan itu (sumber dari Supabase column_schema)
+    2. Tambahkan kolom statis dari SCHEMA_REGISTRY sebagai pelengkap
+    3. Jika dataset tidak dikenal sama sekali, kembalikan skema generik dari kolom DB
+
+    Parameter
+    ----------
+    dataset_name : str
+        Nama kategori dataset (misal: "Overview Vessel", "Realisasi UC")
+    db_schema : dict, optional
+        Dict {sheet_name: [kolom]} dari DB (column_schema di data_sources)
+
+    Returns
+    -------
+    dict
+        {"sheets": [...], "columns": [...]}
+    """
     if db_schema:
         sheets = list(db_schema.keys())
         columns = []
@@ -353,13 +373,46 @@ def get_schema(dataset_name: str, db_schema: dict = None) -> dict:
                 if col not in seen:
                     columns.append(col)
                     seen.add(col)
+        # Tambahkan kolom statis sebagai pelengkap
         static = SCHEMA_REGISTRY.get(dataset_name, {})
         for col in static.get("columns", []):
             if col not in seen:
                 columns.append(col)
                 seen.add(col)
         return {"sheets": sheets, "columns": columns}
-    return SCHEMA_REGISTRY.get(dataset_name, {})
+
+    # Fallback ke SCHEMA_REGISTRY statis
+    static = SCHEMA_REGISTRY.get(dataset_name, {})
+    if static:
+        return static
+
+    # Skema generik untuk dataset baru yang belum terdaftar
+    return _get_generic_schema()
+
+
+def _get_generic_schema() -> dict:
+    """Skema generik fallback untuk dataset yang belum terdaftar.
+
+    Berisi kolom-kolom umum yang biasanya ada di hampir semua spreadsheet data bisnis,
+    sehingga AI bisa tetap menjawab pertanyaan umum (tahun, bulan, total, dll.)
+    meskipun dataset belum diregistrasikan secara eksplisit.
+    """
+    return {
+        "sheets": ["_all_sheets"],
+        "columns": [
+            # Temporal
+            "YEAR", "TAHUN", "MONTH", "BULAN", "DATE", "TANGGAL", "TIMESTAMP",
+            # Quantity
+            "TEUS", "TOTAL TEUS", "BOXES", "TOTAL BOX", "BOX",
+            # Revenue
+            "TOTAL", "TOTAL REVENUE", "REVENUE", "AMOUNT",
+            # Dimension
+            "LOP", "VESSEL OPERATOR", "OPERATOR", "STATUS", "KATEGORI",
+            "NAMA PERUSAHAAN", "CUSTOMER", "SERVICE", "ROUTES",
+        ]
+    }
+
+
 
 
 def validate_column(column: str, dataset: str, db_schema: dict = None) -> bool:
