@@ -70,6 +70,47 @@ MONTH_ALIASES = {
     12: ["12", "december", "desember", "des", "dec"]
 }
 
+MONTH_NAME_MAP = {
+    1: "Januari", 2: "Februari", 3: "Maret", 4: "April",
+    5: "Mei", 6: "Juni", 7: "Juli", 8: "Agustus",
+    9: "September", 10: "Oktober", 11: "November", 12: "Desember"
+}
+
+
+def parse_month_order_and_label(val: Any) -> tuple:
+    val_clean = str(val).replace(".0", "").strip()
+    try:
+        val_int = int(float(val_clean))
+        if 1 <= val_int <= 12:
+            m_name = MONTH_NAME_MAP.get(val_int, f"Bulan {val_int}")
+            return (val_int, f"Bulan {val_int} ({m_name})")
+    except ValueError:
+        pass
+    
+    val_lower = val_clean.lower()
+    for m_code, m_aliases in MONTH_ALIASES.items():
+        if val_lower in m_aliases or any(a in val_lower for a in m_aliases):
+            m_name = MONTH_NAME_MAP.get(m_code, val_clean.capitalize())
+            return (m_code, m_name)
+            
+    return (99, val_clean)
+
+
+def format_idr_number(val: Any) -> str:
+    try:
+        v = float(val)
+        if v.is_integer():
+            return f"{int(v):,}".replace(",", ".")
+        else:
+            parts = f"{v:.2f}".split(".")
+            int_part = f"{int(parts[0]):,}".replace(",", ".")
+            dec_part = parts[1].rstrip("0")
+            if not dec_part:
+                return int_part
+            return f"{int_part},{dec_part}"
+    except (ValueError, TypeError):
+        return str(val)
+
 
 def _execute_llm_text_to_sql_pipeline(
     question: str,
@@ -166,7 +207,7 @@ def _execute_llm_text_to_sql_pipeline(
                 df = df[df[col] == val]
 
     if df.empty:
-        return f"Data tidak ditemukan untuk filter yang diminta di dataset '{dataset}'.", {"llm_plan": llm_plan}
+        return f"Dataset \"{dataset}\" tidak memuat data sesuai filter yang diminta.", {"llm_plan": llm_plan}
 
     start_ts = time.time()
 
@@ -248,57 +289,110 @@ def _execute_llm_text_to_sql_pipeline(
                 df_op = df_ms[op_series.isin(synonym_set)]
                 op_teus = df_op[vol_col].sum()
                 pct = (op_teus * 100.0 / total_overall_teus) if total_overall_teus > 0 else 0.0
-                return f"Berikut hasil market share faktual:\nTotal volume operator {op_clean} ({', '.join(sorted(synonym_set))}) mencapai {op_teus:,.0f} TEUS dengan Market Share sebesar {pct:.2f}% (dari total market volume {total_overall_teus:,.0f} TEUS).", plan_debug
+                return f"Berikut hasil market share faktual:\n\n• **Operator**: {op_clean} ({', '.join(sorted(synonym_set))})\n• **Total Volume**: {format_idr_number(op_teus)} TEUS\n• **Market Share**: **{format_idr_number(pct)}%** (dari total pasar {format_idr_number(total_overall_teus)} TEUS)", plan_debug
             elif total_overall_teus > 0:
                 grouped = df_ms.groupby(op_col)[vol_col].sum().reset_index()
                 grouped["MARKET SHARE %"] = (grouped[vol_col] * 100.0 / total_overall_teus).round(2)
-                grouped = grouped.sort_values(vol_col, ascending=False)
-                if limit:
-                    grouped = grouped.head(int(limit))
                 
-                rows_text = []
-                for idx, r in enumerate(grouped.itertuples(), 1):
-                    op_val = getattr(r, op_col.replace(" ", "_"), "") or getattr(r, f"_{idx}", "")
-                    teus_val = getattr(r, vol_col.replace(" ", "_"), 0)
-                    pct_val = getattr(r, "MARKET_SHARE_%", 0)
-                    rows_text.append(f"{idx}. {op_val}: {pct_val}% ({teus_val:,.0f} TEUS)")
-                return f"Berikut hasil market share faktual (Total Overall Volume: {total_overall_teus:,.0f} TEUS):\n" + "\n".join(rows_text), plan_debug
+                is_month_grp = op_col.upper() in ("MONTH", "BULAN", "MONTH_CODE", "_MONTH_CODE")
+                if is_month_grp:
+                    month_info = grouped[op_col].apply(parse_month_order_and_label)
+                    grouped["m_order"] = [m[0] for m in month_info]
+                    grouped["m_label"] = [m[1] for m in month_info]
+                    grouped = grouped.sort_values("m_order", ascending=True)
+                    if limit:
+                        grouped = grouped.head(int(limit))
+                    rows_text = []
+                    for r in grouped.itertuples():
+                        m_lbl = getattr(r, "m_label")
+                        teus_val = getattr(r, vol_col.replace(" ", "_"), 0)
+                        pct_val = getattr(r, "MARKET_SHARE_%", 0)
+                        rows_text.append(f"• **{m_lbl}**: {format_idr_number(pct_val)}% ({format_idr_number(teus_val)} TEUS)")
+                    return f"Berikut hasil faktual market share per bulan (Total Market Volume: {format_idr_number(total_overall_teus)} TEUS):\n\n" + "\n".join(rows_text), plan_debug
+                else:
+                    grouped = grouped.sort_values(vol_col, ascending=False)
+                    if limit:
+                        grouped = grouped.head(int(limit))
+                    rows_text = []
+                    for idx, r in enumerate(grouped.itertuples(), 1):
+                        op_val = getattr(r, op_col.replace(" ", "_"), "") or getattr(r, f"_{idx}", "")
+                        teus_val = getattr(r, vol_col.replace(" ", "_"), 0)
+                        pct_val = getattr(r, "MARKET_SHARE_%", 0)
+                        rows_text.append(f"{idx}. **{op_val}**: {format_idr_number(pct_val)}% ({format_idr_number(teus_val)} TEUS)")
+                    return f"Berikut hasil market share faktual (Total Overall Volume: {format_idr_number(total_overall_teus)} TEUS):\n\n" + "\n".join(rows_text), plan_debug
 
     if group_by and group_by in df.columns and valid_metrics:
+        is_month_grp = group_by.upper() in ("MONTH", "BULAN", "MONTH_CODE", "_MONTH_CODE")
         grouped = df.groupby(group_by)[valid_metrics].sum().reset_index()
-        primary_metric = valid_metrics[0]
-        if sort_by == "desc":
-            grouped = grouped.sort_values(primary_metric, ascending=False)
-        if limit:
-            grouped = grouped.head(int(limit))
 
-        rows_text = []
-        for idx, row in enumerate(grouped.itertuples(), 1):
-            key_val = getattr(row, group_by.replace(" ", "_"), None) or getattr(row, f"_{idx}", None)
-            metrics_str_parts = []
-            for m in valid_metrics:
-                val_raw = getattr(row, m.replace(" ", "_").replace("'", ""), 0)
-                if "REVENUE" in m.upper() or "RUPIAH" in m.upper() or "DPP" in m.upper():
-                    metrics_str_parts.append(f"{m}: Rp {val_raw:,.0f}")
-                else:
-                    metrics_str_parts.append(f"{m}: {val_raw:,.0f}")
-            rows_text.append(f"{idx}. {key_val} : {', '.join(metrics_str_parts)}")
-        return f"Berikut hasil faktual query data:\n" + "\n".join(rows_text), plan_debug
+        if is_month_grp:
+            month_info = grouped[group_by].apply(parse_month_order_and_label)
+            grouped["m_order"] = [m[0] for m in month_info]
+            grouped["m_label"] = [m[1] for m in month_info]
+            grouped = grouped.sort_values("m_order", ascending=True)
+            if limit:
+                grouped = grouped.head(int(limit))
+
+            rows_text = []
+            for row in grouped.itertuples():
+                m_lbl = getattr(row, "m_label")
+                metrics_str_parts = []
+                for m in valid_metrics:
+                    val_raw = getattr(row, m.replace(" ", "_").replace("'", ""), 0)
+                    formatted_val = format_idr_number(val_raw)
+                    if "REVENUE" in m.upper() or "RUPIAH" in m.upper() or "DPP" in m.upper():
+                        metrics_str_parts.append(f"Rp {formatted_val}")
+                    elif len(valid_metrics) == 1 and m.upper() in ("TEUS", "TOTAL TEUS", "BOX", "TOTAL BOX"):
+                        metrics_str_parts.append(f"{formatted_val} {m.upper()}")
+                    else:
+                        metrics_str_parts.append(f"{m}: {formatted_val}")
+                rows_text.append(f"• **{m_lbl}**: {', '.join(metrics_str_parts)}")
+            return f"Berikut hasil faktual tren data per bulan:\n\n" + "\n".join(rows_text), plan_debug
+        else:
+            primary_metric = valid_metrics[0]
+            if sort_by == "desc":
+                grouped = grouped.sort_values(primary_metric, ascending=False)
+            if limit:
+                grouped = grouped.head(int(limit))
+
+            rows_text = []
+            for idx, row in enumerate(grouped.itertuples(), 1):
+                key_val = getattr(row, group_by.replace(" ", "_"), None) or getattr(row, f"_{idx}", None)
+                metrics_str_parts = []
+                for m in valid_metrics:
+                    val_raw = getattr(row, m.replace(" ", "_").replace("'", ""), 0)
+                    formatted_val = format_idr_number(val_raw)
+                    if "REVENUE" in m.upper() or "RUPIAH" in m.upper() or "DPP" in m.upper():
+                        metrics_str_parts.append(f"{m}: Rp {formatted_val}")
+                    else:
+                        metrics_str_parts.append(f"{m}: {formatted_val}")
+                rows_text.append(f"{idx}. **{key_val}**: {', '.join(metrics_str_parts)}")
+            return f"Berikut hasil faktual query data:\n\n" + "\n".join(rows_text), plan_debug
 
     elif valid_metrics:
-        # Single row Multi-Metric Aggregation (e.g. TEUS + REVENUE)
-        metric_results = []
-        for m in valid_metrics:
+        # Single row Multi-Metric Aggregation (e.g. ACTUAL vs BUDGET, or TEUS + REVENUE)
+        if len(valid_metrics) == 1:
+            m = valid_metrics[0]
             val_sum = df[m].sum()
+            formatted_val = format_idr_number(val_sum)
             if "REVENUE" in m.upper() or "RUPIAH" in m.upper() or "DPP" in m.upper():
-                metric_results.append(f"Total {m} sebesar Rp {val_sum:,.0f}")
+                return f"Total **{m}** sebesar **Rp {formatted_val}**.", plan_debug
             else:
-                metric_results.append(f"Total {m} sebanyak {val_sum:,.0f}")
-        return " dan ".join(metric_results) + ".", plan_debug
+                return f"Total **{m}** mencapai **{formatted_val}**.", plan_debug
+        else:
+            metric_results = []
+            for m in valid_metrics:
+                val_sum = df[m].sum()
+                formatted_val = format_idr_number(val_sum)
+                if "REVENUE" in m.upper() or "RUPIAH" in m.upper() or "DPP" in m.upper():
+                    metric_results.append(f"• **Total {m}**: Rp {formatted_val}")
+                else:
+                    metric_results.append(f"• **Total {m}**: {formatted_val}")
+            return f"Berikut rincian faktual data:\n\n" + "\n".join(metric_results), plan_debug
 
     else:
         top_rows = df.head(limit or 5).to_dict(orient="records")
-        return f"Berikut hasil faktual query data (top rows):\n{json.dumps(top_rows[:5], default=str, ensure_ascii=False)}", plan_debug
+        return f"Berikut hasil faktual query data (top rows):\n\n{json.dumps(top_rows[:5], default=str, ensure_ascii=False)}", plan_debug
 
 
 def answer_tabular_question(
@@ -387,15 +481,21 @@ def answer_tabular_question(
     )
     debug_info["execution"] = plan_debug
 
-    # 5. Narrative Polish using Groq / Gemini
+    # 5. Narrative Polish using Groq / Gemini (Structured Line-by-Line Format)
     try:
         from backend.services.rag_engine import groq_generate
         polished = groq_generate(prompt=(
-            f"Berikut hasil faktual dari query data:\n{answer_text}\n\n"
-            "Ubah menjadi kalimat narasi eksekutif yang natural, ringkas, dan profesional dalam Bahasa Indonesia. "
-            "JANGAN ubah angka atau fakta. Pertahankan format ribuan dengan titik (contoh: Rp 1.239.652.922,02 atau 370 TEUS)."
+            f"Berikut data faktual hasil query data:\n\n{answer_text}\n\n"
+            "TUGAS ANDA: Susun dan sajikan data di atas menjadi format laporan yang SANGAT RAPI, BERSTRUKTUR, dan NIKMAT DIBACA.\n"
+            "ATURAN FORMAT MUTLAK:\n"
+            "1. JIKA DATA BERUPA RINCIAN/LIST/TREN PER BULAN/PERBANDINGAN: Gunakan daftar poin per poin (bullet points '•' atau '-') pada baris baru (newline) terpisah untuk setiap item!\n"
+            "2. DILARANG KERAS MENGGABUNGKAN ITEM LIST MENJADI SATU PARAGRAF PANJANG MELEBAR!\n"
+            "3. Cetak tebal (bold) nama kategori/bulan/metrik (contoh: • **Januari**: 4.012 TEUS atau • **Total ACTUAL**: 388.068).\n"
+            "4. JANGAN MENGUBAH ANGKA ATAU FAKTA DATA SEDIKIT PUN.\n"
+            "5. Pertahankan penulisan angka dengan titik ribuan dan koma desimal (contoh: Rp 1.838.896.145,93 atau 15.110 unit)."
         ))
-        answer_text = polished
+        if polished and len(polished.strip()) > 10:
+            answer_text = polished
     except Exception as groq_err:
         print(f"[tabular_query] Groq narrative polish skipped: {groq_err}")
 
