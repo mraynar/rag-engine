@@ -1,15 +1,8 @@
-/* =============================================
-   RAG Engine Frontend — Global Design System
-   Brand: TPS Pelindo — Corporate Blue
-   Standard: Industry-grade, Claude/Gemini/ChatGPT-level
-   ============================================= */
+/* Global Styles */
 
-/* ---- Google Fonts: Inter (UI) ---- */
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700&display=swap');
 
-/* ---- CSS Design Tokens ---- */
 :root {
-  /* Brand Colors — Uniformly set to #2B7FD6 */
   --color-brand:        #2B7FD6;
   --color-brand-hover:  #2B7FD6;
   --color-brand-dark:   #2B7FD6;
@@ -17,7 +10,6 @@
   --color-brand-mid:    #DBEAFE;
   --color-brand-ring:   rgba(43, 127, 214, 0.18);
 
-  /* Legacy aliases for backward compatibility */
   --color-navy:         #2B7FD6;
   --color-navy-light:   #2B7FD6;
   --color-navy-dark:    #2B7FD6;
@@ -27,7 +19,6 @@
   --color-muted:        var(--color-text-muted);
   --color-text-light:   var(--color-text-2);
 
-  /* Sidebar — keep TPS blue */
   --sidebar-bg:         #2B7FD6;
   --sidebar-active:     rgba(255,255,255,0.18);
   --sidebar-hover:      rgba(255,255,255,0.09);
@@ -35,29 +26,25 @@
   --sidebar-text:       rgba(255,255,255,0.95);
   --sidebar-muted:      rgba(255,255,255,0.60);
 
-  /* Surface palette — more varied */
-  --color-bg:           #EEF2F7;   /* Slight blue-gray page bg */
+  --color-bg:           #EEF2F7;
   --color-surface:      #FFFFFF;
-  --color-surface-2:    #F4F7FB;   /* Chat message area */
-  --color-surface-3:    #EBF0F8;   /* Suggestions section */
-  --color-surface-4:    #F8FAFD;   /* Input area */
+  --color-surface-2:    #F4F7FB;
+  --color-surface-3:    #EBF0F8;
+  --color-surface-4:    #F8FAFD;
   --color-border:       #D8E2EF;
   --color-border-soft:  #E5EEFA;
 
-  /* Text */
   --color-text:         #0F172A;
   --color-text-2:       #334155;
   --color-text-muted:   #5A6E8A;
   --color-text-faint:   #8FA3BC;
 
-  /* Semantic */
   --color-success:      #10B981;
   --color-success-bg:   #ECFDF5;
   --color-error:        #EF4444;
   --color-error-bg:     #FEF2F2;
   --color-warning:      #F59E0B;
 
-  /* Radius scale */
   --r-xs:  4px;
   --r-sm:  6px;
   --r-md:  10px;
@@ -66,7 +53,6 @@
   --r-2xl: 28px;
   --r-full: 9999px;
 
-  /* Legacy radius mappings */
   --radius-xs:   var(--r-xs);
   --radius-sm:   var(--r-sm);
   --radius-md:   var(--r-md);
@@ -74,24 +60,20 @@
   --radius-xl:   var(--r-xl);
   --radius-full: var(--r-full);
 
-  /* Elevation */
   --shadow-xs:  0 1px 2px rgba(15,23,42,0.06);
   --shadow-sm:  0 1px 3px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.05);
   --shadow-md:  0 4px 12px rgba(15,23,42,0.08), 0 2px 4px rgba(15,23,42,0.04);
   --shadow-lg:  0 8px 24px rgba(15,23,42,0.10), 0 3px 8px rgba(15,23,42,0.06);
   --shadow-xl:  0 16px 40px rgba(15,23,42,0.12), 0 6px 16px rgba(15,23,42,0.07);
 
-  /* Topnav */
   --topnav-height: 56px;
   --topnav-bg:     #FFFFFF;
   --topnav-border: #DDE5F0;
 
-  /* Transition */
   --ease: 0.18s cubic-bezier(0.4,0,0.2,1);
   --ease-bounce: 0.25s cubic-bezier(0.34,1.56,0.64,1);
 }
 
-/* ---- Reset ---- */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -121,9 +103,7 @@ a { color: inherit; text-decoration: none; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; }
 input, textarea { font-family: inherit; font-size: inherit; }
 
-/* ============================================
-   LAYOUT SHELL
-   ============================================ */
+/* Layout */
 .page-shell {
   display: flex;
   flex-direction: column;
@@ -139,9 +119,7 @@ input, textarea { font-family: inherit; font-size: inherit; }
   flex-direction: column;
 }
 
-/* ============================================
-   TOPNAV — Full-width, compact, professional
-   ============================================ */
+/* Navigation */
 .topnav {
   position: sticky;
   top: 0;
@@ -157,12 +135,10 @@ input, textarea { font-family: inherit; font-size: inherit; }
   display: flex;
   align-items: center;
   height: 100%;
-  /* Full-width — no max-width constraint */
   padding: 0 20px;
   gap: 12px;
 }
 
-/* Brand */
 .topnav-brand {
   display: flex;
   align-items: center;
@@ -208,7 +184,6 @@ input, textarea { font-family: inherit; font-size: inherit; }
   white-space: nowrap;
 }
 
-/* Nav links */
 .topnav-links {
   display: flex;
   align-items: center;
@@ -240,9 +215,7 @@ input, textarea { font-family: inherit; font-size: inherit; }
   font-weight: 600;
 }
 
-/* ============================================
-   UTILITY
-   ============================================ */
+/* Utilities */
 .sr-only {
   position: absolute;
   width: 1px; height: 1px;
