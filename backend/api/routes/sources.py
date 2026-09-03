@@ -159,8 +159,18 @@ def verify_source_data(id: str, user: dict = Depends(require_user)) -> dict:
 
 
 @router.get("/{id}/preview")
-def get_source_preview(id: str, limit: int = 100, offset: int = 0, user: dict = Depends(require_user)) -> dict:
-    """Fetch database preview rows for a synchronized online data source."""
+def get_source_preview(
+    id: str,
+    limit: int = 50,
+    offset: int = 0,
+    sheet: str = None,
+    user: dict = Depends(require_user)
+) -> dict:
+    """Fetch database preview rows for a synchronized online data source.
+    
+    Jika parameter `sheet` diberikan, hanya kembalikan baris dari sheet tersebut
+    dan nomor baris (row_index) dimulai ulang dari 1 untuk sheet tersebut.
+    """
     from backend.services.db import get_db_conn
     from sqlalchemy import text
     import json
@@ -183,51 +193,80 @@ def get_source_preview(id: str, limit: int = 100, offset: int = 0, user: dict = 
                     "category_name": category_name,
                     "total_rows": 0,
                     "sheets": [],
+                    "sheet_counts": {},
                     "rows": [],
                     "limit": limit,
-                    "offset": offset
+                    "offset": offset,
+                    "active_sheet": sheet
                 }
                 
             db_source_id = db_source[0]
             
-            total_rows = conn.execute(
-                text("SELECT COUNT(*) FROM data_rows WHERE source_id = :source_id"),
+            # Ambil semua nama sheet yang tersedia
+            all_sheets_result = conn.execute(
+                text("""
+                    SELECT sheet_name, COUNT(*) as cnt
+                    FROM data_rows
+                    WHERE source_id = :source_id
+                    GROUP BY sheet_name
+                    ORDER BY sheet_name
+                """),
                 {"source_id": db_source_id}
-            ).scalar() or 0
-            
-            query = text("""
-                SELECT sheet_name, row_index, row_data 
-                FROM data_rows 
-                WHERE source_id = :source_id
-                ORDER BY sheet_name, row_index
-                LIMIT :limit OFFSET :offset
-            """)
-            db_rows = conn.execute(
-                query,
-                {"source_id": db_source_id, "limit": limit, "offset": offset}
             ).fetchall()
+
+            sheets_list = [r[0] for r in all_sheets_result]
+            sheet_counts = {r[0]: r[1] for r in all_sheets_result}
+            total_rows_global = sum(sheet_counts.values())
+
+            # Tentukan sheet aktif
+            active_sheet = sheet if sheet and sheet in sheet_counts else (sheets_list[0] if sheets_list else None)
+
+            # Ambil baris untuk sheet yang aktif saja
+            if active_sheet:
+                sheet_total = sheet_counts.get(active_sheet, 0)
+                db_rows = conn.execute(
+                    text("""
+                        SELECT sheet_name, row_index, row_data
+                        FROM data_rows
+                        WHERE source_id = :source_id AND sheet_name = :sheet_name
+                        ORDER BY row_index ASC
+                        LIMIT :limit OFFSET :offset
+                    """),
+                    {
+                        "source_id": db_source_id,
+                        "sheet_name": active_sheet,
+                        "limit": limit,
+                        "offset": offset
+                    }
+                ).fetchall()
+            else:
+                sheet_total = 0
+                db_rows = []
             
             rows = []
-            sheets = set()
-            for r in db_rows:
-                sheets.add(r[0])
+            for seq_idx, r in enumerate(db_rows):
                 try:
                     data_dict = json.loads(r[2]) if isinstance(r[2], str) else r[2]
                 except Exception:
                     data_dict = {}
                 rows.append({
                     "sheet_name": r[0],
-                    "row_index": r[1],
+                    # row_index per-sheet: gunakan offset + posisi sekuensial dalam hasil query
+                    "row_index": offset + seq_idx,
                     "row_data": data_dict
                 })
                 
             return {
                 "category_name": category_name,
-                "total_rows": total_rows,
-                "sheets": sorted(list(sheets)),
+                "total_rows": sheet_total,           # Total baris untuk sheet aktif
+                "total_rows_global": total_rows_global,  # Total semua sheet
+                "sheets": sheets_list,
+                "sheet_counts": sheet_counts,
                 "rows": rows,
                 "limit": limit,
-                "offset": offset
+                "offset": offset,
+                "active_sheet": active_sheet
             }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch database preview: {e}")
+

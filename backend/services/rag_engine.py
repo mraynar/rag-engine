@@ -208,7 +208,7 @@ def format_user_friendly_error(err: Exception | str) -> str:
             "Silakan persingkat pertanyaan Anda."
         )
     else:
-        return "Mohon maaf, terjadi kendala saat memproses jawaban dengan AI. Silakan coba beberapa saat lagi."
+        return "Mohon maaf,  jawaban dengan AI. Silakan coba beberapa saat lagi."
 
 
 def generate_answer(prompt: str) -> str:
