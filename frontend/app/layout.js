@@ -5,7 +5,7 @@ import './globals.css';
 export const metadata = {
   title: 'TPS RAG Engine — Intelligent Assistant',
   description: 'Document-based Q&A and analysis portal for PT Terminal Petikemas Surabaya, powered by Gemini AI.',
-  icons: { icon: '/images/Logo Pelindo.png' },
+  icons: { icon: '/images/Logo_Pelindo.png' },
 };
 
 import AppProviders from './AppProviders';

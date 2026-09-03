@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useCategory } from './CategoryContext';
 import OneDriveManager from './OneDriveManager';
-import DocumentManager from './DocumentManager';
 import AccessTokenManager from './AccessTokenManager';
 import { XIcon, TrashIcon } from './icons';
 
@@ -15,7 +14,7 @@ export default function DataManagementModal() {
   const [resetting, setResetting] = useState(false);
 
   async function handleResetData() {
-    if (!window.confirm("WARNING: Are you sure you want to delete all application data (Categories, Documents, Chats, Vector Index)? This action is permanent.")) return;
+    if (!window.confirm("WARNING: Are you sure you want to delete all application data (Categories, Chats, Vector Index)? This action is permanent.")) return;
     
     setResetting(true);
     try {
@@ -47,7 +46,7 @@ export default function DataManagementModal() {
               Data Source Management
             </h3>
             <p className="modal-desc">
-              Manage online data synchronization (OneDrive, Google Drive, Google Sheets) or upload manual documents.
+              Manage online data synchronization (OneDrive, Google Drive, Google Sheets).
             </p>
           </div>
           
@@ -70,13 +69,6 @@ export default function DataManagementModal() {
           </button>
 
           <button
-            onClick={() => setActiveSubTab('manual')}
-            className={`modal-tab-btn ${activeSubTab === 'manual' ? 'active' : ''}`}
-          >
-            Manual Documents
-          </button>
-
-          <button
             onClick={() => setActiveSubTab('tokens')}
             className={`modal-tab-btn ${activeSubTab === 'tokens' ? 'active' : ''}`}
           >
@@ -87,14 +79,13 @@ export default function DataManagementModal() {
         {/* Modal Body */}
         <div className="modal-body">
           {activeSubTab === 'onedrive' && <OneDriveManager />}
-          {activeSubTab === 'manual' && <DocumentManager />}
           {activeSubTab === 'tokens' && <AccessTokenManager />}
 
           {/* Danger Zone */}
           <div className="danger-zone">
             <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#C53030', fontWeight: '700' }}>Danger Zone (Reset Data)</h4>
             <p style={{ margin: '0 0 16px 0', fontSize: '0.78rem', color: '#9B2C2C', lineHeight: '1.4' }}>
-              Permanently delete all cloud categories, manual documents, chat history, and ChromaDB search indices from the server. This action cannot be undone.
+              Permanently delete all cloud categories, chat history, and database search indices from the server. This action cannot be undone.
             </p>
             <button
               onClick={handleResetData}

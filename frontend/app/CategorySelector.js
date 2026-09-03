@@ -70,7 +70,6 @@ export default function CategorySelector() {
     setSelectedCategory,
     categories,
     loadingCategories,
-    documents,
     setIsDataModalOpen
   } = useCategory();
   const [isOpen, setIsOpen] = useState(false);
@@ -98,7 +97,6 @@ export default function CategorySelector() {
 
   const selectedSource = categories.find(c => c.category_name === selectedCategory);
   const needsSync = selectedSource && selectedSource.sync_status === 'never_synced';
-  const activeDocs = documents.filter(doc => doc.is_active);
 
   return (
     <div className="category-selector-container" ref={dropdownRef}>
@@ -131,7 +129,7 @@ export default function CategorySelector() {
               </div>
             </div>
             
-            <div className="category-section-header">OneDrive Categories</div>
+            <div className="category-section-header">Online Categories</div>
             {categories.map((cat) => {
               const isUnsynced = cat.sync_status === 'never_synced';
               return (
@@ -153,30 +151,7 @@ export default function CategorySelector() {
               );
             })}
             {categories.length === 0 && !loadingCategories && (
-              <div className="category-selector-empty">No OneDrive categories found</div>
-            )}
-
-            <div className="category-section-header">Manual Documents (Active)</div>
-            {activeDocs.map((doc) => {
-              return (
-                <div
-                  key={doc.filename}
-                  className={`category-selector-item ${selectedCategory === doc.filename ? 'selected' : ''}`}
-                  role="option"
-                  aria-selected={selectedCategory === doc.filename}
-                  onClick={() => handleSelect(doc.filename)}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                    <FileTextIcon size={14} style={{ flexShrink: 0 }} />
-                    <span style={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }} title={doc.filename}>
-                      {doc.filename}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-            {activeDocs.length === 0 && (
-              <div className="category-selector-empty">No active manual documents</div>
+              <div className="category-selector-empty">No data categories found</div>
             )}
           </div>
 

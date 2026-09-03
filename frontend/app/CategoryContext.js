@@ -42,9 +42,6 @@ export function CategoryProvider({ children }) {
 
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
-  
-  const [documents, setDocuments] = useState([]);
-  const [loadingDocuments, setLoadingDocuments] = useState(true);
 
   const [isDataModalOpen, setIsDataModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -74,27 +71,9 @@ export function CategoryProvider({ children }) {
     }
   }, [authLoading, getHeaders]);
 
-  const refreshDocuments = useCallback(async () => {
-    if (authLoading) return;
-    try {
-      const res = await fetch(`${API_BASE}/documents`, {
-        headers: getHeaders(),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setDocuments(data);
-      }
-    } catch (err) {
-      console.error('Failed to load manual documents', err);
-    } finally {
-      setLoadingDocuments(false);
-    }
-  }, [authLoading, getHeaders]);
-
   useEffect(() => {
     refreshCategories();
-    refreshDocuments();
-  }, [session, refreshCategories, refreshDocuments]);
+  }, [session, refreshCategories]);
 
   return (
     <CategoryContext.Provider
@@ -104,9 +83,6 @@ export function CategoryProvider({ children }) {
         categories,
         loadingCategories,
         refreshCategories,
-        documents,
-        loadingDocuments,
-        refreshDocuments,
         isDataModalOpen,
         setIsDataModalOpen,
         isAuthModalOpen,
