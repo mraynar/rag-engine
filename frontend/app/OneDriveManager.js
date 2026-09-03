@@ -751,6 +751,16 @@ export default function OneDriveManager() {
           </div>
         </div>
       )}
+
+      {previewTarget && (
+        <PreviewModal
+          isOpen={!!previewTarget}
+          onClose={() => setPreviewTarget(null)}
+          type="cloud"
+          idOrFilename={previewTarget.id}
+          title={previewTarget.name}
+        />
+      )}
     </div>
   );
 }
