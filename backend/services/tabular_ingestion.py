@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,6 +12,72 @@ from sqlalchemy import text
 from backend.services.db import get_db_conn
 from backend.services.cloud_fetchers import download_googledrive_file, download_sharepoint_file
 from backend.services.tabular_sanitize import sanitize_and_combine, dataframe_to_clean_records
+
+
+# Pola nama sheet yang dianggap 'sampah' dari Excel (helper/pivot/temp sheets)
+_JUNK_SHEET_PATTERN = re.compile(
+    r'^(Sheet\d+|Pivot\s+Table\s+\d+|Sheet\s+\d+|Temp|temp|_)$',
+    re.IGNORECASE
+)
+
+
+def _clean_excel_sheets(xls: dict) -> dict:
+    """Bersihkan dict sheet Excel dari kolom dan sheet yang tidak relevan.
+
+    Operasi yang dilakukan:
+    1. Hapus kolom tanpa nama (Unnamed: X) dari Excel
+    2. Hapus kolom yang seluruhnya atau hampir seluruhnya kosong (>= 90% null)
+    3. Hapus sheet yang kosong atau hampir kosong (< 2 baris data)
+    4. Hapus sheet 'sampah' (Sheet1, Pivot Table 1, Sheet4, dll.)
+
+    Parameter
+    ---------
+    xls : dict
+        Dict {sheet_name: DataFrame} hasil pd.read_excel(sheet_name=None)
+
+    Returns
+    -------
+    dict
+        Dict yang sudah dibersihkan.
+    """
+    cleaned = {}
+    for sheet_name, df in xls.items():
+        # 1. Skip sheet dengan nama 'sampah'
+        if _JUNK_SHEET_PATTERN.match(sheet_name.strip()):
+            print(f"[clean_excel] Skipping junk sheet: '{sheet_name}'")
+            continue
+
+        # 2. Hapus kolom Unnamed: X (kolom tanpa header di Excel)
+        unnamed_cols = [c for c in df.columns if re.match(r'^Unnamed:\s*\d+', str(c))]
+        if unnamed_cols:
+            print(f"[clean_excel] Sheet '{sheet_name}': dropping {len(unnamed_cols)} Unnamed columns: {unnamed_cols}")
+            df = df.drop(columns=unnamed_cols)
+
+        # 3. Hapus kolom yang >= 90% null
+        if len(df) > 0:
+            null_ratio = df.isnull().mean()
+            mostly_null_cols = null_ratio[null_ratio >= 0.90].index.tolist()
+            if mostly_null_cols:
+                print(f"[clean_excel] Sheet '{sheet_name}': dropping {len(mostly_null_cols)} mostly-null columns: {mostly_null_cols}")
+                df = df.drop(columns=mostly_null_cols)
+
+        # 4. Strip whitespace dari nama kolom
+        df.columns = [str(c).strip() if not re.match(r'^Unnamed:\s*\d+', str(c)) else c for c in df.columns]
+
+        # 5. Skip sheet yang tidak punya data nyata (< 2 baris atau tidak ada kolom)
+        if df.shape[0] < 2 or df.shape[1] == 0:
+            print(f"[clean_excel] Skipping empty/tiny sheet: '{sheet_name}' ({df.shape[0]} rows, {df.shape[1]} cols)")
+            continue
+
+        cleaned[sheet_name] = df
+        print(f"[clean_excel] Sheet '{sheet_name}' kept: {df.shape[0]} rows × {df.shape[1]} cols")
+
+    if not cleaned:
+        # Fallback: kembalikan semua sheet jika semua terfilter (safety guard)
+        print("[clean_excel] WARNING: semua sheet terfilter, mengembalikan data asli sebagai fallback.")
+        return xls
+
+    return cleaned
 
 
 def fetch_and_parse_source(source_url: str, category_name: str) -> tuple[dict, str]:
@@ -56,6 +123,9 @@ def fetch_and_parse_source(source_url: str, category_name: str) -> tuple[dict, s
             xls = {"Sheet1": df_csv}
 
         print(f"[sync_tabular_source] Parsing complete. Sheets found: {list(xls.keys())}")
+        # Bersihkan sheet dan kolom yang tidak relevan sebelum dikembalikan
+        xls = _clean_excel_sheets(xls)
+        print(f"[sync_tabular_source] After cleaning. Clean sheets: {list(xls.keys())}")
         return xls, fetch_method
 
 
