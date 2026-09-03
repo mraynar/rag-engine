@@ -7,6 +7,16 @@ import PreviewModal from './PreviewModal';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
+function SyncIcon({ size = 12, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21.5 2v6h-6M2.5 22v-6h6" />
+      <path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8M22 12.5a10 10 0 0 1-18.8 4.2L2.5 16" />
+    </svg>
+  );
+}
+
 export default function OneDriveManager() {
   const { categories, refreshCategories } = useCategory();
   
@@ -16,7 +26,10 @@ export default function OneDriveManager() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
+  const [syncAllProgress, setSyncAllProgress] = useState({ current: 0, total: 0 });
   const [previewTarget, setPreviewTarget] = useState(null);
+  const [syncSummaryModal, setSyncSummaryModal] = useState(null);
 
   const toggleSelect = (id) => {
     setSelectedIds(prev =>
@@ -53,6 +66,42 @@ export default function OneDriveManager() {
       setIsBulkDeleting(false);
     }
   };
+
+  // Sync All Categories sequentially
+  const handleSyncAll = async () => {
+    if (categories.length === 0) return;
+    if (!confirm(`Apakah Anda yakin ingin menyinkronkan seluruh (${categories.length}) data kategori secara otomatis?`)) return;
+    
+    setIsSyncingAll(true);
+    setSyncAllProgress({ current: 0, total: categories.length });
+    
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < categories.length; i++) {
+      const cat = categories[i];
+      setSyncAllProgress({ current: i + 1, total: categories.length });
+      setSyncingId(cat.id);
+      try {
+        const res = await fetch(`${API_BASE}/sources/${cat.id}/sync`, { method: 'POST' });
+        if (res.ok) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (err) {
+        failCount++;
+      } finally {
+        refreshCategories();
+      }
+    }
+    
+    setSyncingId(null);
+    setIsSyncingAll(false);
+    setSyncSummaryModal({ success: successCount, fail: failCount });
+    refreshCategories();
+  };
+
   
   // Add Form Inputs
   const [categoryName, setCategoryName] = useState('');
@@ -195,6 +244,38 @@ export default function OneDriveManager() {
               </button>
             )}
             <button
+              onClick={handleSyncAll}
+              disabled={isSyncingAll || categories.length === 0}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: isSyncingAll ? '#4A5568' : '#3182CE',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                cursor: isSyncingAll || categories.length === 0 ? 'not-allowed' : 'pointer',
+                whiteSpace: 'nowrap',
+                opacity: categories.length === 0 ? 0.6 : 1,
+                transition: 'background-color 0.2s',
+              }}
+              title="Sync all categories sequentially"
+            >
+              {isSyncingAll ? (
+                <>
+                  <SpinnerIcon size={12} className="spin" />
+                  Syncing ({syncAllProgress.current}/{syncAllProgress.total})...
+                </>
+              ) : (
+                <>
+                  <SyncIcon size={12} /> Sync All
+                </>
+              )}
+            </button>
+            <button
               onClick={() => setShowAddForm(!showAddForm)}
               style={{
                 display: 'flex',
@@ -213,6 +294,7 @@ export default function OneDriveManager() {
             >
               <PlusIcon size={12} /> Add Category
             </button>
+
           </div>
         </div>
         <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-muted)' }}>
@@ -597,23 +679,78 @@ export default function OneDriveManager() {
         </table>
       </div>
       
-      {/* Preview Modal */}
-      <PreviewModal
-        isOpen={!!previewTarget}
-        onClose={() => setPreviewTarget(null)}
-        type="cloud"
-        idOrFilename={previewTarget?.id}
-        title={previewTarget?.name}
-      />
-      
-      <style jsx global>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-        .spin {
-          animation: spin 1s linear infinite;
-        }
-      `}</style>
+      {/* Sync Summary Modal */}
+      {syncSummaryModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            maxWidth: '380px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            textAlign: 'center',
+            border: '1px solid #e2e8f0',
+          }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#1e293b', marginBottom: '16px' }}>
+              Sinkronisasi Massal Selesai!
+            </h3>
+            <div style={{
+              backgroundColor: '#f8fafc',
+              borderRadius: '10px',
+              padding: '16px',
+              marginBottom: '20px',
+              border: '1px solid #e2e8f0',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              textAlign: 'left',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: '600', color: '#16a34a' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+                <span>Berhasil: {syncSummaryModal.success}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: '600', color: '#dc2626' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="15" y1="9" x2="9" y2="15" />
+                  <line x1="9" y1="9" x2="15" y2="15" />
+                </svg>
+                <span>Gagal: {syncSummaryModal.fail}</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setSyncSummaryModal(null)}
+              style={{
+                width: '100%',
+                padding: '10px 16px',
+                backgroundColor: '#2563eb',
+                color: '#ffffff',
+                fontWeight: '600',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

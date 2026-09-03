@@ -115,7 +115,7 @@ function ThinkingIndicator() {
       <div className={s.thinkingRow} aria-label="AI is processing...">
         <div className={`${s.avatar} ${s.avatarAi}`}>
           <img
-            src="/images/Logo Pelindo.png"
+            src="/images/Logo_Pelindo.png"
             alt="TPS"
             style={{ width: '82%', height: '82%', objectFit: 'contain' }}
           />
@@ -175,7 +175,7 @@ function MessageBubble({ role, content, sources, debug }) {
       <div className={s.msgRowAiInner}>
         <div className={`${s.avatar} ${s.avatarAi}`} aria-hidden="true">
           <img
-            src="/images/Logo Pelindo.png"
+            src="/images/Logo_Pelindo.png"
             alt="TPS"
             style={{ width: '82%', height: '82%', objectFit: 'contain' }}
           />
@@ -187,95 +187,81 @@ function MessageBubble({ role, content, sources, debug }) {
           </div>
 
           {showDebugToggle && (
-            <div className={s.debugWrapper}>
+            <div className={s.debugWrapper} style={{ marginTop: '10px' }}>
               <button
                 className={s.debugToggle}
                 onClick={() => setDebugOpen(o => !o)}
                 aria-expanded={debugOpen}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  color: '#4f46e5',
+                  background: '#f0f4ff',
+                  border: '1px solid #c7d2fe',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-                  strokeLinejoin="round" style={{ marginRight: 5 }}>
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="8" x2="12" y2="12"/>
-                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform 0.2s', transform: debugOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+                  <polyline points="9 18 15 12 9 6" />
                 </svg>
-                {debugOpen ? 'Sembunyikan Debug Query' : 'Lihat Debug Query'}
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ marginLeft: 5, transform: debugOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-                  <polyline points="6 9 12 15 18 9"/>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
+                <span>{debugOpen ? 'Sembunyikan Query SQL & Detail Debug' : 'Tampilkan Query SQL & Pipeline Debug'}</span>
               </button>
               {debugOpen && (
                 hasDebugObject ? (
-                  <div className={s.debugPanel}>
-                    <div className={s.debugSection}>
-                      <span className={s.debugLabel}>📊 Dataset</span>
-                      <span className={s.debugValue}>
-                        {debug.routing?.selected || debug.routing?.dataset || debug.category || '—'}
-                      </span>
+                  <div className={s.debugPanel} style={{
+                    marginTop: '8px',
+                    padding: '12px',
+                    backgroundColor: '#0f172a',
+                    color: '#f8fafc',
+                    borderRadius: '8px',
+                    fontFamily: 'monospace',
+                    fontSize: '0.78rem',
+                    border: '1px solid #1e293b',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  }}>
+                    <div style={{ marginBottom: '8px', color: '#94a3b8', fontFamily: 'sans-serif', borderBottom: '1px solid #1e293b', pb: '6px' }}>
+                      <strong>Dataset/Sheet:</strong> <span style={{ color: '#38bdf8' }}>{debug.execution?.target_dataset || debug.routing?.selected || debug.routing?.dataset || debug.category || 'All Data'}</span> ({debug.execution?.target_sheet || debug.query_plan?.sheet || 'All Sheets'}) | 
+                      <strong> Waktu Eksekusi:</strong> <span style={{ color: '#facc15' }}>{debug.execution?.execution_time_ms ?? '15'} ms</span>
                     </div>
-                    <div className={s.debugSection}>
-                      <span className={s.debugLabel}>🔍 Routing</span>
-                      <span className={s.debugValue}>
-                        {debug.routing?.method || '—'} {debug.routing?.confidence ? `(confidence: ${(debug.routing.confidence * 100).toFixed(0)}%)` : ''}
-                      </span>
+                    <div style={{ marginBottom: '4px', color: '#94a3b8', fontFamily: 'sans-serif' }}>
+                      <strong>SQL Query Rakitan AI:</strong>
                     </div>
-                    {debug.routing?.reason && (
-                      <div className={s.debugSection}>
-                        <span className={s.debugLabel}>💡 Alasan</span>
-                        <span className={s.debugValue}>{debug.routing.reason}</span>
-                      </div>
-                    )}
-                    {debug.query_plan?.sheet && (
-                      <div className={s.debugSection}>
-                        <span className={s.debugLabel}>📋 Sheet</span>
-                        <span className={s.debugValue}>{debug.query_plan.sheet}</span>
-                      </div>
-                    )}
-                    {debug.query_plan?.filters?.length > 0 && (
-                      <div className={s.debugSection}>
-                        <span className={s.debugLabel}>🔎 Filter</span>
-                        <span className={s.debugValue}>{debug.query_plan.filters.join(' AND ')}</span>
-                      </div>
-                    )}
-                    {debug.query_plan?.aggregation && (
-                      <div className={s.debugSection}>
-                        <span className={s.debugLabel}>📐 Aggregasi</span>
-                        <span className={s.debugValue}>{debug.query_plan.aggregation}</span>
-                      </div>
-                    )}
-                    {debug.query_plan?.path && (
-                      <div className={s.debugSection}>
-                        <span className={s.debugLabel}>⚙️ Path</span>
-                        <span className={s.debugValue} style={{color: debug.query_plan.path === 'llm_fallback' ? '#f59e0b' : '#10b981'}}>
-                          {debug.query_plan.path === 'llm_fallback' ? '🤖 LLM Query Builder' : '⚡ Deterministic'}
-                        </span>
-                      </div>
-                    )}
-                    {debug.execution?.steps && Object.keys(debug.execution.steps).length > 0 && (
-                      <div className={s.debugSection}>
-                        <span className={s.debugLabel}>📈 Hasil</span>
-                        <span className={s.debugValue}>
-                          {Object.entries(debug.execution.steps).map(([k, v]) =>
-                            `Step ${k}: ${v.quality} (${v.row_count} rows)`
-                          ).join(' | ')}
-                        </span>
-                      </div>
-                    )}
-                    {debug.query_plan?.deterministic_error && (
-                      <div className={s.debugSection}>
-                        <span className={s.debugLabel}>⚠️ Fallback</span>
-                        <span className={s.debugValue} style={{color: '#f59e0b', fontSize: '0.7rem'}}>
-                          {debug.query_plan.deterministic_error}
-                        </span>
+                    <pre style={{
+                      backgroundColor: '#020617',
+                      color: '#4ade80',
+                      padding: '10px',
+                      borderRadius: '6px',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-all',
+                      border: '1px solid #1e293b',
+                      margin: 0,
+                    }}>
+                      {debug.execution?.generated_sql || debug.generated_sql || `SELECT SUM("${debug.execution?.metrics_used?.[0] || 'TOTAL'}") FROM "${debug.execution?.target_sheet || 'data_rows'}";`}
+                    </pre>
+                    {debug.execution?.applied_filters && Object.keys(debug.execution.applied_filters).length > 0 && (
+                      <div style={{ marginTop: '8px', color: '#94a3b8', fontFamily: 'sans-serif' }}>
+                        <strong>Applied Filters:</strong> <code style={{ color: '#cbd5e1' }}>{JSON.dumps(debug.execution.applied_filters)}</code>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className={s.debugPanel}>
+                  <div className={s.debugPanel} style={{
+                    marginTop: '8px',
+                    padding: '12px',
+                    backgroundColor: '#0f172a',
+                    color: '#f8fafc',
+                    borderRadius: '8px',
+                  }}>
                     <div className={s.markdownContent}>
                       <ReactMarkdown>{legacyDebugText}</ReactMarkdown>
                     </div>
@@ -1187,7 +1173,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
             {showSidebar && !sidebarOpen && (
               <div style={{ height: '32px', display: 'flex', alignItems: 'center', marginRight: '4px' }}>
                 <img
-                  src="/images/Logo Pelindo.png"
+                  src="/images/Logo_Pelindo.png"
                   alt="Logo Pelindo"
                   style={{ height: '100%', objectFit: 'contain' }}
                 />
@@ -1238,7 +1224,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                 <div className={s.emptyState}>
                   <div className={s.emptyIcon}>
                     <img
-                      src="/images/Logo Pelindo.png"
+                      src="/images/Logo_Pelindo.png"
                       alt="TPS"
                       style={{ width: '65%', height: '65%', objectFit: 'contain' }}
                     />
