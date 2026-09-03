@@ -10,17 +10,28 @@ def _now_iso() -> datetime:
     return datetime.now(timezone.utc)
 
 def list_user_conversations(user_id: str) -> list[dict]:
-    """Lists summaries of all conversations for a specific authenticated user, ordered by pinned first, then updated_at desc."""
+    """Lists summaries of all conversations for a specific authenticated user, purging 0-message empty conversations."""
     with get_db_conn() as conn:
-        rows = conn.execute(
-            text("""
-                SELECT id, title, title_source, pinned, created_at, updated_at, category_name
-                FROM public.conversations
-                WHERE user_id = :user_id
-                ORDER BY pinned DESC, updated_at DESC
-            """),
-            {"user_id": user_id}
-        ).fetchall()
+        with conn.begin():
+            # Automatically clean up any empty conversations that have 0 messages
+            conn.execute(
+                text("""
+                    DELETE FROM public.conversations
+                    WHERE user_id = :user_id
+                    AND id NOT IN (SELECT DISTINCT conversation_id FROM public.messages)
+                """),
+                {"user_id": user_id}
+            )
+
+            rows = conn.execute(
+                text("""
+                    SELECT id, title, title_source, pinned, created_at, updated_at, category_name
+                    FROM public.conversations
+                    WHERE user_id = :user_id
+                    ORDER BY pinned DESC, updated_at DESC
+                """),
+                {"user_id": user_id}
+            ).fetchall()
     
     return [
         {
@@ -179,9 +190,17 @@ def append_user_messages(
             ).fetchone()
 
             if not conv:
-                raise KeyError(f"Conversation '{conv_id}' not found or access denied.")
-
-            current_title, title_source = conv
+                title = generate_conversation_title(user_content)
+                conn.execute(
+                    text("""
+                        INSERT INTO public.conversations (id, user_id, title, title_source, pinned)
+                        VALUES (:conv_id, :user_id, :title, 'ai', false)
+                    """),
+                    {"conv_id": conv_id, "user_id": user_id, "title": title}
+                )
+                current_title, title_source = title, 'ai'
+            else:
+                current_title, title_source = conv
 
             # Count current messages to determine if this is the first interaction
             msg_count = conn.execute(

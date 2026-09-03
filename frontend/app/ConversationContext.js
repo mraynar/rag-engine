@@ -90,6 +90,9 @@ export function ConversationProvider({ children }) {
       try {
         const stored = localStorage.getItem(GUEST_CONVS_KEY);
         let guestConvs = stored ? JSON.parse(stored) : [];
+        // Filter out empty guest conversations with 0 messages
+        guestConvs = guestConvs.filter(c => c.messages && c.messages.length > 0);
+        localStorage.setItem(GUEST_CONVS_KEY, JSON.stringify(guestConvs));
         
         // Sort: pinned first, then updated_at desc
         guestConvs.sort((a, b) => {
@@ -123,49 +126,18 @@ export function ConversationProvider({ children }) {
     loadConversations();
   }, [user, authLoading, loadConversations]);
 
-  // Create conversation
+  // Create conversation (ephemeral until user sends first message)
   const createConversation = async () => {
-    if (user) {
-      // Database backed
-      try {
-        const res = await fetch(`${API_BASE}/conversations`, {
-          method: 'POST',
-          headers: getAuthHeaders(),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          // Optimistically update conversation list
-          setConversations(prev => [data, ...prev.filter(c => c.id !== data.id)]);
-          return data;
-        }
-      } catch (err) {
-        console.error('[createConversation] error:', err);
-      }
-      return null;
-    } else {
-      // Local guest storage
-      const newConv = {
-        id: `conv_guest_${Math.random().toString(36).substring(2, 10)}`,
-        title: 'New conversation',
-        title_source: 'auto',
-        pinned: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        messages: []
-      };
-
-      try {
-        const stored = localStorage.getItem(GUEST_CONVS_KEY);
-        const guestConvs = stored ? JSON.parse(stored) : [];
-        guestConvs.unshift(newConv);
-        localStorage.setItem(GUEST_CONVS_KEY, JSON.stringify(guestConvs));
-        setConversations(prev => [newConv, ...prev.filter(c => c.id !== newConv.id)]);
-        return newConv;
-      } catch (err) {
-        console.error('[createConversation] guest error:', err);
-      }
-      return null;
-    }
+    const newConv = {
+      id: user ? `conv_${Math.random().toString(36).substring(2, 10)}` : `conv_guest_${Math.random().toString(36).substring(2, 10)}`,
+      title: 'New conversation',
+      title_source: 'auto',
+      pinned: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      messages: []
+    };
+    return newConv;
   };
 
   // Get conversation details including messages
