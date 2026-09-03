@@ -106,18 +106,27 @@ RETURN ONLY VALID JSON WITH THIS EXACT STRUCTURE (no markdown fences, no explana
         )
         text_resp = response.text.strip()
         parsed = json.loads(text_resp)
-        logger.info(f"[sql_generator] Successfully generated plan: {parsed}")
+        logger.info(f"[sql_generator] Successfully generated plan via Gemini: {parsed}")
         return parsed
     except Exception as e:
-        logger.error(f"[sql_generator] Failed to generate plan via Gemini: {e}")
-        # Fallback default plan structure
-        return {
-            "sheet": preferred_sheet,
-            "metrics": [],
-            "aggregations": ["sum"],
-            "filters": [],
-            "group_by": None,
-            "sort_by": None,
-            "limit": 10,
-            "derived_mode": None
-        }
+        logger.warning(f"[sql_generator] Gemini plan generation failed, trying Groq fallback: {e}")
+        try:
+            from backend.services.rag_engine import groq_generate
+            text_resp = groq_generate(prompt=prompt + "\n\nRETURN ONLY VALID JSON:")
+            text_clean = text_resp.replace("```json", "").replace("```", "").strip()
+            parsed = json.loads(text_clean)
+            logger.info(f"[sql_generator] Successfully generated plan via Groq fallback: {parsed}")
+            return parsed
+        except Exception as groq_err:
+            logger.error(f"[sql_generator] Groq fallback also failed: {groq_err}")
+            # Fallback default plan structure
+            return {
+                "sheet": preferred_sheet,
+                "metrics": [],
+                "aggregations": ["sum"],
+                "filters": [],
+                "group_by": None,
+                "sort_by": None,
+                "limit": 10,
+                "derived_mode": None
+            }
