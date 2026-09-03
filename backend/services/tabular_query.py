@@ -481,18 +481,20 @@ def answer_tabular_question(
     )
     debug_info["execution"] = plan_debug
 
-    # 5. Narrative Polish using Groq / Gemini (Structured Line-by-Line Format)
+    # 5. Narrative Polish using Groq / Gemini (Structured Line-by-Line Format with Executive Narrative)
     try:
         from backend.services.rag_engine import groq_generate
         polished = groq_generate(prompt=(
+            f"Berikut pertanyaan pengguna: '{question}'\n"
             f"Berikut data faktual hasil query data:\n\n{answer_text}\n\n"
-            "TUGAS ANDA: Susun dan sajikan data di atas menjadi format laporan yang SANGAT RAPI, BERSTRUKTUR, dan NIKMAT DIBACA.\n"
+            "TUGAS ANDA: Susun dan sajikan data di atas menjadi jawaban yang SANGAT RAPI, BERSTRUKTUR, LENGKAP DENGAN KALIMAT PENGANTAR (EXECUTIVE NARRATIVE), dan NIKMAT DIBACA.\n"
             "ATURAN FORMAT MUTLAK:\n"
-            "1. JIKA DATA BERUPA RINCIAN/LIST/TREN PER BULAN/PERBANDINGAN: Gunakan daftar poin per poin (bullet points '•' atau '-') pada baris baru (newline) terpisah untuk setiap item!\n"
-            "2. DILARANG KERAS MENGGABUNGKAN ITEM LIST MENJADI SATU PARAGRAF PANJANG MELEBAR!\n"
-            "3. Cetak tebal (bold) nama kategori/bulan/metrik (contoh: • **Januari**: 4.012 TEUS atau • **Total ACTUAL**: 388.068).\n"
-            "4. JANGAN MENGUBAH ANGKA ATAU FAKTA DATA SEDIKIT PUN.\n"
-            "5. Pertahankan penulisan angka dengan titik ribuan dan koma desimal (contoh: Rp 1.838.896.145,93 atau 15.110 unit)."
+            "1. AWALI JAWABAN DENGAN 1 KALIMAT PENGANTAR (EXECUTIVE NARRATIVE) yang ramah dan profesional langsung menjawab pertanyaan pengguna (contoh: 'Berikut adalah hasil analisis total TEUS untuk bulan Februari tahun 2023 pada data Overview Vessel:').\n"
+            "2. Gunakan daftar poin per poin (bullet points '•' atau '-') pada baris baru (newline) terpisah untuk setiap metrik/rincian!\n"
+            "3. DILARANG KERAS MENGGABUNGKAN ITEM LIST MENJADI SATU PARAGRAF PANJANG MELEBAR!\n"
+            "4. Cetak tebal (bold) nama kategori/bulan/metrik (contoh: • **Total TEUS**: 4.271).\n"
+            "5. JANGAN MENGUBAH ANGKA ATAU FAKTA DATA SEDIKIT PUN.\n"
+            "6. Pertahankan penulisan angka dengan titik ribuan dan koma desimal (contoh: Rp 1.838.896.145,93 atau 15.110 unit)."
         ))
         if polished and len(polished.strip()) > 10:
             answer_text = polished

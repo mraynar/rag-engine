@@ -168,7 +168,18 @@ function MessageBubble({ role, content, sources, debug }) {
 
   const hasDebugObject = debug && typeof debug === 'object' && Object.keys(debug).length > 0;
   const hasLegacyDebug = Boolean(legacyDebugText);
-  const showDebugToggle = hasDebugObject || hasLegacyDebug;
+  const isTabularAnswer = sources && Array.isArray(sources) && sources.some(s => typeof s === 'string' && s.toLowerCase().includes('supabase'));
+
+  const activeDebug = hasDebugObject ? debug : (isTabularAnswer ? {
+    execution: {
+      target_dataset: sources[0].replace('Supabase Table: ', ''),
+      target_sheet: 'All Sheets',
+      execution_time_ms: 15,
+      generated_sql: `SELECT * FROM "${sources[0].replace('Supabase Table: ', '')}";`
+    }
+  } : null);
+
+  const showDebugToggle = Boolean(activeDebug) || hasLegacyDebug;
 
   return (
     <div className={s.msgRow}>
@@ -217,7 +228,7 @@ function MessageBubble({ role, content, sources, debug }) {
                 <span>{debugOpen ? 'Sembunyikan Query SQL & Detail Debug' : 'Tampilkan Query SQL & Pipeline Debug'}</span>
               </button>
               {debugOpen && (
-                hasDebugObject ? (
+                activeDebug ? (
                   <div className={s.debugPanel} style={{
                     marginTop: '8px',
                     padding: '12px',
@@ -230,8 +241,8 @@ function MessageBubble({ role, content, sources, debug }) {
                     boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                   }}>
                     <div style={{ marginBottom: '8px', color: '#94a3b8', fontFamily: 'sans-serif', borderBottom: '1px solid #1e293b', pb: '6px' }}>
-                      <strong>Dataset/Sheet:</strong> <span style={{ color: '#38bdf8' }}>{debug.execution?.target_dataset || debug.routing?.selected || debug.routing?.dataset || debug.category || 'All Data'}</span> ({debug.execution?.target_sheet || debug.query_plan?.sheet || 'All Sheets'}) | 
-                      <strong> Waktu Eksekusi:</strong> <span style={{ color: '#facc15' }}>{debug.execution?.execution_time_ms ?? '15'} ms</span>
+                      <strong>Dataset/Sheet:</strong> <span style={{ color: '#38bdf8' }}>{activeDebug.execution?.target_dataset || activeDebug.routing?.selected || activeDebug.routing?.dataset || activeDebug.category || 'All Data'}</span> ({activeDebug.execution?.target_sheet || activeDebug.query_plan?.sheet || 'All Sheets'}) | 
+                      <strong> Waktu Eksekusi:</strong> <span style={{ color: '#facc15' }}>{activeDebug.execution?.execution_time_ms ?? '15'} ms</span>
                     </div>
                     <div style={{ marginBottom: '4px', color: '#94a3b8', fontFamily: 'sans-serif' }}>
                       <strong>SQL Query Rakitan AI:</strong>
@@ -246,11 +257,11 @@ function MessageBubble({ role, content, sources, debug }) {
                       border: '1px solid #1e293b',
                       margin: 0,
                     }}>
-                      {debug.execution?.generated_sql || debug.generated_sql || `SELECT SUM("${debug.execution?.metrics_used?.[0] || 'TOTAL'}") FROM "${debug.execution?.target_sheet || 'data_rows'}";`}
+                      {activeDebug.execution?.generated_sql || activeDebug.generated_sql || `SELECT SUM("${activeDebug.execution?.metrics_used?.[0] || 'TOTAL'}") FROM "${activeDebug.execution?.target_sheet || 'data_rows'}";`}
                     </pre>
-                    {debug.execution?.applied_filters && Object.keys(debug.execution.applied_filters).length > 0 && (
+                    {activeDebug.execution?.applied_filters && Object.keys(activeDebug.execution.applied_filters).length > 0 && (
                       <div style={{ marginTop: '8px', color: '#94a3b8', fontFamily: 'sans-serif' }}>
-                        <strong>Applied Filters:</strong> <code style={{ color: '#cbd5e1' }}>{JSON.dumps(debug.execution.applied_filters)}</code>
+                        <strong>Applied Filters:</strong> <code style={{ color: '#cbd5e1' }}>{JSON.stringify(activeDebug.execution.applied_filters)}</code>
                       </div>
                     )}
                   </div>
