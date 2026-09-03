@@ -1,4 +1,3 @@
-// frontend/app/ConversationContext.js
 // Centralized state manager for all chat conversations and messages.
 // Handles Supabase authenticated database sessions and local guest storage transparently.
 'use client';
@@ -25,17 +24,17 @@ export function ConversationProvider({ children }) {
   }, []);
   const initializedRef = useRef(false);
 
-  // Dynamic localStorage key for active conversation ID to prevent data leakage between users
+  // Dynamic sessionStorage key for active conversation ID (resets to New Conversation when tab is closed)
   const getActiveConvIdKey = useCallback(() => {
     return user ? `rag_active_conv_id_${user.id}` : 'rag_active_conv_id_guest';
   }, [user]);
 
-  // Hydrate active conversation ID from localStorage
+  // Hydrate active conversation ID from sessionStorage
   useEffect(() => {
     if (authLoading) return;
     try {
       const key = getActiveConvIdKey();
-      const stored = localStorage.getItem(key);
+      const stored = sessionStorage.getItem(key);
       if (stored) {
         _setActiveConvId(stored);
       } else {
@@ -44,15 +43,15 @@ export function ConversationProvider({ children }) {
     } catch {}
   }, [user, authLoading, getActiveConvIdKey]);
 
-  // Wrap setter to persist to user-specific or guest localStorage key
+  // Wrap setter to persist to user-specific or guest sessionStorage key
   const setActiveConvId = useCallback((id) => {
     _setActiveConvId(id);
     try {
       const key = getActiveConvIdKey();
       if (id) {
-        localStorage.setItem(key, id);
+        sessionStorage.setItem(key, id);
       } else {
-        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
       }
     } catch {}
   }, [getActiveConvIdKey]);
