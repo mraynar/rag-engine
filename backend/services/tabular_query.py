@@ -217,36 +217,121 @@ def _execute_llm_text_to_sql_pipeline(
     limit = llm_plan.get("limit", 10)
     derived_mode = llm_plan.get("derived_mode")
 
-    # Map requested metric names to actual column names case-insensitively
-    valid_metrics = []
-    df_cols_upper = {c.upper(): c for c in df.columns}
+    df_cols_upper = {c.upper(): c for c in df.columns if not c.startswith('_')}
+
+    # Apply LLM Filters with Case-Insensitive Column & Value Matching
+    filters = llm_plan.get("filters", [])
+    applied_filters_dict = {}
+    where_parts = []
+
+    for f in filters:
+        col_raw = f.get("column")
+        val = f.get("value")
+        if not col_raw or val is None:
+            continue
+
+        col = df_cols_upper.get(str(col_raw).upper()) or (col_raw if col_raw in df.columns else None)
+        if not col:
+            continue
+
+        val_clean = str(val).replace(".0", "").strip()
+        col_series = df[col].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+        col_upper = col.upper()
+
+        where_parts.append(f'"{col}" = \'{val_clean}\'')
+        applied_filters_dict[col] = val_clean
+
+        # Operator Synonym Matching
+        if col_upper in ("LOP", "VESSEL OPERATOR", "OPERATOR", "VESSEL_OPERATOR"):
+            synonym_set = {val_clean.upper()}
+            for grp in OPERATOR_SYNONYM_GROUPS:
+                if any(syn in grp for syn in synonym_set):
+                    synonym_set.update(grp)
+            df = df[col_series.str.upper().isin(synonym_set)]
+        # Check if filter is Month filter
+        elif col_upper in ("MONTH", "BULAN", "MONTH_CODE", "_MONTH_CODE"):
+            month_num = None
+            try:
+                val_int = int(float(str(val)))
+                if 1 <= val_int <= 12:
+                    month_num = val_int
+            except ValueError:
+                val_str = val_clean.lower()
+                for m_code, m_aliases in MONTH_ALIASES.items():
+                    if val_str in m_aliases:
+                        month_num = m_code
+                        break
+
+            if month_num and month_num in MONTH_ALIASES:
+                aliases = MONTH_ALIASES[month_num]
+                month_cols = [c for c in df.columns if c.upper() in ("MONTH", "BULAN", "MONTH_CODE", "_MONTH_CODE")]
+                if month_cols:
+                    mask = pd.Series(False, index=df.index)
+                    for m_col in month_cols:
+                        s_clean = df[m_col].astype(str).str.replace(r'\.0$', '', regex=True).str.strip().str.lower()
+                        mask = mask | s_clean.isin(aliases)
+                    df = df[mask]
+                else:
+                    df = df[col_series.str.lower().isin(aliases)]
+            else:
+                df = df[col_series.str.upper() == val_clean.upper()]
+        elif col_upper in ("YEAR", "TAHUN", "_YEAR"):
+            df = df[col_series.str.upper() == val_clean.upper()]
+        else:
+            if isinstance(val, str):
+                df = df[col_series.str.upper().str.contains(val_clean.upper(), regex=False, na=False)]
+            else:
+                df = df[df[col] == val]
+
+    start_ts = time.time()
+
+    raw_metrics = llm_plan.get("metrics", [])
+    group_by_raw = llm_plan.get("group_by")
+    sort_by = llm_plan.get("sort_by", "desc")
+    limit = llm_plan.get("limit", 10)
+    derived_mode = llm_plan.get("derived_mode")
+
+    group_by = df_cols_upper.get(str(group_by_raw).upper()) if group_by_raw else None
+
+    # Separate numeric metrics vs text/categorical list columns
+    numeric_metrics = []
+    text_columns = []
+
     for m in raw_metrics:
         m_up = str(m).upper()
-        if m_up in df_cols_upper:
-            valid_metrics.append(df_cols_upper[m_up])
-        elif m in df.columns:
-            valid_metrics.append(m)
-    if not valid_metrics:
-        common_metrics = ["TOTAL TEUS", "TEUS", "TOTAL REVENUE", "TOTAL ALL REVENUE", "VESSEL REVENUE", "TOTAL BOX", "BOX", "ACTUAL"]
-        valid_metrics = [m for m in common_metrics if m in df.columns][:2]
+        col_actual = df_cols_upper.get(m_up) or (m if m in df.columns else None)
+        if col_actual and not col_actual.startswith('_'):
+            converted = pd.to_numeric(df[col_actual], errors='coerce')
+            if converted.notna().sum() > 0 and not pd.api.types.is_string_dtype(df[col_actual]):
+                if col_actual not in numeric_metrics:
+                    numeric_metrics.append(col_actual)
+            else:
+                if col_actual not in text_columns:
+                    text_columns.append(col_actual)
 
-    for m in valid_metrics:
+    # Fallback to common numeric metrics if query implies numeric aggregation
+    if not numeric_metrics and not text_columns:
+        common_metrics = ["TOTAL TEUS", "TEUS", "TOTAL REVENUE", "TOTAL ALL REVENUE", "VESSEL REVENUE", "TOTAL BOX", "BOX", "ACTUAL"]
+        for cm in common_metrics:
+            if cm in df.columns:
+                numeric_metrics.append(cm)
+                break
+
+    for m in numeric_metrics:
         df[m] = pd.to_numeric(df[m], errors="coerce").fillna(0)
 
     # Build SQL string representation for Debugger UI
-    select_clause = ", ".join([f'SUM("{m}") AS "{m.lower().replace(" ", "_")}"' for m in valid_metrics]) if valid_metrics else '*'
-    where_parts = []
-    applied_filters_dict = {}
-    for f in filters:
-        col_f = f.get("column")
-        val_f = f.get("value")
-        if col_f and val_f is not None:
-            where_parts.append(f'"{col_f}" = \'{val_f}\'')
-            applied_filters_dict[col_f] = val_f
-
     where_clause = f" WHERE {' AND '.join(where_parts)}" if where_parts else ""
-    group_clause = f' GROUP BY "{group_by}"' if group_by else ""
+    group_clause = f' GROUP BY "{group_by}"' if (group_by and numeric_metrics and group_by not in numeric_metrics) else ""
     sheet_table = sheet_choice or "data_rows"
+
+    if numeric_metrics:
+        select_clause = ", ".join([f'SUM("{m}") AS "{m.lower().replace(" ", "_")}"' for m in numeric_metrics])
+    elif text_columns:
+        select_clause = ", ".join([f'"{c}"' for c in text_columns])
+    else:
+        select_clause = "*"
+
     generated_sql = f'SELECT {select_clause} FROM "{sheet_table}"{where_clause}{group_clause};'
 
     elapsed_ms = round((time.time() - start_ts) * 1000, 2)
@@ -256,10 +341,13 @@ def _execute_llm_text_to_sql_pipeline(
         "target_sheet": sheet_choice or "All Sheets",
         "generated_sql": generated_sql,
         "execution_time_ms": elapsed_ms,
-        "metrics_used": valid_metrics,
+        "metrics_used": numeric_metrics or text_columns,
         "applied_filters": applied_filters_dict,
         "llm_plan": llm_plan
     }
+
+    if df.empty:
+        return f"Dataset \"{dataset}\" tidak memuat data sesuai filter yang diminta.", plan_debug
 
     # Special Derived Market Share Calculation if % column is missing/null
     if derived_mode == "market_share_ratio" or (dataset == "Market Share" and any("MARKET SHARE" in q.upper() or "%" in q or "TIL" in q.upper() for q in [question])):
@@ -321,9 +409,9 @@ def _execute_llm_text_to_sql_pipeline(
                         rows_text.append(f"{idx}. **{op_val}**: {format_idr_number(pct_val)}% ({format_idr_number(teus_val)} TEUS)")
                     return f"Berikut hasil market share faktual (Total Overall Volume: {format_idr_number(total_overall_teus)} TEUS):\n\n" + "\n".join(rows_text), plan_debug
 
-    if group_by and group_by in df.columns and valid_metrics:
+    if group_by and group_by in df.columns and numeric_metrics:
         is_month_grp = group_by.upper() in ("MONTH", "BULAN", "MONTH_CODE", "_MONTH_CODE")
-        grouped = df.groupby(group_by)[valid_metrics].sum().reset_index()
+        grouped = df.groupby(group_by)[numeric_metrics].sum().reset_index()
 
         if is_month_grp:
             month_info = grouped[group_by].apply(parse_month_order_and_label)
@@ -337,19 +425,19 @@ def _execute_llm_text_to_sql_pipeline(
             for row in grouped.itertuples():
                 m_lbl = getattr(row, "m_label")
                 metrics_str_parts = []
-                for m in valid_metrics:
+                for m in numeric_metrics:
                     val_raw = getattr(row, m.replace(" ", "_").replace("'", ""), 0)
                     formatted_val = format_idr_number(val_raw)
                     if "REVENUE" in m.upper() or "RUPIAH" in m.upper() or "DPP" in m.upper():
                         metrics_str_parts.append(f"Rp {formatted_val}")
-                    elif len(valid_metrics) == 1 and m.upper() in ("TEUS", "TOTAL TEUS", "BOX", "TOTAL BOX"):
+                    elif len(numeric_metrics) == 1 and m.upper() in ("TEUS", "TOTAL TEUS", "BOX", "TOTAL BOX"):
                         metrics_str_parts.append(f"{formatted_val} {m.upper()}")
                     else:
                         metrics_str_parts.append(f"{m}: {formatted_val}")
                 rows_text.append(f"• **{m_lbl}**: {', '.join(metrics_str_parts)}")
             return f"Berikut hasil faktual tren data per bulan:\n\n" + "\n".join(rows_text), plan_debug
         else:
-            primary_metric = valid_metrics[0]
+            primary_metric = numeric_metrics[0]
             if sort_by == "desc":
                 grouped = grouped.sort_values(primary_metric, ascending=False)
             if limit:
@@ -359,7 +447,7 @@ def _execute_llm_text_to_sql_pipeline(
             for idx, row in enumerate(grouped.itertuples(), 1):
                 key_val = getattr(row, group_by.replace(" ", "_"), None) or getattr(row, f"_{idx}", None)
                 metrics_str_parts = []
-                for m in valid_metrics:
+                for m in numeric_metrics:
                     val_raw = getattr(row, m.replace(" ", "_").replace("'", ""), 0)
                     formatted_val = format_idr_number(val_raw)
                     if "REVENUE" in m.upper() or "RUPIAH" in m.upper() or "DPP" in m.upper():
@@ -369,10 +457,10 @@ def _execute_llm_text_to_sql_pipeline(
                 rows_text.append(f"{idx}. **{key_val}**: {', '.join(metrics_str_parts)}")
             return f"Berikut hasil faktual query data:\n\n" + "\n".join(rows_text), plan_debug
 
-    elif valid_metrics:
+    elif numeric_metrics:
         # Single row Multi-Metric Aggregation (e.g. ACTUAL vs BUDGET, or TEUS + REVENUE)
-        if len(valid_metrics) == 1:
-            m = valid_metrics[0]
+        if len(numeric_metrics) == 1:
+            m = numeric_metrics[0]
             val_sum = df[m].sum()
             formatted_val = format_idr_number(val_sum)
             if "REVENUE" in m.upper() or "RUPIAH" in m.upper() or "DPP" in m.upper():
@@ -381,7 +469,7 @@ def _execute_llm_text_to_sql_pipeline(
                 return f"Total **{m}** mencapai **{formatted_val}**.", plan_debug
         else:
             metric_results = []
-            for m in valid_metrics:
+            for m in numeric_metrics:
                 val_sum = df[m].sum()
                 formatted_val = format_idr_number(val_sum)
                 if "REVENUE" in m.upper() or "RUPIAH" in m.upper() or "DPP" in m.upper():
@@ -391,8 +479,25 @@ def _execute_llm_text_to_sql_pipeline(
             return f"Berikut rincian faktual data:\n\n" + "\n".join(metric_results), plan_debug
 
     else:
-        top_rows = df.head(limit or 5).to_dict(orient="records")
-        return f"Berikut hasil faktual query data (top rows):\n\n{json.dumps(top_rows[:5], default=str, ensure_ascii=False)}", plan_debug
+        # Record Listing / Selection Query for Text/Categorical columns
+        display_cols = [c for c in (text_columns or list(df.columns[:5])) if not c.startswith('_')]
+        df_display = df[display_cols].drop_duplicates().head(int(limit) if limit else 10)
+
+        rows_text = []
+        for idx, row_dict in enumerate(df_display.to_dict(orient="records"), 1):
+            details = []
+            first_val = None
+            for c in display_cols:
+                v = row_dict.get(c, '')
+                if pd.notna(v) and str(v).strip():
+                    if first_val is None:
+                        first_val = f"**{v}**"
+                    else:
+                        details.append(f"{c}: {v}")
+            detail_str = f" ({', '.join(details)})" if details else ""
+            rows_text.append(f"• {first_val or f'Item {idx}'}{detail_str}")
+
+        return f"Berikut adalah daftar faktual data yang ditemukan:\n\n" + "\n".join(rows_text), plan_debug
 
 
 def answer_tabular_question(
