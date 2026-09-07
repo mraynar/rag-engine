@@ -482,6 +482,7 @@ def _execute_llm_text_to_sql_pipeline(
         # Record Listing / Selection Query for Text/Categorical columns
         display_cols = [c for c in (text_columns or list(df.columns[:5])) if not c.startswith('_')]
         df_display = df[display_cols].drop_duplicates().head(int(limit) if limit else 10)
+        total_matching_rows = len(df)
 
         rows_text = []
         for idx, row_dict in enumerate(df_display.to_dict(orient="records"), 1):
@@ -497,7 +498,7 @@ def _execute_llm_text_to_sql_pipeline(
             detail_str = f" ({', '.join(details)})" if details else ""
             rows_text.append(f"• {first_val or f'Item {idx}'}{detail_str}")
 
-        return f"Berikut adalah daftar faktual data yang ditemukan:\n\n" + "\n".join(rows_text), plan_debug
+        return f"Berikut adalah daftar faktual data yang ditemukan (Total data/rekaman: {total_matching_rows}):\n\n" + "\n".join(rows_text), plan_debug
 
 
 def answer_tabular_question(
@@ -524,10 +525,10 @@ def answer_tabular_question(
         "execution": {},
     }
 
-    sec_error = check_input_security(question)
-    if sec_error:
-        debug_info["security_blocked"] = True
-        return {"answer": sec_error, "sources": [], "debug": debug_info}
+    # 1. Input Security Check
+    sec_err = check_input_security(question)
+    if sec_err:
+        return {"answer": sec_err, "sources": [], "debug": debug_info}
 
     greeting_resp = check_data_query_and_respond(question, category_name)
     if greeting_resp:
@@ -586,20 +587,21 @@ def answer_tabular_question(
     )
     debug_info["execution"] = plan_debug
 
-    # 5. Narrative Polish using Groq / Gemini (Structured Line-by-Line Format with Executive Narrative)
+    # 5. Narrative Polish using Groq / Gemini (Structured Line-by-Line Format with Executive Narrative & Complete Summary Stats)
     try:
         from backend.services.rag_engine import groq_generate
         polished = groq_generate(prompt=(
             f"Berikut pertanyaan pengguna: '{question}'\n"
             f"Berikut data faktual hasil query data:\n\n{answer_text}\n\n"
-            "TUGAS ANDA: Susun dan sajikan data di atas menjadi jawaban yang SANGAT RAPI, BERSTRUKTUR, LENGKAP DENGAN KALIMAT PENGANTAR (EXECUTIVE NARRATIVE), dan NIKMAT DIBACA.\n"
-            "ATURAN FORMAT MUTLAK:\n"
-            "1. AWALI JAWABAN DENGAN 1 KALIMAT PENGANTAR (EXECUTIVE NARRATIVE) yang ramah dan profesional langsung menjawab pertanyaan pengguna (contoh: 'Berikut adalah hasil analisis total TEUS untuk bulan Februari tahun 2023 pada data Overview Vessel:').\n"
-            "2. Gunakan daftar poin per poin (bullet points '•' atau '-') pada baris baru (newline) terpisah untuk setiap metrik/rincian!\n"
-            "3. DILARANG KERAS MENGGABUNGKAN ITEM LIST MENJADI SATU PARAGRAF PANJANG MELEBAR!\n"
-            "4. Cetak tebal (bold) nama kategori/bulan/metrik (contoh: • **Total TEUS**: 4.271).\n"
-            "5. JANGAN MENGUBAH ANGKA ATAU FAKTA DATA SEDIKIT PUN.\n"
-            "6. Pertahankan penulisan angka dengan titik ribuan dan koma desimal (contoh: Rp 1.838.896.145,93 atau 15.110 unit)."
+            "TUGAS ANDA: Susun dan sajikan data di atas menjadi jawaban yang SANGAT RAPI, BERSTRUKTUR, DENGAN KELENGKAPAN INFORMASI MAKSIMAL (WAJIB SERTAKAN TOTAL JUMLAH DATA/REKAP/RATA-RATA DENGAN JELAS), LENGKAP DENGAN KALIMAT PENGANTAR (EXECUTIVE NARRATIVE), dan NIKMAT DIBACA.\n"
+            "ATURAN FORMAT MUTLAK UNIVERSAL:\n"
+            "1. AWALI JAWABAN DENGAN 1 KALIMAT PENGANTAR (EXECUTIVE NARRATIVE) yang ramah dan profesional langsung menjawab pertanyaan pengguna, DAN SEBUTKAN TOTAL JUMLAH DATA/REKAMAN YANG DITEMUKAN SECARA EKSPLISIT (contoh: 'Berikut adalah daftar 2 perusahaan yang statusnya ditolak pada datasource RestNDisc:' atau 'Berikut adalah hasil analisis total TEUS untuk bulan Februari tahun 2023 pada data Overview Vessel:').\n"
+            "2. SERTAKAN RINGKASAN/REKAPITULASI TOTAL JUMLAH REKAMAN SECARA NATURAL (hanya sertakan rata-rata jika relevan dengan metrik numerik/keuangan).\n"
+            "3. Gunakan daftar poin per poin (bullet points '•' atau '-') pada baris baru (newline) terpisah untuk setiap metrik/rincian!\n"
+            "4. DILARANG KERAS MENGGABUNGKAN ITEM LIST MENJADI SATU PARAGRAF PANJANG MELEBAR!\n"
+            "5. Cetak tebal (bold) nama kategori/bulan/metrik (contoh: • **PT Unilever** (STATUS: Ditolak) atau • **Total TEUS**: 4.271).\n"
+            "6. JANGAN MENGUBAH ANGKA ATAU FAKTA DATA SEDIKIT PUN.\n"
+            "7. Pertahankan penulisan angka dengan titik ribuan dan koma desimal (contoh: Rp 1.838.896.145,93 atau 15.110 unit)."
         ))
         if polished and len(polished.strip()) > 10:
             answer_text = polished
