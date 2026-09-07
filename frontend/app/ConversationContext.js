@@ -309,6 +309,40 @@ export function ConversationProvider({ children }) {
     }
   };
 
+  // Delete all conversations
+  const deleteAllConversations = async () => {
+    // Optimistic UI update
+    setConversations([]);
+    _setActiveConvId(null);
+    try {
+      const key = getActiveConvIdKey();
+      sessionStorage.removeItem(key);
+    } catch {}
+
+    if (user) {
+      try {
+        const res = await fetch(`${API_BASE}/conversations`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) return true;
+      } catch (err) {
+        console.error('[deleteAllConversations] error:', err);
+        await loadConversations();
+      }
+      return false;
+    } else {
+      // Guest
+      try {
+        localStorage.removeItem(GUEST_CONVS_KEY);
+        return true;
+      } catch (err) {
+        console.error('[deleteAllConversations] guest error:', err);
+      }
+      return false;
+    }
+  };
+
   // Post chat message to backend `/chat` endpoint
   const postChatMessage = async (convId, messageText, category) => {
     // 1. Post to backend
@@ -398,6 +432,7 @@ export function ConversationProvider({ children }) {
         renameConversation,
         togglePin,
         deleteConversation,
+        deleteAllConversations,
         postChatMessage
       }}
     >

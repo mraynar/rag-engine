@@ -336,6 +336,16 @@ def delete_user_conversation(conv_id: str, user_id: str) -> None:
                 {"conv_id": conv_id}
             )
 
+def delete_all_user_conversations(user_id: str) -> None:
+    """Deletes all conversations for an authenticated user from the database."""
+    with get_db_conn() as conn:
+        with conn.begin():
+            conn.execute(
+                text("DELETE FROM public.conversations WHERE user_id = :user_id"),
+                {"user_id": user_id}
+            )
+
+
 def find_conversation_by_category(user_id: Optional[str], category_name: str) -> Optional[dict]:
     """Finds the most recent conversation associated with a specific user and category.
     

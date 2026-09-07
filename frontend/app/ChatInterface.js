@@ -8,6 +8,7 @@ import { useConversation } from './ConversationContext';
 import { useAuth } from './AuthContext';
 import CategorySelector from './CategorySelector';
 import ConfigManager from './ConfigManager';
+import ActivityManager from './ActivityManager';
 import s from './chat.module.css';
 import {
   AlertCircleIcon, XIcon, SendIcon, SpinnerIcon,
@@ -612,7 +613,7 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
         )}
       </div>
 
-      {/* Sidebar Footer with Config & Login */}
+      {/* Sidebar Footer with Account Card & Settings Gear */}
       <div style={{
         borderTop: '1px solid var(--sidebar-border)',
         padding: '12px 14px',
@@ -622,44 +623,9 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
         background: 'rgba(0, 0, 0, 0.08)',
         flexShrink: 0
       }}>
-        {/* Configuration Button */}
-        <button
-          onClick={() => {
-            setActiveView('config');
-            if (typeof window !== 'undefined' && window.innerWidth <= 640) {
-              setSidebarOpen(false);
-            }
-          }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            width: '100%',
-            padding: '8px 10px',
-            borderRadius: 'var(--r-sm)',
-            color: '#fff',
-            fontSize: '0.85rem',
-            fontWeight: activeView === 'config' ? '600' : '500',
-            background: activeView === 'config' ? 'rgba(255, 255, 255, 0.22)' : 'transparent',
-            border: activeView === 'config' ? '1px solid rgba(255, 255, 255, 0.35)' : '1px solid transparent',
-            cursor: 'pointer',
-            textAlign: 'left',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={e => { if (activeView !== 'config') e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.12)'; }}
-          onMouseLeave={e => { if (activeView !== 'config') e.currentTarget.style.backgroundColor = 'transparent'; }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-          <span>Settings</span>
-        </button>
-
-        {/* Auth status block */}
         {authLoading ? (
           <div style={{ height: '36px', background: 'rgba(255,255,255,0.08)', borderRadius: 'var(--r-sm)', animation: 'pulse 1.5s infinite' }} />
-        ) : user ? (
+        ) : (
           <div ref={accountMenuRef} style={{ position: 'relative', width: '100%' }}>
             {/* Account Popover Menu */}
             {isAccountMenuOpen && (
@@ -670,33 +636,38 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
                   left: 0,
                   right: 0,
                   backgroundColor: '#ffffff',
-                  borderRadius: '10px',
-                  boxShadow: '0 12px 30px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.08)',
+                  borderRadius: '12px',
+                  boxShadow: '0 14px 35px rgba(0, 0, 0, 0.22), 0 3px 8px rgba(0, 0, 0, 0.1)',
                   border: '1px solid #E2E8F0',
                   padding: '6px',
                   zIndex: 1000,
+                  animation: 'fadeIn 0.15s ease-out'
                 }}
               >
                 {/* Account Details Header */}
                 <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid #F1F5F9' }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
-                    Signed in as
+                  <div style={{ fontSize: '0.68rem', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>
+                    {user ? 'Account & Settings' : 'Guest Account'}
                   </div>
                   <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {user.user_metadata?.display_name || user.email.split('@')[0]}
+                    {user ? (user.user_metadata?.display_name || user.email.split('@')[0]) : 'Guest User'}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {user.email}
+                  <div style={{ fontSize: '0.73rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {user ? user.email : 'Local Session'}
                   </div>
                 </div>
 
                 {/* Menu Actions */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
+                  {/* Activity Option */}
                   <button
                     type="button"
                     onClick={() => {
                       setIsAccountMenuOpen(false);
-                      logout();
+                      setActiveView('activity');
+                      if (typeof window !== 'undefined' && window.innerWidth <= 640) {
+                        setSidebarOpen(false);
+                      }
                     }}
                     style={{
                       display: 'flex',
@@ -705,32 +676,34 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
                       width: '100%',
                       padding: '8px 10px',
                       borderRadius: '6px',
-                      background: 'none',
+                      background: activeView === 'activity' ? '#F1F5F9' : 'none',
                       border: 'none',
                       fontSize: '0.82rem',
-                      fontWeight: '500',
+                      fontWeight: activeView === 'activity' ? '600' : '500',
                       color: '#1E293B',
                       cursor: 'pointer',
                       textAlign: 'left',
                       transition: 'background 0.15s ease',
                     }}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = activeView === 'activity' ? '#F1F5F9' : 'transparent'}
                   >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                      <circle cx="9" cy="7" r="4" />
-                      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
                     </svg>
-                    <span>Change Account</span>
+                    <span>Activity</span>
                   </button>
 
+                  {/* Credentials & Models Option */}
                   <button
                     type="button"
                     onClick={() => {
                       setIsAccountMenuOpen(false);
-                      logout();
+                      setActiveView('credentials');
+                      if (typeof window !== 'undefined' && window.innerWidth <= 640) {
+                        setSidebarOpen(false);
+                      }
                     }}
                     style={{
                       display: 'flex',
@@ -739,40 +712,113 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
                       width: '100%',
                       padding: '8px 10px',
                       borderRadius: '6px',
-                      background: 'none',
+                      background: (activeView === 'credentials' || activeView === 'config') ? '#F1F5F9' : 'none',
                       border: 'none',
                       fontSize: '0.82rem',
-                      fontWeight: '500',
-                      color: '#DC2626',
+                      fontWeight: (activeView === 'credentials' || activeView === 'config') ? '600' : '500',
+                      color: '#1E293B',
                       cursor: 'pointer',
                       textAlign: 'left',
                       transition: 'background 0.15s ease',
                     }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = (activeView === 'credentials' || activeView === 'config') ? '#F1F5F9' : 'transparent'}
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                      <polyline points="16 17 21 12 16 7" />
-                      <line x1="21" y1="12" x2="9" y2="12" />
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                     </svg>
-                    <span>Sign Out</span>
+                    <span>Credentials & Models</span>
                   </button>
+
+                  {user ? (
+                    <>
+                      <div style={{ height: '1px', background: '#F1F5F9', margin: '4px 0' }} />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAccountMenuOpen(false);
+                          logout();
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          width: '100%',
+                          padding: '8px 10px',
+                          borderRadius: '6px',
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '0.82rem',
+                          fontWeight: '500',
+                          color: '#DC2626',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'background 0.15s ease',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                          <polyline points="16 17 21 12 16 7" />
+                          <line x1="21" y1="12" x2="9" y2="12" />
+                        </svg>
+                        <span>Sign Out</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ height: '1px', background: '#F1F5F9', margin: '4px 0' }} />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAccountMenuOpen(false);
+                          router.push('/login');
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          width: '100%',
+                          padding: '8px 10px',
+                          borderRadius: '6px',
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '0.82rem',
+                          fontWeight: '500',
+                          color: 'var(--color-brand)',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'background 0.15s ease',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                          <polyline points="10 17 15 12 10 7" />
+                          <line x1="15" y1="12" x2="3" y2="12" />
+                        </svg>
+                        <span>Sign In</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Profile Card trigger button */}
+            {/* Profile Card Trigger with Gear Settings Logo */}
             <div
               onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '8px 10px',
+                padding: '9px 12px',
                 borderRadius: 'var(--r-sm)',
                 background: isAccountMenuOpen ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
+                border: '1px solid rgba(255, 255, 255, 0.14)',
                 gap: '8px',
                 width: '100%',
                 cursor: 'pointer',
@@ -784,84 +830,46 @@ function Sidebar({ onNewChat, activeView, setActiveView, setSidebarOpen }) {
               onMouseLeave={e => {
                 if (!isAccountMenuOpen) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
               }}
-              title="Click to manage account"
+              title="Account & Settings"
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
                 <div style={{
-                  width: '28px', height: '28px', borderRadius: '50%',
+                  width: '32px', height: '32px', borderRadius: '50%',
                   background: '#fff', color: 'var(--color-brand)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: '700', fontSize: '0.8rem', flexShrink: 0
+                  fontWeight: '700', fontSize: '0.85rem', flexShrink: 0
                 }}>
-                  {(user.user_metadata?.display_name || user.email)[0].toUpperCase()}
+                  {user ? (user.user_metadata?.display_name || user.email)[0].toUpperCase() : 'G'}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                  <span style={{ fontSize: '0.8rem', color: '#fff', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '130px' }}>
-                    {user.user_metadata?.display_name || user.email.split('@')[0]}
+                  <span style={{ fontSize: '0.82rem', color: '#fff', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
+                    {user ? (user.user_metadata?.display_name || user.email.split('@')[0]) : 'Muhammad Raynar...'}
                   </span>
-                  <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '130px' }}>
-                    {user.email}
+                  <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
+                    {user ? user.email : 'Pro'}
                   </span>
                 </div>
               </div>
 
-              {/* Chevron Icon */}
+              {/* Settings Gear Logo (as requested in Gemini Pro reference) */}
               <div
                 style={{
                   padding: '4px',
                   borderRadius: 'var(--r-sm)',
-                  color: 'rgba(255, 255, 255, 0.85)',
+                  color: 'rgba(255, 255, 255, 0.9)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  transform: isAccountMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                   transition: 'transform 0.2s ease',
                 }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="18 15 12 9 6 15" />
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
                 </svg>
               </div>
             </div>
           </div>
-        ) : (
-          <button
-            onClick={() => router.push('/login')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              width: '100%',
-              padding: '10px',
-              borderRadius: 'var(--r-sm)',
-              background: '#ffffff',
-              color: 'var(--color-brand)',
-              fontWeight: '600',
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              boxShadow: 'var(--shadow-sm)',
-              border: '1px solid transparent'
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = '#EBF4FF';
-              e.currentTarget.style.color = 'var(--color-brand-dark)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = '#ffffff';
-              e.currentTarget.style.color = 'var(--color-brand)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-              <polyline points="10 17 15 12 10 7" />
-              <line x1="15" y1="12" x2="3" y2="12" />
-            </svg>
-            <span>Sign In</span>
-          </button>
         )}
       </div>
     </nav>
@@ -1213,11 +1221,20 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
           </div>
         </div>
 
-        {/* ── Content View routing (Chat vs Configuration) ── */}
-        {activeView === 'config' ? (
+        {/* ── Content View routing (Chat vs Credentials vs Activity) ── */}
+        {activeView === 'config' || activeView === 'credentials' ? (
           <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, background: 'var(--color-bg)', padding: '24px 24px 48px' }}>
             <div style={{ maxWidth: '960px', width: '100%', margin: '0 auto' }}>
               <ConfigManager />
+            </div>
+          </div>
+        ) : activeView === 'activity' ? (
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, background: 'var(--color-bg)', padding: '24px 24px 48px' }}>
+            <div style={{ maxWidth: '960px', width: '100%', margin: '0 auto' }}>
+              <ActivityManager onSelectConv={(id) => {
+                setActiveConvId(id);
+                setActiveView('chat');
+              }} />
             </div>
           </div>
         ) : (

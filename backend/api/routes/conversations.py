@@ -10,6 +10,7 @@ from backend.services.db_chat_store import (
     rename_user_conversation,
     toggle_user_pin,
     delete_user_conversation,
+    delete_all_user_conversations,
 )
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
@@ -30,6 +31,11 @@ def list_convs(user: Optional[dict] = Depends(get_current_user)):
 def create_conv(user: dict = Depends(require_user)):
     """Create a new empty conversation for the authenticated user."""
     return create_user_conversation(user["id"])
+
+@router.delete("", status_code=204)
+def delete_all_convs(user: dict = Depends(require_user)):
+    """Delete all conversations for the authenticated user."""
+    delete_all_user_conversations(user["id"])
 
 @router.get("/{conv_id}")
 def get_conv(conv_id: str, user: dict = Depends(require_user)):
@@ -58,3 +64,4 @@ def delete_conv(conv_id: str, user: dict = Depends(require_user)):
         delete_user_conversation(conv_id, user["id"])
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
