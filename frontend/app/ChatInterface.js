@@ -1027,47 +1027,62 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
     }
   }, [loadingConvs, activeConvId, conversations, createConversation, setActiveConvId]);
 
-  // Load messages instantly from cache, then sync from server
+  const currentConvIdRef = useRef(null);
+
+  // Load messages instantly from cache when switching active conversation, then sync from server
   useEffect(() => {
     if (!activeConvId) return;
     setInput(getDraft(activeConvId));
 
-    // 1. Instant synchronous cache check — 0ms transition, no welcome screen flash
-    const cached = getCachedConversation(activeConvId);
-    if (cached && Array.isArray(cached.messages)) {
-      setMessages(cached.messages.map(m => ({
-        role: m.role === 'assistant' ? 'ai' : 'user',
-        content: m.content,
-        sources: m.sources || [],
-      })));
-      loadedConvRef.current = activeConvId;
-    } else {
-      // Not in cache yet: check if it's a known empty conversation or newly created
-      const convMeta = conversations.find(c => c.id === activeConvId);
-      if (convMeta && convMeta.message_count === 0) {
-        setMessages([]);
-        loadedConvRef.current = activeConvId;
-      }
-    }
+    const isConvSwitch = currentConvIdRef.current !== activeConvId;
+    currentConvIdRef.current = activeConvId;
 
-    // 2. Fetch fresh data from server in background
-    let isCurrent = true;
-    getConversation(activeConvId)
-      .then(data => {
-        if (!isCurrent || !data) return;
-        loadedConvRef.current = activeConvId;
-        setMessages(data.messages.map(m => ({
+    if (isConvSwitch) {
+      // 1. Instant synchronous cache check — 0ms transition, no welcome screen flash
+      const cached = getCachedConversation(activeConvId);
+      if (cached && Array.isArray(cached.messages)) {
+        setMessages(cached.messages.map(m => ({
           role: m.role === 'assistant' ? 'ai' : 'user',
           content: m.content,
           sources: m.sources || [],
+          debug: m.debug || null,
         })));
-      })
-      .catch(() => {});
+        loadedConvRef.current = activeConvId;
+      } else {
+        // Not in cache yet: check if it's a known empty conversation or newly created
+        const convMeta = conversations.find(c => c.id === activeConvId);
+        if (convMeta && convMeta.message_count === 0) {
+          setMessages([]);
+          loadedConvRef.current = activeConvId;
+        }
+      }
 
-    return () => {
-      isCurrent = false;
-    };
-  }, [activeConvId, getConversation, getCachedConversation]);
+      // 2. Fetch fresh data from server in background
+      let isCurrent = true;
+      getConversation(activeConvId)
+        .then(data => {
+          if (!isCurrent || !data || !Array.isArray(data.messages)) return;
+          loadedConvRef.current = activeConvId;
+          setMessages(prev => {
+            // Prevent overwriting if local state already has newer/more messages during active chat
+            if (prev.length > 0 && prev.length >= data.messages.length) {
+              return prev;
+            }
+            return data.messages.map(m => ({
+              role: m.role === 'assistant' ? 'ai' : 'user',
+              content: m.content,
+              sources: m.sources || [],
+              debug: m.debug || null,
+            }));
+          });
+        })
+        .catch(() => {});
+
+      return () => {
+        isCurrent = false;
+      };
+    }
+  }, [activeConvId, getConversation, getCachedConversation, conversations]);
 
 
   // Auto-resize textarea height as content changes (max ~40% of viewport)

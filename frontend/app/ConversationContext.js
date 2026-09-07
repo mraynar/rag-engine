@@ -141,7 +141,7 @@ export function ConversationProvider({ children }) {
   };
 
   // Get conversation details including messages
-  const getConversation = async (id) => {
+  const getConversation = useCallback(async (id) => {
     if (user) {
       try {
         const res = await fetch(`${API_BASE}/conversations/${id}`, {
@@ -171,7 +171,7 @@ export function ConversationProvider({ children }) {
       }
       return messagesCacheRef.current[id] || null;
     }
-  };
+  }, [user, getAuthHeaders]);
 
   // Rename conversation
   const renameConversation = async (id, title) => {
@@ -370,6 +370,22 @@ export function ConversationProvider({ children }) {
     }
 
     const data = await res.json();
+
+    // Synchronize in-memory cache immediately so UI reads instant updated messages
+    if (messagesCacheRef.current[convId]) {
+      const cachedObj = messagesCacheRef.current[convId];
+      cachedObj.messages = cachedObj.messages || [];
+      cachedObj.messages.push({ role: 'user', content: messageText, timestamp: new Date().toISOString() });
+      cachedObj.messages.push({ role: 'assistant', content: data.answer, sources: data.sources || [], debug: data.debug || null, timestamp: new Date().toISOString() });
+    } else {
+      messagesCacheRef.current[convId] = {
+        id: convId,
+        messages: [
+          { role: 'user', content: messageText, timestamp: new Date().toISOString() },
+          { role: 'assistant', content: data.answer, sources: data.sources || [], debug: data.debug || null, timestamp: new Date().toISOString() }
+        ]
+      };
+    }
 
     // 2. If guest, append the user and assistant messages manually to localStorage
     if (!user) {
