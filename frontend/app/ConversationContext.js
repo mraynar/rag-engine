@@ -358,11 +358,11 @@ export function ConversationProvider({ children }) {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      let friendlyMsg = "Mohon maaf, terjadi kendala saat memproses jawaban. Silakan coba beberapa saat lagi.";
+      let friendlyMsg = "We're sorry, an issue occurred while processing your request. Please try again in a moment.";
       if (res.status === 429) {
-        friendlyMsg = "Mohon maaf, batas penggunaan AI (kuota / rate limit) telah tercapai sementara waktu. Silakan tunggu beberapa saat lagi sebelum mencoba kembali.";
+        friendlyMsg = "We're sorry, the AI usage limit (rate limit / quota) has been reached temporarily. Please wait a moment before trying again.";
       } else if (res.status === 503 || res.status === 502 || res.status === 504) {
-        friendlyMsg = "Layanan AI sedang mengalami kepadatan lalu lintas atau kendala koneksi sementara. Silakan coba beberapa saat lagi.";
+        friendlyMsg = "The AI service is experiencing high traffic or temporary connection issues. Please try again in a moment.";
       } else if (err.detail && typeof err.detail === 'string') {
         friendlyMsg = err.detail;
       }

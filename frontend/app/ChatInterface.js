@@ -1127,7 +1127,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
-      alert('Browser Anda tidak mendukung input suara (Speech Recognition).');
+      alert('Your browser does not support voice input (Speech Recognition).');
       return;
     }
     if (isListening) {
@@ -1362,7 +1362,7 @@ function ChatInterfaceInner({ hideHeader = false, showSidebar = true }) {
                   transition: 'transform 0.15s ease, background 0.15s ease',
                 }}
               >
-                ↓ Ke bawah
+                ↓ Scroll down
               </button>
             )}
 

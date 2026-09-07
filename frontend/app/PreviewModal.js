@@ -269,7 +269,7 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
                 <line x1="12" y1="9" x2="12" y2="13"></line>
                 <line x1="12" y1="17" x2="12.01" y2="17"></line>
               </svg>
-              <h4 style={{ margin: '12px 0 6px 0', color: '#E53E3E' }}>Gagal Memuat Preview</h4>
+              <h4 style={{ margin: '12px 0 6px 0', color: '#E53E3E' }}>Failed to Load Preview</h4>
               <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-muted)' }}>{error}</p>
             </div>
           ) : totalItems === 0 && !loading ? (
@@ -277,9 +277,9 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--color-navy)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
               </svg>
-              <h4 style={{ margin: '12px 0 6px 0', color: 'var(--color-navy)' }}>Tidak Ada Data</h4>
+              <h4 style={{ margin: '12px 0 6px 0', color: 'var(--color-navy)' }}>No Data Available</h4>
               <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--color-muted)', maxWidth: '400px' }}>
-                Sumber ini belum diindeks atau tidak memiliki data yang dapat dibaca. Jika ini adalah spreadsheet cloud, lakukan <strong>Sync</strong> terlebih dahulu.
+                This source has not been indexed or has no readable data. If this is a cloud spreadsheet, please perform a <strong>Sync</strong> first.
               </p>
             </div>
           ) : (
@@ -424,7 +424,7 @@ export default function PreviewModal({ isOpen, onClose, type, idOrFilename, titl
                     <ChevronLeftIcon size={14} /> Previous
                   </button>
                   <span style={{ fontSize: '0.8rem', color: 'var(--color-text)' }}>
-                    Halaman <strong>{page}</strong> dari {totalPages}
+                    Page <strong>{page}</strong> of {totalPages}
                   </span>
                   <button
                     disabled={page === totalPages || loading}

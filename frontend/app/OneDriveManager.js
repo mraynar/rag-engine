@@ -70,7 +70,7 @@ export default function OneDriveManager() {
   // Sync All Categories sequentially
   const handleSyncAll = async () => {
     if (categories.length === 0) return;
-    if (!confirm(`Apakah Anda yakin ingin menyinkronkan seluruh (${categories.length}) data kategori secara otomatis?`)) return;
+    if (!confirm(`Are you sure you want to automatically sync all (${categories.length}) category data?`)) return;
     
     setIsSyncingAll(true);
     setSyncAllProgress({ current: 0, total: categories.length });
@@ -721,7 +721,7 @@ export default function OneDriveManager() {
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                   <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
-                <span>Berhasil: {syncSummaryModal.success}</span>
+                <span>Successful: {syncSummaryModal.success}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: '600', color: '#dc2626' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -729,7 +729,7 @@ export default function OneDriveManager() {
                   <line x1="15" y1="9" x2="9" y2="15" />
                   <line x1="9" y1="9" x2="15" y2="15" />
                 </svg>
-                <span>Gagal: {syncSummaryModal.fail}</span>
+                <span>Failed: {syncSummaryModal.fail}</span>
               </div>
             </div>
             <button

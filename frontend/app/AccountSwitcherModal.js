@@ -23,7 +23,7 @@ export default function AccountSwitcherModal({ isOpen, onClose }) {
     try {
       const res = await switchAccount(acc);
       if (res?.error) {
-        setError('Sesi akun telah berakhir. Silakan login kembali.');
+        setError('Account session expired. Please log in again.');
         setTimeout(() => {
           router.push(`/login?email=${encodeURIComponent(acc.email)}`);
         }, 1200);
@@ -31,7 +31,7 @@ export default function AccountSwitcherModal({ isOpen, onClose }) {
         onClose();
       }
     } catch (err) {
-      setError('Gagal beralih akun: ' + (err.message || 'Terjadi kesalahan'));
+      setError('Failed to switch account: ' + (err.message || 'An error occurred'));
     } finally {
       setSwitchingId(null);
     }
@@ -91,10 +91,10 @@ export default function AccountSwitcherModal({ isOpen, onClose }) {
         {/* Modal Header */}
         <div style={{ marginBottom: '20px' }}>
           <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: '#0F172A' }}>
-            Ganti Akun (Change Account)
+            Switch Account
           </h2>
           <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#64748B' }}>
-            Pilih akun terdaftar yang ingin Anda gunakan untuk mengakses percakapan & data.
+            Select a saved account to access its conversations & data.
           </p>
         </div>
 
@@ -116,7 +116,7 @@ export default function AccountSwitcherModal({ isOpen, onClose }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto', marginBottom: '20px' }}>
           {savedAccounts.length === 0 ? (
             <div style={{ padding: '16px', textAlign: 'center', color: '#64748B', fontSize: '0.85rem' }}>
-              Belum ada akun lain yang tersimpan di perangkat ini.
+              No other saved accounts on this device.
             </div>
           ) : (
             savedAccounts.map((acc) => {
@@ -165,7 +165,7 @@ export default function AccountSwitcherModal({ isOpen, onClose }) {
                             fontSize: '0.68rem', fontWeight: '700', background: '#DBEAFE', color: '#1E40AF',
                             padding: '2px 8px', borderRadius: '10px', flexShrink: 0
                           }}>
-                            Aktif saat ini
+                            Active
                           </span>
                         )}
                       </div>
@@ -179,7 +179,7 @@ export default function AccountSwitcherModal({ isOpen, onClose }) {
                     {isSwitching && <SpinnerIcon size={18} />}
                     {!isActive && (
                       <button
-                        title="Hapus dari daftar perangkat ini"
+                        title="Remove from this device"
                         onClick={(e) => {
                           e.stopPropagation();
                           removeSavedAccount(acc.id);
@@ -227,7 +227,7 @@ export default function AccountSwitcherModal({ isOpen, onClose }) {
           onMouseEnter={e => e.currentTarget.style.background = 'rgba(0, 114, 206, 0.08)'}
           onMouseLeave={e => e.currentTarget.style.background = 'rgba(0, 114, 206, 0.03)'}
         >
-          <span>+ Masuk dengan Akun Lain (Add Another Account)</span>
+          <span>+ Add Another Account</span>
         </button>
       </div>
     </div>

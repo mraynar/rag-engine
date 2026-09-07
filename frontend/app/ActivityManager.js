@@ -31,7 +31,7 @@ function relativeTime(isoStr) {
   const d = Math.floor(h / 24);
   if (d === 1) return 'Yesterday';
   if (d < 7)   return `${d}d ago`;
-  return parsedDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  return parsedDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 export default function ActivityManager({ onSelectConv }) {
@@ -55,7 +55,7 @@ export default function ActivityManager({ onSelectConv }) {
 
   const handleDeleteOne = async (e, id, title) => {
     e.stopPropagation();
-    if (window.confirm(`Hapus percakapan "${title}"?`)) {
+    if (window.confirm(`Delete conversation "${title}"?`)) {
       await deleteConversation(id);
     }
   };
@@ -102,15 +102,15 @@ export default function ActivityManager({ onSelectConv }) {
               </div>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: '#0F172A' }}>
-                  Hapus Semua Riwayat?
+                  Clear All History?
                 </h3>
                 <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748B' }}>
-                  Tindakan ini tidak dapat dibatalkan.
+                  This action cannot be undone.
                 </p>
               </div>
             </div>
             <p style={{ fontSize: '0.88rem', color: '#334155', lineHeight: '1.5', marginBottom: '24px' }}>
-              Seluruh riwayat percakapan Anda ({conversations.length} item) akan dihapus secara permanen dari sistem.
+              All your conversation history ({conversations.length} items) will be permanently deleted from the system.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button
@@ -127,7 +127,7 @@ export default function ActivityManager({ onSelectConv }) {
                   cursor: 'pointer'
                 }}
               >
-                Batal
+                Cancel
               </button>
               <button
                 onClick={handleDeleteAll}
@@ -146,7 +146,7 @@ export default function ActivityManager({ onSelectConv }) {
                   gap: '6px'
                 }}
               >
-                {deletingAll ? 'Menghapus...' : 'Hapus Semua'}
+                {deletingAll ? 'Deleting...' : 'Delete All'}
               </button>
             </div>
           </div>
@@ -168,7 +168,7 @@ export default function ActivityManager({ onSelectConv }) {
             Activity & Conversation History
           </h1>
           <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-            Kelola dan hapus riwayat percakapan Anda dengan TPS Assistant.
+            Manage and clear your conversation history with TPS Assistant.
           </p>
         </div>
 
@@ -193,7 +193,7 @@ export default function ActivityManager({ onSelectConv }) {
             onMouseLeave={e => e.currentTarget.style.background = '#FEE2E2'}
           >
             <TrashIcon size={16} />
-            <span>Hapus Semua Riwayat</span>
+            <span>Clear All History</span>
           </button>
         )}
       </div>
@@ -214,7 +214,7 @@ export default function ActivityManager({ onSelectConv }) {
               cursor: 'pointer'
             }}
           >
-            Semua ({conversations.length})
+            All ({conversations.length})
           </button>
           <button
             onClick={() => setFilter('pinned')}
@@ -229,13 +229,13 @@ export default function ActivityManager({ onSelectConv }) {
               cursor: 'pointer'
             }}
           >
-            Dipin ({conversations.filter(c => c.pinned).length})
+            Pinned ({conversations.filter(c => c.pinned).length})
           </button>
         </div>
 
         <input
           type="text"
-          placeholder="Cari riwayat percakapan..."
+          placeholder="Search conversation history..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{
@@ -262,7 +262,7 @@ export default function ActivityManager({ onSelectConv }) {
             color: 'var(--color-text-muted)'
           }}>
             <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: '500' }}>
-              {search ? 'Tidak ada percakapan yang cocok dengan pencarian.' : 'Belum ada riwayat percakapan.'}
+              {search ? 'No conversations match your search.' : 'No conversation history yet.'}
             </p>
           </div>
         ) : (
@@ -340,7 +340,7 @@ export default function ActivityManager({ onSelectConv }) {
                   <PinIcon size={15} filled={conv.pinned} />
                 </button>
                 <button
-                  title="Hapus percakapan"
+                  title="Delete conversation"
                   onClick={(e) => handleDeleteOne(e, conv.id, conv.title)}
                   style={{
                     padding: '6px',
