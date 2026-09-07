@@ -47,8 +47,8 @@ function PinIcon({ size = 13, filled = false }) {
       fill={filled ? 'currentColor' : 'none'}
       stroke="currentColor" strokeWidth="2" strokeLinecap="round"
       strokeLinejoin="round" aria-hidden="true">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-      <circle cx="12" cy="10" r="3" fill={filled ? '#fff' : 'none'} />
+      <line x1="12" y1="17" x2="12" y2="22" />
+      <path d="M5 17h14v-1.76a2 2 0 0 0-.51-1.37l-1.49-1.61V5a2 2 0 0 0-2-2H10a2 2 0 0 0-2 2v7.26l-1.49 1.61A2 2 0 0 0 6 15.24V17z" fill={filled ? 'currentColor' : 'none'} />
     </svg>
   );
 }
